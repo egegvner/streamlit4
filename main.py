@@ -8,6 +8,13 @@ import random
 import time
 import pandas as pd
 
+st.set_page_config(
+    page_title = "Bank Genova",
+    page_icon = "🏦",
+    layout = "centered",
+    initial_sidebar_state = "expanded",
+)
+
 def hashPass(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
