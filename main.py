@@ -23,6 +23,7 @@ def verifyPass(hashed_password, entered_password):
 
 admins = [
     "egegvner",
+    "taeqyoon",
 ]
 
 def init_db():
