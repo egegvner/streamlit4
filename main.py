@@ -68,9 +68,9 @@ def deposit(conn, c, uid, amount):
         c.execute("INSERT INTO transactions (userId, type, amount, balance) VALUES (?, ?, ?, ?)", (uid, 'deposit', amount, balance))
         conn.commit()
         with st.spinner("Processing..."):
-            time.sleep(random.uniform(0.1, 3))
+            time.sleep(random.uniform(0.1, 2))
             st.success(f"Successfully deposited ${amount:.2f}")
-        time.sleep(2)
+        time.sleep(1)
         st.rerun()
 
     else:
@@ -84,9 +84,9 @@ def withdraw(conn, c, uid, amount):
         c.execute("INSERT INTO transactions (userId, type, amount, balance) VALUES (?, ?, ?, ?)", (uid, 'withdrawal', amount, balance))
         conn.commit()
         with st.spinner("Processing..."):
-            time.sleep(random.uniform(0.1, 3))
+            time.sleep(random.uniform(0.1, 2))
             st.success(f"Successfully withdrawn ${amount:.2f}")
-        time.sleep(2)
+        time.sleep(1)
         st.rerun()
     else:
         st.error("Invalid withdrawal amount. Must be between $0 and current balance, max $1,000,000.")
@@ -110,9 +110,9 @@ def transfer(conn, c, uid, to_username, amount):
             
             conn.commit()
             with st.spinner("Processing..."):
-                time.sleep(random.uniform(0.1, 3))
+                time.sleep(random.uniform(0.1, 2))
                 st.success(f"Successfully transferred ${amount:.2f} to {to_username}")
-            time.sleep(2)
+            time.sleep(1)
             st.rerun()
         else:
             st.error("Invalid transfer amount. Must be between $0 and current balance, max $1,000,000.")
@@ -144,7 +144,7 @@ def adminPanel(conn):
                 conn.commit()
                 st.success(f"User {tempUser.capitalize()} and their associated data have been deleted.")
                 st.session_state[f"confirm_delete_{tempUser}"] = False
-                time.sleep(3)
+                time.sleep(2)
                 st.rerun()
             else:
                 st.error(f"User {tempUser.capitalize()} not found in the database!")
@@ -202,7 +202,7 @@ def adminPanel(conn):
             c.execute("UPDATE OR IGNORE users SET username = ?, balance = ?, suspention = ? WHERE userId = ?", (row["username"], row["balance"], row["suspention"], row["userId"]))
         conn.commit()
         with st.spinner("Processing Changes..."):
-            time.sleep(3)
+            time.sleep(2)
         st.success("User data updated.")
         st.rerun()
 
@@ -239,7 +239,7 @@ def main():
                             st.session_state.logged_in = True
                             st.session_state.user_id = user[0]
                             st.session_state.username = username
-                            time.sleep(2)
+                            time.sleep(1)
                     time.sleep(4)
                     st.rerun()
                 else:
@@ -259,7 +259,7 @@ def main():
                         if new_password == confirm_password:
                             if register_user(conn, c, new_username, new_password):
                                 with st.spinner("We are creating your account..."):
-                                    time.sleep(3)
+                                    time.sleep(2)
                                     st.balloons()
                                 st.success("Success! You can now log in with your credentials!")
                         else:
@@ -362,7 +362,7 @@ def main():
 
         elif st.session_state.current_menu == "Logout":
             st.sidebar.info("Logging you out...")
-            time.sleep(2)
+            time.sleep(1)
             st.session_state.logged_in = False
             st.session_state.user_id = None
             st.session_state.username = None
