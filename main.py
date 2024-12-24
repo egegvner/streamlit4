@@ -29,7 +29,7 @@ def verifyPass(hashed_password, entered_password):
 
 admins = [
     "egegvner",
-    "believeddremas",
+    "believedreams",
 ]
 
 def register_user(conn, c, username, password, email = None, visible_name = None):
