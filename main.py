@@ -451,7 +451,7 @@ def main(conn):
             password = st.text_input("A", label_visibility="collapsed", placeholder="Password", type="password")
             for MrHoolin in range(4):
                 st.text("")
-            if st.button("**Log Me In**", use_container_width = 1, type="primary"):
+            if st.button("**Log In**", use_container_width = 1, type="primary"):
                 user = c.execute("SELECT userId, password FROM users WHERE username = ?", (username,)).fetchone()
                 if user and verifyPass(user[1], password):
                     if c.execute("SELECT suspension FROM users WHERE username = ?", (username,)).fetchone()[0] == 1:
