@@ -140,8 +140,8 @@ def check_cooldown(c, uid):
         last_time = pd.to_datetime(last_transaction)
         current_time = pd.Timestamp.now()
         time_diff = (current_time - last_time).total_seconds()
-        if time_diff < 5:
-            st.warning(f"Cooldown in effect. Please wait {5 - int(time_diff)} seconds before your next transaction.")
+        if time_diff < 60:
+            st.warning(f"Cooldown in effect. Please wait {60 - int(time_diff)} seconds before your next transaction.")
             return False
     return True
 
