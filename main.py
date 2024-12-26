@@ -66,7 +66,7 @@ def register_user(conn, c, username, password, email = None, visible_name = None
 import sqlite3
 
 def init_db():
-    conn = sqlite3.connect('abc.db')
+    conn = sqlite3.connect('qq.db')
     c = conn.cursor()
 
     c.execute('''CREATE TABLE IF NOT EXISTS users (
@@ -92,6 +92,7 @@ def init_db():
                   amount REAL NOT NULL,
                   balance REAL NOT NULL,
                   toUsername TEXT,
+                  status TEXT DEFAULT 'pending',
                   timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                   FOREIGN KEY (userId) REFERENCES users(userId),
                   FOREIGN KEY (toUsername) REFERENCES users(username)
@@ -156,7 +157,7 @@ def update_last_transaction_time(c, conn, uid):
 
 def recent_transactions_metrics(c, uid):
     current_time = pd.Timestamp.now()
-    last_24_hours = current_time - pd.Timedelta(days=1)
+    last_24_hours = current_time - pd.Timedelta(days = 1)
 
     transactions = c.execute("SELECT type, COUNT(*), SUM(amount) FROM transactions WHERE userId = ? AND timestamp >= ? GROUP BY type", (uid, last_24_hours.strftime('%Y-%m-%d %H:%M:%S'))).fetchall()
 
@@ -280,36 +281,150 @@ def withdraw(conn, c, uid, amount):
             st.error("Invalid withdrawal amount. Must be between 0 and current balance, max 1,000,000.")
 
 def transfer(conn, c, uid, to_username, amount):
-    sender_username = c.execute("SELECT username FROM users WHERE userId = ?", (uid,)).fetchone()[0]
-    receiver_uid = c.execute("SELECT userId FROM users WHERE username = ?", (to_username,)).fetchone()[0]
-    receiver_username = c.execute("SELECT username FROM users WHERE userId = ?", (receiver_uid,)).fetchone()[0]
+    receiver_uid = c.execute("SELECT userId FROM users WHERE username = ?", (to_username,)).fetchone()
 
     if receiver_uid:
-        current_balance = c.execute('SELECT balance FROM users WHERE userId = ?', (uid,)).fetchone()[0]
+        receiver_uid = receiver_uid[0]
+
+        existing_transfer = c.execute("""
+            SELECT COUNT(*)
+            FROM transactions
+            WHERE userId = ? AND toUsername = ? AND status = 'pending'
+        """, (uid, to_username)).fetchone()[0]
         
+        if existing_transfer > 0:
+            st.warning(f"A pending transfer to {to_username} already exists. Please wait for it to be accepted or rejected.")
+            return
+
+        current_balance = c.execute("SELECT balance FROM users WHERE userId = ?", (uid,)).fetchone()[0]
+
         if 0 < amount <= 1000000 and amount <= current_balance:
-            c.execute("UPDATE users SET balance = balance - ?, outgoing_transfers = outgoing_transfers + 1 WHERE userId = ?", (amount, uid))
-            sender_balance = c.execute("SELECT balance FROM users WHERE userId = ?", (uid,)).fetchone()[0]
-            c.execute("INSERT INTO transactions (transactionId, userId, type, amount, balance, toUsername) VALUES (?, ?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), uid, f'Transfer to {receiver_username}', amount, sender_balance, to_username))
-            
-            c.execute("UPDATE users SET balance = balance + ?, incoming_transfers = incoming_transfers + 1 WHERE userId = ?", (amount, receiver_uid))
-            receiver_balance = c.execute("SELECT balance FROM users WHERE userId = ?", (receiver_uid,)).fetchone()[0]
-            c.execute("INSERT INTO transactions (transactionId, userId, type, amount, balance, toUsername) VALUES (?, ?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), receiver_uid, f'Transfer from {sender_username}', amount, receiver_balance, sender_username))
+            c.execute("UPDATE users SET balance = balance - ? WHERE userId = ?", (amount, uid))
+            c.execute("INSERT INTO transactions (transactionId, userId, type, amount, balance, toUsername, status) VALUES (?, ?, ?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), uid, f'Transfer to {to_username}', amount, current_balance, to_username, 'pending'))
             
             conn.commit()
-            with st.spinner("Processing..."):
-                time.sleep(random.uniform(0.1, 2))
-                st.success(f"Successfully transferred ${amount:.2f} to {to_username}")
-            time.sleep(1.5)
+            with st.spinner("Processing"):
+                time.sleep(2)
+            st.success(f"Successfully initiated transfer of ${amount:.2f} to {to_username}. Awaiting acceptance.")
+            time.sleep(2.5)
             st.rerun()
         else:
-            st.error("Invalid transfer amount. Must be between $0 and current balance, max $1,000,000.")
+            st.error("Invalid transfer amount. Must be within current balance and below $1,000,000.")
     else:
         st.error(f"User {to_username} does not exist.")
 
-def get_transaction_history(c, uid):
-    transactions = c.execute("SELECT * FROM transactions WHERE userId = ? ORDER BY timestamp DESC", (uid,)).fetchall()
-    return transactions
+def manage_pending_transfers(c, conn, receiver_id):
+    st.header("📥 Pending Transfers")
+    st.divider()
+
+    pending_transfers = c.execute("""
+        SELECT transactionId, userId, amount, timestamp
+        FROM transactions
+        WHERE toUsername = (SELECT username FROM users WHERE userId = ?) AND status = 'pending'
+    """, (receiver_id,)).fetchall()
+
+    if not pending_transfers:
+        st.write("No pending transfers.")
+        return
+
+    for transaction in pending_transfers:
+        transaction_id, sender_id, amount, timestamp = transaction
+        sender_username = c.execute("SELECT username FROM users WHERE userId = ?", (sender_id,)).fetchone()[0]
+
+        st.subheader(f" 💸 **{sender_username}** wants to transfer **${amount:.2f}** ({timestamp}).", divider="rainbow")
+        col1, col2 = st.columns(2)
+
+        if col1.button(f"Accept", type = "primary", use_container_width = 1, key = transaction_id):
+            with st.spinner("Accepting Transfer"):
+                c.execute("UPDATE transactions SET status = 'accepted' WHERE transactionId = ?", (transaction_id,))
+                c.execute("UPDATE users SET balance = balance + ? WHERE userId = ?", (amount, receiver_id))
+                conn.commit()
+                time.sleep(2)
+            st.toast("Transfer accepted!")
+            time.sleep(2)
+            st.rerun()
+
+        if col2.button(f"Reject", use_container_width = 1, key = transaction_id + 1):
+            with st.spinner("Rejecting Transfer"):
+                c.execute("UPDATE transactions SET status = 'rejected' WHERE transactionId = ?", (transaction_id,))
+                c.execute("UPDATE users SET balance = balance + ? WHERE userId = ?", (amount, sender_id))
+                conn.commit()
+                time.sleep(2)
+            st.toast("Transfer rejected!")
+            time.sleep(2)
+            st.rerun()
+
+        st.divider()
+
+def get_transaction_history(c, user_id):
+    username = c.execute("SELECT username FROM users WHERE userId = ?", (user_id,)).fetchone()[0]
+
+    sender_query = """
+        SELECT 'sent' AS role, type, amount, balance, timestamp, status, toUsername
+        FROM transactions
+        WHERE userId = ?
+        ORDER BY timestamp DESC
+    """
+    sent_transactions = c.execute(sender_query, (user_id,)).fetchall()
+
+    receiver_query = """
+        SELECT 'received' AS role, type, amount, balance, timestamp, status, userId AS fromUserId
+        FROM transactions
+        WHERE toUsername = ?
+        ORDER BY timestamp DESC
+    """
+    received_transactions = c.execute(receiver_query, (username,)).fetchall()
+
+    return sent_transactions, received_transactions
+
+def display_transaction_history(c, user_id):
+    st.header("Transaction History")
+
+    sent_transactions, received_transactions = get_transaction_history(c, user_id)
+    transactions = sent_transactions + received_transactions
+
+    if transactions:
+        for t in transactions:
+            role = t[0]
+            t_type = t[1]
+            amount = t[2]
+            balance = t[3]
+            timestamp = t[4]
+            status = t[5]
+            to_username = t[6] if role == "sent" else "N/A"
+            from_username = (
+                c.execute("SELECT username FROM users WHERE userId = ?", (t[6],)).fetchone()[0]
+                if role == "received" else "N/A"
+            )
+
+            if t_type == "deposit":
+                st.success(f"Deposit | {timestamp}", icon = "💵")
+                st.write(f"Amount: :green[+${amount:.2f}]")
+                st.write(f"New Balance: :green[${balance:.2f}]")
+
+            elif t_type == "withdrawal":
+                st.error(f"Withdrawal | {timestamp}", icon = "💵")
+                st.write(f"Amount: :red[-${amount:.2f}]")
+                st.write(f"New Balance: :red[${balance:.2f}]")
+
+            elif role == "sent" and t_type.startswith("Transfer to"):
+                st.error(f"Transfer to {to_username.capitalize()} | {timestamp} (Status: **{status.capitalize()}**)", icon = "💸")
+                st.write(f"Amount: :red[-${amount:.2f}]")
+                st.write(f"New Balance: :red[${balance:.2f}]")
+
+            elif role == "received":
+                st.success(f"Transfer from {from_username.capitalize()} | {timestamp} (Status: **{status.capitalize()}**)", icon = "💸")
+                st.write(f"Amount: :green[+${amount:.2f}]")
+                st.write(f"New Balance: :green[${balance:.2f}]")
+
+            else:
+                st.warning(f"Other Transaction | {timestamp} (Status: {status})")
+                st.write(f"Amount: ${amount}")
+                st.write(f"Balance: ${balance:.2f}")
+
+            st.divider()
+    else:
+        st.info("No transactions found in your history.")
 
 def admin_panel(conn):
     c = conn.cursor()
@@ -383,7 +498,8 @@ def admin_panel(conn):
         time.sleep(1)
     df = pd.DataFrame(userData, columns = ["User ID", "Username", "Visible Name", "Pass", "Balance", "Suspension", "Deposits", "Withdraws", "Transfers Received", "Transfers Sent", "Total Transactions", "Last Transaction Time", "Email"])
     edited_df = st.data_editor(df, key = "edit_table", num_rows = "fixed", use_container_width = 1, hide_index = False)
-    for MrBob in range(4):
+
+    for _ in range(4):
         st.text("")
 
     if st.button("Update Data", use_container_width = 1, type = "secondary"):
@@ -423,8 +539,9 @@ def settings(c, conn, username):
     if st.button("Update Visible Name"):
         change_visible_name(c, conn, username, new_name)
     
-    for u in range(5):
+    for _ in range(5):
         st.text("")
+
     st.button("Ege Güvener • © 2024", type = "tertiary", use_container_width = 1, disabled = True)
 
 def main(conn):
@@ -449,8 +566,10 @@ def main(conn):
         if login_option == "Login":
             username = st.text_input("A", label_visibility="hidden", placeholder="Your remarkable username")
             password = st.text_input("A", label_visibility="collapsed", placeholder="Password", type="password")
-            for MrHoolin in range(4):
+
+            for _ in range(4):
                 st.text("")
+
             if st.button("**Log In**", use_container_width = 1, type="primary"):
                 user = c.execute("SELECT userId, password FROM users WHERE username = ?", (username,)).fetchone()
                 if user and verifyPass(user[1], password):
@@ -472,7 +591,8 @@ def main(conn):
             new_username = st.text_input("A", label_visibility = "hidden", placeholder = "Choose a remarkable username")
             new_password = st.text_input("A", label_visibility = "collapsed", placeholder = "Create a password", type = "password")
             confirm_password = st.text_input("A", label_visibility = "collapsed", placeholder = "Re-password", type = "password")
-            for Brian in range(4):
+
+            for _ in range(4):
                 st.text("")
 
             if st.button("Register", use_container_width = 1, type = "primary"):
@@ -512,16 +632,21 @@ def main(conn):
         
         st.sidebar.divider()
 
-        c3, c4 = st.sidebar.columns(2)
+        c1, c2 = st.sidebar.columns(2)
         
-        if c3.button("Deposit", type = "primary", use_container_width = 1):
+        if c1.button("Deposit", type = "primary", use_container_width = 1):
             st.session_state.current_menu = "Deposit"
         
-        if c4.button("Withdraw", type = "primary", use_container_width = 1):
+        if c2.button("Withdraw", type = "primary", use_container_width = 1):
             st.session_state.current_menu = "Withdraw"
 
-        if st.sidebar.button("Transfer", type = "secondary", use_container_width = 1):
+        c1, c2 = st.sidebar.columns(2)
+
+        if c1.button("Transfer", type = "primary", use_container_width = 1):
             st.session_state.current_menu = "Transfer"
+
+        if c2.button("Pendings", type = "primary", use_container_width = 1):
+            st.session_state.current_menu = "Manage Pending Transfers"
 
         if st.sidebar.button("Transaction History", type = "secondary", use_container_width = 1):
             st.session_state.current_menu = "Transaction History"
@@ -534,12 +659,12 @@ def main(conn):
         else:
             st.sidebar.button("Admin Panel", type = "primary", use_container_width = 1, disabled = True, help = "Not Allowed")
 
-        c5, c6 = st.sidebar.columns(2)
+        c1, c2 = st.sidebar.columns(2)
 
-        if c5.button("Log Out", type = "secondary", use_container_width = 1):
+        if c1.button("Log Out", type = "secondary", use_container_width = 1):
             st.session_state.current_menu = "Logout"
 
-        if c6.button("Settings", type = "secondary", use_container_width = 1):
+        if c2.button("Settings", type = "secondary", use_container_width = 1):
             st.session_state.current_menu = "Settings"
 
         if st.session_state.current_menu == "Dashboard":
@@ -554,63 +679,43 @@ def main(conn):
             st.text("")
             amount = st.number_input("*Amount*", min_value = 0.0, max_value = 1000000.0, step = 0.5)
             st.write(f"Current max deposit: :green[${((b / 100) * 75):.2f}]")
-            for nothing in range(4):
+
+            for _ in range(4):
                 st.text("")
+
             if st.button(":green[Deposit Funds]", use_container_width = 1, type = "secondary"):
                 deposit(conn, c, st.session_state.user_id, amount)
                 
         elif st.session_state.current_menu == "Withdraw":
             st.header("Withdraw")
             amount = st.number_input("*Amount*", min_value = 0.0, max_value = 1000000.0, step = 0.5)
-            for wifidirect in range(4):
+            
+            for _ in range(4):
                 st.text("")
+
             if st.button(":red[Withdraw Funds]", use_container_width = 1, type = "secondary"):
                 withdraw(conn, c, st.session_state.user_id, amount)
 
         elif st.session_state.current_menu == "Transfer":
             st.header("Transfer Funds")
-            to_username = st.text_input("A", label_visibility = "hidden", placeholder = "Recipient username")
+            all_users = c.execute("SELECT username FROM users")
+            to_username = st.selectbox("A", label_visibility = "hidden", options = all_users, placeholder = "Receiver username")
             amount = st.number_input("Amount to Transfer", min_value = 0.0, max_value = 1000000.0, step = 10.0)
-            for genova in range(4):
+            
+            for _ in range(4):
                 st.text("")
+
             if st.button(":blue[Transfer]", use_container_width = 1, type = "secondary"):
                 if st.session_state.username != to_username:
                     transfer(conn, c, st.session_state.user_id, to_username, amount)
                 else:
                     st.warning("Why would you transfer money to yourself?")
 
+        elif st.session_state.current_menu == "Manage Pending Transfers":
+            manage_pending_transfers(c, conn, st.session_state.user_id)
+
         elif st.session_state.current_menu == "Transaction History":
-            st.header("Transaction History")
-            transactions = get_transaction_history(c, st.session_state.user_id)
-            
-            if transactions:
-                for t in transactions:
-                    transaction_type, amount, balance, timestamp = t[2], t[3], t[4], t[6]
-                    to_username = t[5] if t[2] == "transfer" else "N/A"
-                    
-                    if transaction_type == "deposit":
-                        st.success(f"Deposit | {timestamp}", icon = "💵")
-                        st.write(f"Amount: :green[+${amount:.2f}]")
-                        st.write(f"New Balance: :green[${balance:.2f}]")
-
-                    elif transaction_type == "withdrawal":
-                        st.error(f"Withdrawal | {timestamp}", icon = "💵")
-                        st.write(f"Amount: :red[-${amount:.2f}]")
-                        st.write(f"New Balance: :red[${balance:.2f}]")
-
-                    elif "Transfer from" in transaction_type:
-                        st.success(f"Transfer from {t[5].capitalize()} | {timestamp}", icon = "💸")
-                        st.write(f"Amount: :green[+${amount:.2f}]")
-                        st.write(f"New Balance: :green[${balance:.2f}]")
-
-                    elif "Transfer to" in transaction_type:
-                        st.error(f"Transfer to {t[5].capitalize()} | {timestamp}", icon = "💸")
-                        st.write(f"Amount: :red[-${amount:.2f}]")
-                        st.write(f"New Balance: :red[${balance:.2f}]")
-                    
-                    st.divider()
-            else:
-                st.write("No transactions found.")
+            display_transaction_history(c, st.session_state.user_id)
 
         elif st.session_state.current_menu == "Logout":
             st.sidebar.info("Logging you out...")
@@ -631,5 +736,5 @@ def main(conn):
                 st.error("You do not have permission to access the Admin Panel.")
 
 if __name__ == "__main__":
-    conn = sqlite3.connect('abc.db')
+    conn = sqlite3.connect('qq.db')
     main(conn)
