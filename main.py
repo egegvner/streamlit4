@@ -620,7 +620,7 @@ def deposit_to_savings_dialog(conn, user_id):
             conn.commit()
             with st.spinner("Processing..."):
                 time.sleep(2)
-            st.success(f"Successfully deposited ${format_currency(amount)} from {source} to your savings account.")
+            st.success(f"Successfully deposited ${format_currency(net)} from {source} to your savings.")
             time.sleep(2.5)
             st.rerun()
 
