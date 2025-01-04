@@ -489,7 +489,7 @@ def withdraw_dialog(conn, user_id):
             update_last_transaction_time(c, conn, user_id)
             with st.spinner("Processing..."):
                 time.sleep(random.uniform(2, 4))
-                st.success(f"Successfully withdrawn ${amount:.2f}")
+                st.success(f"Successfully withdrawn ${net:.2f}")
             st.session_state.withdraw_value = 0.0
             time.sleep(2.5)
             st.rerun()
