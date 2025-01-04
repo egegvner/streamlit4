@@ -436,9 +436,9 @@ def deposit_dialog(conn, user_id):
                     update_last_transaction_time(c, conn, user_id)
                     conn.commit()
                     with st.spinner("Processing..."):
-                        time.sleep(random.uniform(2, 4))
+                        time.sleep(random.uniform(1, 2))
                         st.success(f"Successfully deposited ${net:.2f}")
-                    time.sleep(2.5)
+                    time.sleep(1.5)
                     st.rerun()
                 else:
                     st.warning("Not enough quota.")
@@ -492,10 +492,10 @@ def withdraw_dialog(conn, user_id):
             conn.commit()
             update_last_transaction_time(c, conn, user_id)
             with st.spinner("Processing..."):
-                time.sleep(random.uniform(2, 4))
+                time.sleep(random.uniform(1, 2))
                 st.success(f"Successfully withdrawn ${net:.2f}")
             st.session_state.withdraw_value = 0.0
-            time.sleep(2.5)
+            time.sleep(1.5)
             st.rerun()
             
     if c2.button("Withdraw to Savings", type = "primary", use_container_width = True, disabled = True if net <= 0 or (current_balance - amount) < 0 else False, help = "Insufficent funds" if net <= 0 or (current_balance - net) < 0 else None):
@@ -509,10 +509,10 @@ def withdraw_dialog(conn, user_id):
             conn.commit()
             update_last_transaction_time(c, conn, user_id)
             with st.spinner("Processing..."):
-                time.sleep(random.uniform(2, 4))
+                time.sleep(random.uniform(1, 2))
                 st.success(f"Successfully withdrawn ${amount:.2f}")
             st.session_state.withdraw_value = 0.0
-            time.sleep(2.5)
+            time.sleep(1.5)
             st.rerun()
 
     st.text(" ")
@@ -558,9 +558,9 @@ def transfer_dialog(conn, user_id):
                     c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, balance,  receiver_username, status) VALUES (?, ?, ?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f'Transfer to {receiver_username}', amount, current_balance, receiver_username, 'pending'))
                     conn.commit()
                     with st.spinner("Processing"):
-                        time.sleep(2)
+                        time.sleep(1)
                     st.success(f"Successfully initiated transfer of ${amount:.2f} to {receiver_username}. Awaiting acceptance.")
-                    time.sleep(2.5)
+                    time.sleep(1.5)
                     st.rerun()
                 else:
                     st.error("Invalid transfer amount. Must be within current balance and below $1,000,000.")
@@ -639,9 +639,9 @@ def deposit_to_savings_dialog(conn, user_id):
             c.execute("UPDATE users SET balance = balance + ? WHERE username = 'egegvner'", (tax,))
             conn.commit()
             with st.spinner("Processing..."):
-                time.sleep(2)
+                time.sleep(1)
             st.success(f"Successfully deposited ${format_currency(net)} from {source} to savings.")
-            time.sleep(2.5)
+            time.sleep(1.5)
             st.rerun()
 
     st.caption("All transactions are subject to %0.5 tax (VAT) and irreversible.*")
@@ -698,9 +698,9 @@ def withdraw_from_savings_dialog(conn, user_id):
             c.execute("UPDATE users SET balance = balance + ? WHERE username = 'egegvner'", (tax,))
             conn.commit()
             with st.spinner("Processing..."):
-                time.sleep(2)
+                time.sleep(1)
             st.success(f"Successfully withdrawn ${format_currency(net)} into {target}")
-            time.sleep(2.5)
+            time.sleep(1.5)
             st.rerun()
 
     st.caption("All transactions are subject to %0.5 tax (VAT) and irreversible.*")
