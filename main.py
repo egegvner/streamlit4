@@ -86,9 +86,12 @@ def check_and_reset_quota(conn, user_id):
 def apply_interest_if_due(conn, user_id):
     c = conn.cursor()
 
+    # Get all the item IDs from the user's inventory
+    inventory_item_ids = c.execute("SELECT item_id FROM user_inventory WHERE user_id = ?", (user_id,)).fetchall()
+
     has_savings_account = c.execute("SELECT has_savings_account FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     if not has_savings_account:
-        return  # Exit early if no savings account
+        return
 
     savings_data = c.execute("SELECT balance, last_interest_applied FROM savings WHERE user_id = ?", (user_id,)).fetchone()
     balance, last_applied = savings_data if savings_data else (0, None)
@@ -97,28 +100,23 @@ def apply_interest_if_due(conn, user_id):
 
     now = datetime.datetime.now()
 
-    hours_passed = (now - last_applied_time).total_seconds() // 3600 
-    if hours_passed < 1:
-        return  # Exit if not enough time has passed
+    seconds_passed = (now - last_applied_time).total_seconds() / 3600
 
-    hours_to_apply = int(hours_passed)
+    if seconds_passed < 1:
+        return 
 
-    daily_interest_rate = 0.005  # 0.5% daily
-    hourly_interest_rate = daily_interest_rate / 24  
+    seconds_to_apply = int(seconds_passed)
 
-    interest_boost = c.execute("""
-        SELECT SUM(boost_value) FROM user_inventory
-        JOIN marketplace_items ON user_inventory.item_id = marketplace_items.item_id
-        WHERE user_id = ? AND boost_type = 'interest_bonus'
-    """, (user_id,)).fetchone()[0]
+    hourly_interest_rate = 0.005 / 24 
 
-    if interest_boost:
-        hourly_interest_rate += interest_boost  # Apply boost
+    for id in inventory_item_ids:
+        boost_values = c.execute("SELECT boost_value FROM marketplace_items WHERE item_id = ? AND boost_type = 'interest_boost'", (id[0],)).fetchall()
+        for boost in boost_values:
+            hourly_interest_rate += boost[0]
 
-    for _ in range(hours_to_apply):
-        balance += balance * hourly_interest_rate  # Apply interest
+    balance += balance * hourly_interest_rate * seconds_to_apply
 
-    new_last_applied_time = last_applied_time + datetime.timedelta(hours=hours_to_apply)
+    new_last_applied_time = last_applied_time + datetime.timedelta(seconds=seconds_to_apply)
 
     c.execute("""
         UPDATE savings
@@ -128,8 +126,7 @@ def apply_interest_if_due(conn, user_id):
 
     conn.commit()
 
-    print(f"Applied hourly interest for {hours_to_apply} hours. New balance: ${balance:.2f}.")
-
+    print(f"Applied interest for {seconds_to_apply} seconds. New balance: ${balance:.2f}.")
 
 def change_password(c, conn, username, current_password, new_password):
     c.execute("SELECT password FROM users WHERE username = ?", (username,))
@@ -559,7 +556,6 @@ def transfer_dialog(conn, user_id):
                 if 0 < amount <= 1000000 and amount <= current_balance:
                     c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (amount, user_id))
                     c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, balance,  receiver_username, status) VALUES (?, ?, ?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f'Transfer to {receiver_username}', amount, current_balance, receiver_username, 'pending'))
-                    c.execute("UPDATE users SET balance = balance + ? WHERE username = 'egegvner'", (tax,))
                     conn.commit()
                     with st.spinner("Processing"):
                         time.sleep(2)
@@ -712,17 +708,17 @@ def withdraw_from_savings_dialog(conn, user_id):
 @st.dialog("Item Details")
 def item_options(conn, user_id, item_id):
     c = conn.cursor()
-    owned_item_ids = c.execute("SELECT item_id FROM user_inventory WHERE user_id = ?", (user_id,)).fetchall()[0]
-    st.write(owned_item_ids)
-    item_data = c.execute("SELECT name, description, rarity, price, stock FROM marketplace_items WHERE item_id = ?", (item_id,)).fetchall()[0]
+    owned_item_ids = [item_id[0] for item_id in c.execute("SELECT item_id FROM user_inventory WHERE user_id = ?", (user_id,)).fetchall()]
+    item_data = c.execute("SELECT name, description, rarity, price, stock, item_id FROM marketplace_items WHERE item_id = ?", (item_id,)).fetchall()[0]
     wallet_balance = c.execute("SELECT wallet FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     st.header(f"{item_colors[item_data[2]]}[{item_data[0]}] :gray[\a **•** \a {item_data[2].upper()}]", divider = "rainbow")
     st.text("")
     st.text("")
     with st.container(border=True):
         st.write(f"**:gray[EFFECT \a $|$ \a ]** {item_data[1]}.")
-
         st.write(f"**:gray[PRICE \a $|$ \a ]** :green[${format_currency(item_data[3])}]")
+        st.write(f"**:gray[STOCK \a $|$ \a ]** :green[{item_data[4]}]")
+
     st.divider()
     st.write(f"Wallet \a **•** \a :green[${format_currency(wallet_balance)}] \a **•** \a :red[INSUFFICENT]" if wallet_balance < item_data[3] else f"Wallet \a **•** \a :green[${format_currency(wallet_balance)}]")
     if item_id in owned_item_ids:
@@ -732,6 +728,7 @@ def item_options(conn, user_id, item_id):
         st.rerun()
     if c2.button(f"**Pay :green[${format_currency(item_data[3])}] With Wallet**", type = "primary", use_container_width = True, disabled = True if wallet_balance < item_data[3] or item_id in owned_item_ids else False):
         buy_item(conn, user_id, item_id)
+    st.caption(f":gray[ID \a {item_data[5]}]")
 
 def leaderboard(c):
     st.divider()
@@ -743,32 +740,34 @@ def leaderboard(c):
     else:
         st.write("No users found in the database!")
 
+@st.dialog("Item Options")
+def inventory_item_options():
+    pass
+
 def buy_item(conn, user_id, item_id):
     c = conn.cursor()
 
-    item = c.execute("SELECT price FROM marketplace_items WHERE item_id = ?", (item_id,)).fetchone()[0]
+    price = c.execute("SELECT price FROM marketplace_items WHERE item_id = ?", (item_id,)).fetchone()[0]
     stock = c.execute("SELECT stock FROM marketplace_items WHERE item_id = ?", (item_id,)).fetchone()[0]
-    if not item:
+    if not price:
         st.toast("Item not found.")
 
-    price = item
     wallet_balance = c.execute("SELECT wallet FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
-
-    if wallet_balance < price:
-        st.warning("Insufficent wallet balance! Withdraw money to your wallet.")
-    else:
-        if stock != 0:
-            with st.spinner("Purchasing..."):
-                c.execute("UPDATE users SET wallet = wallet - ? WHERE user_id = ?", (price, user_id))
-                c.execute("INSERT INTO user_inventory (user_id, item_id) VALUES (?, ?)", (user_id, item_id))
-                c.execute("UPDATE marketplace_items SET stock = stock - 1 WHERE item_id = ?", (item_id,))
-                conn.commit()
-                time.sleep(3)
-            st.success(f"Item purchased!")
+        
+    if stock != 0:
+        with st.spinner("Purchasing..."):
+            c.execute("UPDATE users SET wallet = wallet - ? WHERE user_id = ?", (price, user_id))
+            conn.commit()
+            c.execute("INSERT INTO user_inventory (user_id, item_id) VALUES (?, ?)", (user_id, item_id))
+            conn.commit()
+            c.execute("UPDATE marketplace_items SET stock = stock - 1 WHERE item_id = ?", (item_id,))
+            conn.commit()
             time.sleep(2)
-            st.rerun()
-        else:
-            st.warning("This item is out of stock.")
+        st.success(f"Item purchased!")
+        time.sleep(1)
+        st.rerun()
+    else:
+        st.warning("This item is out of stock.")
 
 def marketplace_view(conn, user_id):
     c = conn.cursor()
@@ -789,16 +788,19 @@ def inventory_view(conn, user_id):
     owned_item_ids = [owned_item[0] for owned_item in c.execute("SELECT item_id FROM user_inventory WHERE user_id = ?", (user_id,)).fetchall()]
     acquired = c.execute("SELECT acquired_at FROM user_inventory").fetchall()
     counter = 0
-    for id in owned_item_ids:
-        name, description, rarity, price, boost_type, boost_value  = c.execute("SELECT name, description, rarity, price, boost_type, boost_value FROM marketplace_items WHERE item_id = ?", (id,)).fetchall()[0]
-        st.subheader(f"{item_colors[rarity]}[{name}]")
-        st.caption(rarity.upper())
-        st.write(description)
-        if st.button("**OPTIONS**", use_container_width = True, key = id):
-            pass
-        st.caption(f"Acquired at \a {acquired[counter][0]}")
-        st.divider()
-        counter += 1
+    if owned_item_ids:
+        for id in owned_item_ids:
+            name, description, rarity, price, boost_type, boost_value  = c.execute("SELECT name, description, rarity, price, boost_type, boost_value FROM marketplace_items WHERE item_id = ?", (id,)).fetchall()[0]
+            st.subheader(f"{item_colors[rarity]}[{name}]")
+            st.caption(rarity.upper())
+            st.write(description)
+            if st.button("**OPTIONS**", use_container_width = True, key = id):
+                pass
+            st.caption(f"Acquired \a **•** \a {acquired[counter][0]}")
+            st.divider()
+            counter += 1
+    else:
+        st.write("No items.")
 
 def manage_pending_transfers(c, conn, receiver_id):
     st.header("📥 Pending Transfers", divider = "rainbow")
@@ -826,6 +828,7 @@ def manage_pending_transfers(c, conn, receiver_id):
             with st.spinner("Accepting Transfer"):
                 c.execute("UPDATE transactions SET status = 'accepted' WHERE transaction_id = ?", (transaction_id,))
                 c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (net, receiver_id))
+                c.execute("UPDATE users SET balance = balance + ? WHERE username = 'egegvner'", (tax,))
                 conn.commit()
                 time.sleep(2)
             st.toast("Transfer accepted!")
@@ -949,7 +952,7 @@ def savings_view(conn, user_id):
             withdraw_from_savings_dialog(conn, st.session_state.user_id)
 
     with st.container(border = True):
-        st.write(":green[%0.5] interest compounding **hourly.**")
+        st.write(":green[%0.5] simple interest per **hour.**")
 def display_transaction_history(c, user_id):
     st.header("Transaction History", divider = "rainbow")
 
@@ -1192,6 +1195,7 @@ def admin_panel(conn):
     temp_user_id_to_delete_savings = st.number_input("Enter User ID to Delete Savings", min_value = 0)
     if st.button("Delete Savings Account", use_container_width = True):
         c.execute("DELETE FROM savings WHERE user_id = ?", (temp_user_id_to_delete_savings,))
+        c.execute("UPDATE users SET has_savings_account = 0 WHERE user_id = ?", (temp_user_id_to_delete_savings,))
         conn.commit()
         st.rerun()
 
