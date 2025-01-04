@@ -612,7 +612,7 @@ def deposit_to_savings_dialog(conn, user_id):
             else:
                 c.execute("UPDATE users SET wallet = wallet - ? WHERE user_id = ?", (amount, user_id))
 
-            c.execute("UPDATE savings SET balance = balance + ? WHERE user_id = ?", (amount, user_id))
+            c.execute("UPDATE savings SET balance = balance + ? WHERE user_id = ?", (net, user_id))
 
             source = "Main Account" if "Main" in st.session_state.deposit_source else "Wallet"
             c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, balance) VALUES (?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Deposit To Savings From {source}", amount, format_currency(current_savings + amount)))
