@@ -109,7 +109,7 @@ def apply_interest_if_due(conn, user_id):
     interest_boost = c.execute("""
         SELECT SUM(boost_value) FROM user_inventory
         JOIN marketplace_items ON user_inventory.item_id = marketplace_items.item_id
-        WHERE user_id = ? AND is_active = TRUE AND boost_type = 'interest_bonus'
+        WHERE user_id = ? AND boost_type = 'interest_bonus'
     """, (user_id,)).fetchone()[0]
 
     if interest_boost:
