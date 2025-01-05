@@ -83,11 +83,10 @@ def check_and_reset_quota(conn, user_id):
         return new_quota
     return current_quota
 
+import datetime
+
 def apply_interest_if_due(conn, user_id):
     c = conn.cursor()
-
-    # Get all the item IDs from the user's inventory
-    inventory_item_ids = c.execute("SELECT item_id FROM user_inventory WHERE user_id = ?", (user_id,)).fetchall()
 
     has_savings_account = c.execute("SELECT has_savings_account FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     if not has_savings_account:
@@ -100,33 +99,37 @@ def apply_interest_if_due(conn, user_id):
 
     now = datetime.datetime.now()
 
-    seconds_passed = (now - last_applied_time).total_seconds() / 3600
-
+    seconds_passed = (now - last_applied_time).total_seconds()
     if seconds_passed < 1:
-        return 
+        return
 
-    seconds_to_apply = int(seconds_passed)
+    hours_fraction = seconds_passed / 3600
 
-    hourly_interest_rate = 0.005 / 24 
+    hourly_interest_rate = 0.005 / 24  
 
-    for id in inventory_item_ids:
-        boost_values = c.execute("SELECT boost_value FROM marketplace_items WHERE item_id = ? AND boost_type = 'interest_boost'", (id[0],)).fetchall()
-        for boost in boost_values:
-            hourly_interest_rate += boost[0]
+    inventory_item_ids = c.execute("SELECT item_id FROM user_inventory WHERE user_id = ?", (user_id,)).fetchall()
+    if inventory_item_ids:
+        for (item_id,) in inventory_item_ids:
+            boost_values = c.execute("""
+                SELECT boost_value 
+                FROM marketplace_items 
+                WHERE item_id = ? AND boost_type = 'interest_boost'
+            """, (item_id,)).fetchall()
 
-    balance += balance * hourly_interest_rate * seconds_to_apply
+            hourly_interest_rate += sum(boost[0] for boost in boost_values)
 
-    new_last_applied_time = last_applied_time + datetime.timedelta(seconds=seconds_to_apply)
+    total_interest = balance * hourly_interest_rate * hours_fraction
+    new_balance = balance + total_interest
+
+    new_last_applied_time = last_applied_time + datetime.timedelta(seconds=seconds_passed)
 
     c.execute("""
         UPDATE savings
         SET balance = ?, last_interest_applied = ?
         WHERE user_id = ?
-    """, (balance, new_last_applied_time.strftime("%Y-%m-%d %H:%M:%S"), user_id))
+    """, (new_balance, new_last_applied_time.strftime("%Y-%m-%d %H:%M:%S"), user_id))
 
     conn.commit()
-
-    print(f"Applied interest for {seconds_to_apply} seconds. New balance: ${balance:.2f}.")
 
 def change_password(c, conn, username, current_password, new_password):
     c.execute("SELECT password FROM users WHERE username = ?", (username,))
@@ -166,15 +169,13 @@ def check_cooldown(c, user_id):
         last_time = pd.to_datetime(last_transaction)
         current_time = pd.Timestamp.now()
         time_diff = (current_time - last_time).total_seconds()
-        if time_diff < 3:
-            st.warning(f"Cooldown in effect. Please wait {3 - int(time_diff)} seconds before your next transaction.")
+        if time_diff < 15:
+            st.warning(f"Cooldown in effect. Please wait {15 - int(time_diff)} seconds before your next transaction.")
             return False
     return True
 
 def update_last_transaction_time(c, conn, user_id):
-    current_time = pd.Timestamp.now().to_pydatetime().isoformat()
-    c.execute("UPDATE users SET last_transaction_time = ? WHERE user_id = ?", (current_time, user_id))
-
+    c.execute("UPDATE users SET last_transaction_time = ? WHERE user_id = ?", (datetime.datetime.now().isoformat(), user_id))
     conn.commit()
 
 def recent_transactions_metrics(c, user_id):
@@ -203,23 +204,6 @@ def recent_transactions_metrics(c, user_id):
     return metrics
 
 def leaderboard_logic(c):
-    result = c.execute("SELECT username, visible_name, balance FROM users ORDER BY balance DESC").fetchall()
-
-    leaderboard = []
-    rank = 1
-    for row in result:
-        username, visible_name, balance = row
-        name_to_display = visible_name if visible_name else username
-        leaderboard.append({
-            "rank": rank,
-            "name": name_to_display,
-            "balance": balance
-        })
-        rank += 1
-
-    return leaderboard
-
-def leaderboard_logic2(c):
     result = c.execute("SELECT username, visible_name, balance FROM users ORDER BY balance DESC").fetchall()
 
     leaderboard = []
@@ -438,7 +422,7 @@ def deposit_dialog(conn, user_id):
                     with st.spinner("Processing..."):
                         time.sleep(random.uniform(1, 2))
                         st.success(f"Successfully deposited ${net:.2f}")
-                    time.sleep(1.5)
+                    time.sleep(1)
                     st.rerun()
                 else:
                     st.warning("Not enough quota.")
@@ -495,7 +479,7 @@ def withdraw_dialog(conn, user_id):
                 time.sleep(random.uniform(1, 2))
                 st.success(f"Successfully withdrawn ${net:.2f}")
             st.session_state.withdraw_value = 0.0
-            time.sleep(1.5)
+            time.sleep(1)
             st.rerun()
             
     if c2.button("Withdraw to Savings", type = "primary", use_container_width = True, disabled = True if net <= 0 or (current_balance - amount) < 0 else False, help = "Insufficent funds" if net <= 0 or (current_balance - net) < 0 else None):
@@ -512,7 +496,7 @@ def withdraw_dialog(conn, user_id):
                 time.sleep(random.uniform(1, 2))
                 st.success(f"Successfully withdrawn ${amount:.2f}")
             st.session_state.withdraw_value = 0.0
-            time.sleep(1.5)
+            time.sleep(1)
             st.rerun()
 
     st.text(" ")
@@ -560,7 +544,8 @@ def transfer_dialog(conn, user_id):
                     with st.spinner("Processing"):
                         time.sleep(1)
                     st.success(f"Successfully initiated transfer of ${amount:.2f} to {receiver_username}. Awaiting acceptance.")
-                    time.sleep(1.5)
+                    update_last_transaction_time(c, conn, user_id)
+                    time.sleep(1)
                     st.rerun()
                 else:
                     st.error("Invalid transfer amount. Must be within current balance and below $1,000,000.")
@@ -638,10 +623,11 @@ def deposit_to_savings_dialog(conn, user_id):
             c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, balance) VALUES (?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Deposit To Savings From {source}", amount, format_currency(current_savings + amount)))
             c.execute("UPDATE users SET balance = balance + ? WHERE username = 'egegvner'", (tax,))
             conn.commit()
+            update_last_transaction_time(c, conn, user_id)
             with st.spinner("Processing..."):
                 time.sleep(1)
             st.success(f"Successfully deposited ${format_currency(net)} from {source} to savings.")
-            time.sleep(1.5)
+            time.sleep(1)
             st.rerun()
 
     st.caption("All transactions are subject to %0.5 tax (VAT) and irreversible.*")
@@ -697,10 +683,12 @@ def withdraw_from_savings_dialog(conn, user_id):
             c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, balance) VALUES (?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Withdraw From Savings To {target}", amount, format_currency(current_savings - amount)))
             c.execute("UPDATE users SET balance = balance + ? WHERE username = 'egegvner'", (tax,))
             conn.commit()
+            update_last_transaction_time(c, conn, user_id)
             with st.spinner("Processing..."):
-                time.sleep(1)
+                time.sleep(random.uniform(1, 2))
             st.success(f"Successfully withdrawn ${format_currency(net)} into {target}")
             time.sleep(1.5)
+            st.session_state.withdraw_from_savings_value = 0.0
             st.rerun()
 
     st.caption("All transactions are subject to %0.5 tax (VAT) and irreversible.*")
@@ -950,9 +938,15 @@ def savings_view(conn, user_id):
 
         if c2.button("Withdraw", type = "secondary", use_container_width = True, key = "a"):
             withdraw_from_savings_dialog(conn, st.session_state.user_id)
+        if st.button("Refresh Savings Balance", use_container_width = True):
+            apply_interest_if_due(conn, user_id)
+    st.text("")
+    st.text("")
 
     with st.container(border = True):
-        st.write(":green[%0.5] simple interest per **hour.**")
+        st.write(":green[%0.5] simple interest per **second.**")
+    st.caption(":gray[HINT: Some items can boost your interest rate!]")
+
 def display_transaction_history(c, user_id):
     st.header("Transaction History", divider = "rainbow")
 
