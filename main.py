@@ -729,9 +729,21 @@ def leaderboard(c):
         st.write("No users found in the database!")
 
 @st.dialog("Item Options")
-def inventory_item_options():
-    pass
-
+def inventory_item_options(conn, user_id, item_id):
+    c = conn.cursor()
+    item_data = c.execute("SELECT name, description, rarity, price FROM marketplace_items WHERE item_id = ?", (item_id,)).fetchone()
+    st.header(f"{item_colors[item_data[2]]}[{item_data[0]}] \a **•** \a :gray[{item_data[2].upper()}]", divider = "rainbow")
+    with st.container(border = True):
+        st.write(f":gray[EFFECT] \a $|$ \a {item_data[1]}")
+        st.write(f":gray[BOUGHT FOR] \a $|$ \a :green[${item_data[3]}]")
+        st.write(f":gray[EFFECT] \a $|$ \a {item_data[1]}")
+    if st.button(f"Sell to Bank for **:green[${item_data[3]}]**", type = "primary", use_container_width = True):
+        c.execute("DELETE FROM user_inventory WHERE item_id = ?", (item_id,))
+        c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (item_data[3], user_id))
+        c.execute("UPDATE marketplace_items SET stock = stock + 1 WHERE item_id = ?", (item_id,))
+        conn.commit()
+        st.rerun()
+        
 def buy_item(conn, user_id, item_id):
     c = conn.cursor()
 
@@ -739,8 +751,6 @@ def buy_item(conn, user_id, item_id):
     stock = c.execute("SELECT stock FROM marketplace_items WHERE item_id = ?", (item_id,)).fetchone()[0]
     if not price:
         st.toast("Item not found.")
-
-    wallet_balance = c.execute("SELECT wallet FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
         
     if stock != 0:
         with st.spinner("Purchasing..."):
@@ -771,6 +781,7 @@ def marketplace_view(conn, user_id):
         st.divider()
 
 def inventory_view(conn, user_id):
+    st.divider()
     c = conn.cursor()
     st.header("Inventory", divider = "rainbow")
     owned_item_ids = [owned_item[0] for owned_item in c.execute("SELECT item_id FROM user_inventory WHERE user_id = ?", (user_id,)).fetchall()]
@@ -779,11 +790,11 @@ def inventory_view(conn, user_id):
     if owned_item_ids:
         for id in owned_item_ids:
             name, description, rarity, price, boost_type, boost_value  = c.execute("SELECT name, description, rarity, price, boost_type, boost_value FROM marketplace_items WHERE item_id = ?", (id,)).fetchall()[0]
-            st.subheader(f"{item_colors[rarity]}[{name}]")
+            st.write(f"#### {item_colors[rarity]}[{name}]")
             st.caption(rarity.upper())
             st.write(description)
             if st.button("**OPTIONS**", use_container_width = True, key = id):
-                pass
+                inventory_item_options(conn, user_id, id)
             st.caption(f"Acquired \a **•** \a {acquired[counter][0]}")
             st.divider()
             counter += 1
