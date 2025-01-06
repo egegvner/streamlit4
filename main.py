@@ -44,6 +44,7 @@ def verifyPass(hashed_password, entered_password):
 admins = [
     "egegvner",
     "believedreams",
+    "Genova",
 ]
 
 def calculate_new_quota(c, user_id):
