@@ -103,7 +103,7 @@ def apply_interest_if_due(conn, user_id):
 
     hours_fraction = seconds_passed / 60
 
-    hourly_interest_rate = 0.005
+    hourly_interest_rate = 0.0005
 
     inventory_item_ids = c.execute("SELECT item_id FROM user_inventory WHERE user_id = ?", (user_id,)).fetchall()
     if inventory_item_ids:
@@ -285,7 +285,7 @@ def register_user(conn, c, username, password, email = None, visible_name = None
         return False
         
 def init_db():
-    conn = sqlite3.connect('eggggggggg.db')
+    conn = sqlite3.connect('egggggggggg.db')
     c = conn.cursor()
 
     c.execute('''CREATE TABLE IF NOT EXISTS users (
@@ -345,9 +345,12 @@ def init_db():
               ''')
     
     c.execute('''CREATE TABLE IF NOT EXISTS user_inventory (
+              instance_id INTEGER PRIMARY KEY AUTOINCREMENT,
               user_id INTEGER NOT NULL,
               item_id INTEGER NOT NULL,
+              item_number INTEGER NOT NULL,
               acquired_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              expires_at TIMESTAMP DEFAULT NULL,
               FOREIGN KEY (user_id) REFERENCES users(user_id),
               FOREIGN KEY (item_id) REFERENCES marketplace_items(item_id)
               )
@@ -745,20 +748,25 @@ def inventory_item_options(conn, user_id, item_id):
 def buy_item(conn, user_id, item_id):
     c = conn.cursor()
 
-    price = c.execute("SELECT price FROM marketplace_items WHERE item_id = ?", (item_id,)).fetchone()[0]
-    stock = c.execute("SELECT stock FROM marketplace_items WHERE item_id = ?", (item_id,)).fetchone()[0]
+    item_data = c.execute("SELECT name, price, stock FROM marketplace_items WHERE item_id = ?", (item_id,)).fetchone()
+    name, price, stock = item_data
     if not price:
         st.toast("Item not found.")
         
     if stock != 0:
         with st.spinner("Purchasing..."):
+            next_item_number = c.execute("""
+                SELECT COALESCE(MAX(item_number), 0) + 1 
+                FROM user_inventory 
+                WHERE item_id = ?
+            """, (item_id,)).fetchone()[0]
             c.execute("UPDATE users SET wallet = wallet - ? WHERE user_id = ?", (price, user_id))
             conn.commit()
-            c.execute("INSERT INTO user_inventory (user_id, item_id) VALUES (?, ?)", (user_id, item_id))
+            c.execute("INSERT INTO user_inventory (user_id, item_id, item_number) VALUES (?, ?, ?)", (user_id, item_id, next_item_number))
             conn.commit()
             c.execute("UPDATE marketplace_items SET stock = stock - 1 WHERE item_id = ?", (item_id,))
             conn.commit()
-            time.sleep(2)
+            time.sleep(1.5)
         st.success(f"Item purchased!")
         time.sleep(1)
         st.rerun()
@@ -784,11 +792,12 @@ def inventory_view(conn, user_id):
     st.header("Inventory", divider = "rainbow")
     owned_item_ids = [owned_item[0] for owned_item in c.execute("SELECT item_id FROM user_inventory WHERE user_id = ?", (user_id,)).fetchall()]
     acquired = c.execute("SELECT acquired_at FROM user_inventory").fetchall()
+    item_numbers = c.execute("SELECT item_number FROM user_inventory").fetchall()
     counter = 0
     if owned_item_ids:
         for id in owned_item_ids:
-            name, description, rarity, price, boost_type, boost_value  = c.execute("SELECT name, description, rarity, price, boost_type, boost_value FROM marketplace_items WHERE item_id = ?", (id,)).fetchall()[0]
-            st.write(f"#### {item_colors[rarity]}[{name}]")
+            name, description, rarity = c.execute("SELECT name, description, rarity FROM marketplace_items WHERE item_id = ?", (id,)).fetchall()[0]
+            st.write(f"#### {item_colors[rarity]}[{name}] \a :gray[#{item_numbers[counter][0]}]")
             st.caption(rarity.upper())
             st.write(description)
             if st.button("**OPTIONS**", use_container_width = True, key = id):
@@ -953,7 +962,7 @@ def savings_view(conn, user_id):
     st.text("")
 
     with st.container(border = True):
-        st.write(":green[%0.5] simple interest per **minute.**")
+        st.write(":green[%0.05] simple interest per **minute.**")
     st.caption(":gray[HINT: Some items can boost your interest rate!]")
 
 def display_transaction_history(c, user_id):
@@ -1068,7 +1077,7 @@ def admin_panel(conn):
                         c.execute("INSERT INTO marketplace_items (item_id, name, description, rarity, price, stock, boost_type, boost_value) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (item_id, name, description, rarity, price, stock, boost_type, boost_value))
                         conn.commit()
                     st.success("Item created!")
-                    time.sleep(1)
+                    time.sleep(2)
                     st.rerun()
                 else:
                     st.error("Duplicate item_id")
@@ -1083,6 +1092,10 @@ def admin_panel(conn):
         for _, row in edited_df.iterrows():
             c.execute("UPDATE OR IGNORE marketplace_items SET name = ?, description = ?, rarity = ?, price = ?, stock = ?, boost_type = ?, boost_value = ? WHERE item_id = ?", (row["Item Name"], row["Description"], row["Rarity"], row["Price"], row["Stock"], row["Boost Type"], row["Boost Value"], row["Item ID"]))
         conn.commit()
+        with st.spinner("Processing Changes..."):
+            time.sleep(2)
+        st.success("User data updated.")
+        time.sleep(1)
         st.rerun()
 
     item_id_to_delete = st.number_input("Enter Item ID to Delete", min_value = 0, step = 1)
@@ -1390,5 +1403,5 @@ def main(conn):
                 admin_panel(conn)
 
 if __name__ == "__main__":
-    conn = sqlite3.connect('eggggggggg.db')
+    conn = sqlite3.connect('egggggggggg.db')
     main(conn)
