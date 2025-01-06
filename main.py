@@ -101,7 +101,7 @@ def apply_interest_if_due(conn, user_id):
     if seconds_passed < 1:
         return
 
-    hours_fraction = seconds_passed
+    hours_fraction = seconds_passed / 60
 
     hourly_interest_rate = 0.005
 
