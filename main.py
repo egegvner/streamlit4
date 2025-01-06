@@ -1068,7 +1068,7 @@ def admin_panel(conn):
                         c.execute("INSERT INTO marketplace_items (item_id, name, description, rarity, price, stock, boost_type, boost_value) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (item_id, name, description, rarity, price, stock, boost_type, boost_value))
                         conn.commit()
                     st.success("Item created!")
-                    time.sleep(2)
+                    time.sleep(1)
                     st.rerun()
                 else:
                     st.error("Duplicate item_id")
@@ -1083,10 +1083,6 @@ def admin_panel(conn):
         for _, row in edited_df.iterrows():
             c.execute("UPDATE OR IGNORE marketplace_items SET name = ?, description = ?, rarity = ?, price = ?, stock = ?, boost_type = ?, boost_value = ? WHERE item_id = ?", (row["Item Name"], row["Description"], row["Rarity"], row["Price"], row["Stock"], row["Boost Type"], row["Boost Value"], row["Item ID"]))
         conn.commit()
-        with st.spinner("Processing Changes..."):
-            time.sleep(2)
-        st.success("User data updated.")
-        time.sleep(1)
         st.rerun()
 
     item_id_to_delete = st.number_input("Enter Item ID to Delete", min_value = 0, step = 1)
