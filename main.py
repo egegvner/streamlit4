@@ -44,7 +44,6 @@ def verifyPass(hashed_password, entered_password):
 admins = [
     "egegvner",
     "believedreams",
-    "genova",
 ]
 
 def calculate_new_quota(c, user_id):
@@ -84,8 +83,6 @@ def check_and_reset_quota(conn, user_id):
         return new_quota
     return current_quota
 
-import datetime
-
 def apply_interest_if_due(conn, user_id):
     c = conn.cursor()
 
@@ -106,7 +103,7 @@ def apply_interest_if_due(conn, user_id):
 
     hours_fraction = seconds_passed / 3600
 
-    hourly_interest_rate = 0.005 / 24  
+    hourly_interest_rate = 0.005
 
     inventory_item_ids = c.execute("SELECT item_id FROM user_inventory WHERE user_id = ?", (user_id,)).fetchall()
     if inventory_item_ids:
