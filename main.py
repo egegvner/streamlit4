@@ -953,7 +953,7 @@ def savings_view(conn, user_id):
     st.text("")
 
     with st.container(border = True):
-        st.write(":green[%0.5] simple interest per **second.**")
+        st.write(":green[%0.5] simple interest per **minute.**")
     st.caption(":gray[HINT: Some items can boost your interest rate!]")
 
 def display_transaction_history(c, user_id):
