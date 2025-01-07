@@ -44,7 +44,6 @@ def verifyPass(hashed_password, entered_password):
 admins = [
     "egegvner",
     "believedreams",
-    "Stanley",
 ]
 
 def calculate_new_quota(c, user_id):
@@ -120,13 +119,11 @@ def apply_interest_if_due(conn, user_id):
 
     new_last_applied_time = last_applied_time + datetime.timedelta(seconds=seconds_passed)
 
-    # ✅ Log interest application into interest_history table
     c.execute("""
         INSERT INTO interest_history (user_id, interest_amount, new_balance)
         VALUES (?, ?, ?)
     """, (user_id, total_interest, new_balance))
 
-    # ✅ Update savings table
     c.execute("""
         UPDATE savings
         SET balance = ?, last_interest_applied = ?
@@ -134,7 +131,6 @@ def apply_interest_if_due(conn, user_id):
     """, (new_balance, new_last_applied_time.strftime("%Y-%m-%d %H:%M:%S"), user_id))
 
     conn.commit()
-
 
 def change_password(c, conn, username, current_password, new_password):
     c.execute("SELECT password FROM users WHERE username = ?", (username,))
@@ -246,6 +242,25 @@ def get_transaction_history(c, user_id):
 
     return sent_transactions, received_transactions
 
+def claim_daily_reward(conn, user_id):
+    c = conn.cursor()
+    last_claimed = c.execute("SELECT last_daily_reward_claimed FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+
+    if last_claimed:
+        last_claimed_date = datetime.datetime.strptime(last_claimed, "%Y-%m-%d")
+        if last_claimed_date.date() == datetime.datetime.today().date():
+            st.toast("You've already claimed your daily reward today!")
+        else:
+            streak = c.execute("SELECT login_streak FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+            new_streak = streak + 1 if last_claimed else 1
+            reward = 100 + (new_streak * 2)
+
+            c.execute("UPDATE users SET balance = balance + ?, last_daily_reward_claimed = ?, login_streak = ? WHERE user_id = ?", 
+                    (reward, datetime.datetime.today().strftime("%Y-%m-%d"), new_streak, user_id))
+            conn.commit()
+            
+            st.toast("🎉 You received ${reward} for logging in! (Streak: {new_streak})")
+
 def register_user(conn, c, username, password, email = None, visible_name = None):
     try:
 
@@ -292,7 +307,7 @@ def register_user(conn, c, username, password, email = None, visible_name = None
         return False
         
 def init_db():
-    conn = sqlite3.connect('eggggggggggg.db')
+    conn = sqlite3.connect('egggggggggggg.db')
     c = conn.cursor()
 
     c.execute('''CREATE TABLE IF NOT EXISTS users (
@@ -313,7 +328,9 @@ def init_db():
                   outgoing_transfers INTEGER DEFAULT 0,
                   total_transactions INTEGER DEFAULT 0,
                   last_transaction_time DATETIME DEFAULT NULL,
-                  email TEXT
+                  email TEXT,
+                  last_daily_reward_claimed TIMESTAMP DEFAULT NULL,
+                  login_streak INTEGER DEFAULT 0
                   )''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS transactions (
@@ -326,7 +343,7 @@ def init_db():
                   status TEXT DEFAULT None,
                   timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                   FOREIGN KEY (user_id) REFERENCES users(user_id),
-                  FOREIGN KEY ( receiver_username) REFERENCES users(username)
+                  FOREIGN KEY (receiver_username) REFERENCES users(username)
                   )''')
     
     c.execute('''CREATE TABLE IF NOT EXISTS savings (
@@ -335,8 +352,7 @@ def init_db():
               interest_rate REAL DEFAULT 0.05,
               last_interest_applied DATETIME DEFAULT CURRENT_TIMESTAMP,
               FOREIGN KEY (user_id ) REFERENCES users(user_id)
-              )
-              ''')
+              )''')
     
     c.execute('''CREATE TABLE IF NOT EXISTS marketplace_items (
               item_id INTEGER PRIMARY KEY NOT NULL,
@@ -348,8 +364,7 @@ def init_db():
               boost_type TEXT NOT NULL,
               boost_value REAL NOT NULL,
               duration INTEGER DEFAULT NULL
-              )
-              ''')
+              )''')
     
     c.execute('''CREATE TABLE IF NOT EXISTS user_inventory (
               instance_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -360,8 +375,7 @@ def init_db():
               expires_at TIMESTAMP DEFAULT NULL,
               FOREIGN KEY (user_id) REFERENCES users(user_id),
               FOREIGN KEY (item_id) REFERENCES marketplace_items(item_id)
-              )
-              ''')
+              )''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS interest_history (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -370,8 +384,7 @@ def init_db():
               new_balance REAL NOT NULL,
               timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
               FOREIGN KEY (user_id) REFERENCES users(user_id)
-              )
-              ''')
+              )''')
     
     c.execute('CREATE INDEX IF NOT EXISTS idx_user_id ON transactions(user_id)')
     c.execute('CREATE INDEX IF NOT EXISTS idx_timestamp ON transactions(timestamp)')
@@ -737,7 +750,6 @@ def item_options(conn, user_id, item_id):
     st.caption(f":gray[ID \a {item_data[5]}]")
 
 def leaderboard(c):
-    st.divider()
     st.header("🏆 Leaderboard")
     leaderboard_data = leaderboard_logic(c)
 
@@ -804,7 +816,6 @@ def marketplace_view(conn, user_id):
         st.divider()
 
 def inventory_view(conn, user_id):
-    st.divider()
     c = conn.cursor()
     st.header("Inventory", divider = "rainbow")
     owned_item_ids = [owned_item[0] for owned_item in c.execute("SELECT item_id FROM user_inventory WHERE user_id = ?", (user_id,)).fetchall()]
@@ -985,6 +996,57 @@ def savings_view(conn, user_id):
         st.write(":green[%0.05] simple interest per **minute.**")
     st.caption(":gray[HINT: Some items can boost your interest rate!]")
 
+def dashboard(conn, user_id):
+    c = conn.cursor()
+
+    st.header(f"Welcome, {st.session_state.username}!", divider="rainbow")
+    st.subheader("Daily Reward")
+    if st.button("🎁 \a\a\a Claim Reward \a\a\a 🎁", use_container_width = True):
+        claim_daily_reward(conn, user_id)
+
+    balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+    wallet_balance = c.execute("SELECT wallet FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+    savings_balance = c.execute("SELECT balance FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
+    quota = c.execute("SELECT deposit_quota FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+
+    for _ in range(4):
+        st.write("")
+
+    c1, c2, c3, c4 = st.columns(4)
+
+    with c1:
+        st.write("Wallet")
+        st.subheader(f":green[${format_currency(wallet_balance)}]")
+
+    with c2:
+        st.write("Vault")
+        st.subheader(f":green[${format_currency(balance)}]")
+
+    with c3:
+        st.write("Savings")
+        st.subheader(f":green[${format_currency(savings_balance)}]")
+
+    with c4:
+        st.write("Top Up Quota")
+        st.subheader(f":green[${format_currency(quota)}]")
+
+    st.header("", divider="rainbow")
+    st.subheader("📜 Recent Transactions")
+
+    transactions = c.execute("""
+        SELECT timestamp, type, amount, balance 
+        FROM transactions 
+        WHERE user_id = ? 
+        ORDER BY timestamp DESC 
+        LIMIT 5
+    """, (user_id,)).fetchall()
+
+    if transactions:
+        df = pd.DataFrame(transactions, columns=["Timestamp", "Type", "Amount", "New Balance"])
+        df["Timestamp"] = pd.to_datetime(df["Timestamp"])
+        st.dataframe(df.set_index("Timestamp"))
+    else:
+        st.info("No recent transactions.")
 
 def display_transaction_history(c, user_id):
     st.header("Transaction History", divider = "rainbow")
@@ -1075,7 +1137,6 @@ def display_transaction_history(c, user_id):
 
 def admin_panel(conn):
     c = conn.cursor()
-    st.divider()
     st.header("Marketplace Items", divider = "rainbow")
 
     with st.expander("New Item Creation"):
@@ -1266,9 +1327,6 @@ def settings(c, conn, username):
     st.button("Ege Güvener • © 2024", type = "tertiary", use_container_width = True, disabled = True)
 
 def main(conn):
-
-    st.title("Bank :red[Genova] ™", anchor = False)
-
     if 'current_menu' not in st.session_state:
         st.session_state.current_menu = "Deposit"
 
@@ -1281,6 +1339,8 @@ def main(conn):
         st.session_state.current_menu = "Dashboard"
 
     if not st.session_state.logged_in:
+        st.title("Bank :red[Genova] ™", anchor = False)
+
         login_option = st.radio("A", ["Login", "Register"], label_visibility="hidden")
         
         if login_option == "Login":
@@ -1384,7 +1444,7 @@ def main(conn):
 
 
         if st.session_state.current_menu == "Dashboard":
-            # dashboard(c, conn, st.session_state.user_id)
+            dashboard(conn, st.session_state.user_id)
             pass
 
         elif st.session_state.current_menu == "Leaderboard":
@@ -1424,5 +1484,5 @@ def main(conn):
                 admin_panel(conn)
 
 if __name__ == "__main__":
-    conn = sqlite3.connect('eggggggggggg.db')
+    conn = sqlite3.connect('egggggggggggg.db')
     main(conn)
