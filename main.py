@@ -44,7 +44,6 @@ def verifyPass(hashed_password, entered_password):
 admins = [
     "egegvner",
     "believedreams",
-    "genova",
 ]
 
 def calculate_new_quota(c, user_id):
@@ -103,7 +102,6 @@ def apply_interest_if_due(conn, user_id):
         return
 
     hours_fraction = seconds_passed / 60
-
     hourly_interest_rate = 0.0005
 
     inventory_item_ids = c.execute("SELECT item_id FROM user_inventory WHERE user_id = ?", (user_id,)).fetchall()
@@ -114,7 +112,6 @@ def apply_interest_if_due(conn, user_id):
                 FROM marketplace_items 
                 WHERE item_id = ? AND boost_type = 'interest_boost'
             """, (item_id,)).fetchall()
-
             hourly_interest_rate += sum(boost[0] for boost in boost_values)
 
     total_interest = balance * hourly_interest_rate * hours_fraction
@@ -122,6 +119,13 @@ def apply_interest_if_due(conn, user_id):
 
     new_last_applied_time = last_applied_time + datetime.timedelta(seconds=seconds_passed)
 
+    # ✅ Log interest application into interest_history table
+    c.execute("""
+        INSERT INTO interest_history (user_id, interest_amount, new_balance)
+        VALUES (?, ?, ?)
+    """, (user_id, total_interest, new_balance))
+
+    # ✅ Update savings table
     c.execute("""
         UPDATE savings
         SET balance = ?, last_interest_applied = ?
@@ -129,6 +133,7 @@ def apply_interest_if_due(conn, user_id):
     """, (new_balance, new_last_applied_time.strftime("%Y-%m-%d %H:%M:%S"), user_id))
 
     conn.commit()
+
 
 def change_password(c, conn, username, current_password, new_password):
     c.execute("SELECT password FROM users WHERE username = ?", (username,))
@@ -286,7 +291,7 @@ def register_user(conn, c, username, password, email = None, visible_name = None
         return False
         
 def init_db():
-    conn = sqlite3.connect('egggggggggg.db')
+    conn = sqlite3.connect('eggggggggggg.db')
     c = conn.cursor()
 
     c.execute('''CREATE TABLE IF NOT EXISTS users (
@@ -354,6 +359,16 @@ def init_db():
               expires_at TIMESTAMP DEFAULT NULL,
               FOREIGN KEY (user_id) REFERENCES users(user_id),
               FOREIGN KEY (item_id) REFERENCES marketplace_items(item_id)
+              )
+              ''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS interest_history (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              user_id INTEGER NOT NULL,
+              interest_amount REAL NOT NULL,
+              new_balance REAL NOT NULL,
+              timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (user_id) REFERENCES users(user_id)
               )
               ''')
     
@@ -918,53 +933,57 @@ def main_account_view(conn, user_id):
 def savings_view(conn, user_id):
     c = conn.cursor()
     apply_interest_if_due(conn, user_id)
-    check_and_reset_quota(conn, user_id)
     
     st.header("Savings", divider="rainbow")
-    
-    has_savings_account = c.execute("""
-        SELECT has_savings_account
-        FROM users
-        WHERE user_id = ?
-    """, (user_id,)).fetchone()[0]
-    
+
+    has_savings_account = c.execute("SELECT has_savings_account FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+
     if not has_savings_account:
-        if st.button("Set up a Savings Account (%0.5 Interest Rate) - Boostable", type="primary", use_container_width = True):
+        if st.button("Set up a Savings Account (%0.5 Interest Rate) - Boostable", type="primary", use_container_width=True):
             with st.spinner("Setting up a savings account for you..."):
-                c.execute("""
-                    UPDATE users
-                    SET has_savings_account = 1
-                    WHERE user_id = ?
-                """, (user_id,))
-                c.execute("""
-                    INSERT INTO savings (user_id, balance, interest_rate, last_interest_applied)
-                    VALUES (?, 0, 0.005, ?)
-                """, (user_id, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+                c.execute("UPDATE users SET has_savings_account = 1 WHERE user_id = ?", (user_id,))
+                c.execute("INSERT INTO savings (user_id, balance, interest_rate, last_interest_applied) VALUES (?, 0, 0.005, ?)", 
+                          (user_id, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
                 conn.commit()
                 time.sleep(2)
             st.rerun()
     else:
-        savings_balance = c.execute("""
-            SELECT balance
-            FROM savings
-            WHERE user_id = ?
-        """, (user_id,)).fetchone()[0]
+        savings_balance = c.execute("SELECT balance FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
         st.write(f"Savings Balance \a | \a :green[${format_currency(savings_balance)}]")
 
-        c1, c2, = st.columns(2)
-        if c1.button("Deposit", type = "primary", use_container_width = True):
+        c1, c2 = st.columns(2)
+        if c1.button("Deposit", type="primary", use_container_width=True):
             deposit_to_savings_dialog(conn, st.session_state.user_id)
 
-        if c2.button("Withdraw", type = "secondary", use_container_width = True, key = "a"):
+        if c2.button("Withdraw", type="secondary", use_container_width=True):
             withdraw_from_savings_dialog(conn, st.session_state.user_id)
-        if st.button("Refresh Savings Balance", use_container_width = True):
+        
+        if st.button("Refresh Savings Balance", use_container_width=True):
             apply_interest_if_due(conn, user_id)
-    st.text("")
-    st.text("")
 
-    with st.container(border = True):
+    st.text("")
+    st.text("")
+    
+    st.header("📜 Interest History", divider="rainbow")
+    interest_history = c.execute("""
+        SELECT timestamp, interest_amount, new_balance 
+        FROM interest_history 
+        WHERE user_id = ? 
+        ORDER BY timestamp DESC 
+        LIMIT 10
+    """, (user_id,)).fetchall()
+
+    if interest_history:
+        df = pd.DataFrame(interest_history, columns=["Timestamp", "Interest Earned", "New Balance"])
+        df["Timestamp"] = pd.to_datetime(df["Timestamp"])
+        st.dataframe(df.set_index("Timestamp"), use_container_width = True)
+    else:
+        st.info("No interest history available.")
+
+    with st.container(border=True):
         st.write(":green[%0.05] simple interest per **minute.**")
     st.caption(":gray[HINT: Some items can boost your interest rate!]")
+
 
 def display_transaction_history(c, user_id):
     st.header("Transaction History", divider = "rainbow")
@@ -1404,5 +1423,5 @@ def main(conn):
                 admin_panel(conn)
 
 if __name__ == "__main__":
-    conn = sqlite3.connect('egggggggggg.db')
+    conn = sqlite3.connect('eggggggggggg.db')
     main(conn)
