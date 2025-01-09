@@ -749,7 +749,7 @@ def inventory_item_options(conn, user_id, item_id):
         st.write(f":gray[EFFECT] \a $|$ \a {item_data[1]}")
     if st.button(f"Sell to Bank for **:green[${item_data[3]}]**", type = "primary", use_container_width = True):
         c.execute("DELETE FROM user_inventory WHERE item_id = ?", (item_id,))
-        c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (item_data[3], user_id))
+        c.execute("UPDATE users SET wallet = wallet + ? WHERE user_id = ?", (item_data[3], user_id))
         c.execute("UPDATE marketplace_items SET stock = stock + 1 WHERE item_id = ?", (item_id,))
         conn.commit()
         st.rerun()
@@ -777,7 +777,7 @@ def buy_item(conn, user_id, item_id):
             conn.commit()
 
             if item_data[3] == "quota_boost":
-                c.execute("UPDATE users set deposit_quota = + deposit_quota + ? WHERE user_id = ?"), (item_data[3], user_id)
+                c.execute("UPDATE users set deposit_quota = + deposit_quota + ? WHERE user_id = ?", (item_data[3], user_id))
                 conn.commit()
             elif item_data[3] == "interest_boost":
                 c.execute("UPDATE savings set interest_rate = + interest_rate + ?", (item_data[3], user_id))
@@ -1136,13 +1136,13 @@ def admin_panel(conn):
         with st.form(key= "q"):
             st.subheader("New Item Creation")
             item_id = st.text_input("Item ID", value = f"{random.randint(100000000, 999999999)}", disabled = True, help = "Item ID must be unique")
-            name = st.text_input("", label_visibility = "collapsed", placeholder = "Item  Name")
-            description = st.text_input("", label_visibility = "collapsed", placeholder = "Description")
-            rarity = st.selectbox("", label_visibility = "collapsed", placeholder = "Description", options = ["Common", "Uncommon", "Rare", "Epic", "Ultimate"])         
-            price = st.text_input("", label_visibility = "collapsed", placeholder = "Price")
-            stock = st.text_input("", label_visibility = "collapsed", placeholder = "Stock")
-            boost_type = st.text_input("", label_visibility = "collapsed", placeholder = "Boost Type")
-            boost_value = st.text_input("", label_visibility = "collapsed", placeholder = "Boost Value")
+            name = st.text_input("A", label_visibility = "collapsed", placeholder = "Item  Name")
+            description = st.text_input("A", label_visibility = "collapsed", placeholder = "Description")
+            rarity = st.selectbox("A", label_visibility = "collapsed", placeholder = "Description", options = ["Common", "Uncommon", "Rare", "Epic", "Ultimate"])         
+            price = st.text_input("A", label_visibility = "collapsed", placeholder = "Price")
+            stock = st.text_input("A", label_visibility = "collapsed", placeholder = "Stock")
+            boost_type = st.text_input("A", label_visibility = "collapsed", placeholder = "Boost Type")
+            boost_value = st.text_input("A", label_visibility = "collapsed", placeholder = "Boost Value")
             st.divider()
             
             if st.form_submit_button("Add Item", use_container_width = True):
