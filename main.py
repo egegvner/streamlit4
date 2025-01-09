@@ -20,7 +20,7 @@ st.set_page_config(
 
 @st.cache_resource
 def get_db_connection():
-    return sqlite3.connect("specialdb.db", check_same_thread = False)
+    return sqlite3.connect("egggggggggggg.db", check_same_thread = False)
 
 item_colors = {
         "Common":"",
