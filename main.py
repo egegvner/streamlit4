@@ -31,11 +31,11 @@ item_colors = {
         "Ultimate":":orange"
     }
 
-def format_currency(amount):
-   return "{:,.2f}".format(amount)
-
 # def format_currency(amount):
-#     return "{:,.2f}".format(amount).replace(",", "X").replace(".", ",").replace("X", ".")
+#     return "{:,.2f}".format(amount)
+
+def format_currency(amount):
+    return "{:,.2f}".format(amount).replace(",", "X").replace(".", ",").replace("X", ".")
 
 def hashPass(password):
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt())
