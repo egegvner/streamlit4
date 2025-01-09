@@ -1035,7 +1035,7 @@ def dashboard(conn, user_id):
 
     with c3:
         st.write("Savings")
-        st.subheader(f"{":red[Not Owned]" if not has_savings_account else f":green[${format_currency(savings_balance)}"}]")
+        st.subheader(f"{':red[Not Owned]' if not has_savings_account else f':green[${format_currency(savings_balance)}]'}")
 
     with c4:
         st.write("Top Up Quota")
