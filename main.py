@@ -770,17 +770,15 @@ def buy_item(conn, user_id, item_id):
                 WHERE item_id = ?
             """, (item_id,)).fetchone()[0]
             c.execute("UPDATE users SET wallet = wallet - ? WHERE user_id = ?", (price, user_id))
-            conn.commit()
             c.execute("INSERT INTO user_inventory (user_id, item_id, item_number) VALUES (?, ?, ?)", (user_id, item_id, next_item_number))
-            conn.commit()
             c.execute("UPDATE marketplace_items SET stock = stock - 1 WHERE item_id = ?", (item_id,))
             conn.commit()
 
             if item_data[3] == "quota_boost":
-                c.execute("UPDATE users set deposit_quota = + deposit_quota + ? WHERE user_id = ?", (item_data[3], user_id))
+                c.execute("UPDATE users set deposit_quota = deposit_quota + ? WHERE user_id = ?", (item_data[3], user_id))
                 conn.commit()
             elif item_data[3] == "interest_boost":
-                c.execute("UPDATE savings set interest_rate = + interest_rate + ? WHERE user_id = ?", (item_data[3], user_id))
+                c.execute("UPDATE savings set interest_rate = interest_rate + ? WHERE user_id = ?", (item_data[3], user_id))
                 conn.commit()
             time.sleep(1.5)
         st.success(f"Item purchased!")
@@ -984,9 +982,10 @@ def savings_view(conn, user_id):
     else:
         st.info("No interest history available.")
 
+    interest = c.execute("SELECT interest_rate from savings WHERE user_id = ?", (user_id,)).fetchone()[0]
     with st.container(border=True):
         
-        st.write(":green[%0.05] simple interest per **minute.**")
+        st.write(f":green[%{interest}] simple interest per **minute.**")
     st.caption(":gray[HINT: Some items can boost your interest rate!]")
 
 def dashboard(conn, user_id):
