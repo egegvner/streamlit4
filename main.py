@@ -93,7 +93,7 @@ def apply_interest_if_due(conn, user_id):
         return
 
     hours_fraction = seconds_passed / 60
-    hourly_interest_rate = 0.0005
+    hourly_interest_rate = c.execute("SELECT interest_rate FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
     total_interest = balance * hourly_interest_rate * hours_fraction
     new_balance = balance + total_interest
