@@ -1168,7 +1168,6 @@ def admin_panel(conn):
         conn.commit()
         with st.spinner("Processing Changes..."):
             time.sleep(2)
-        st.success("User data updated.")
         time.sleep(1)
         st.rerun()
 
@@ -1217,7 +1216,7 @@ def admin_panel(conn):
 
         if transactions:
             df = pd.DataFrame(transactions, columns = ["Transaction ID", "User ID", "Type", "Amount", "Balance", "To Username", "Status", "Timestamp"])
-            edited_df = st.data_editor(df, key = "transaction_editor", num_rows = "fixed", use_container_width = True, hide_index = False)
+            edited_df = st.data_editor(df, key = "transaction_table", num_rows = "fixed", use_container_width = True, hide_index = False)
             
             if st.button("Update Transaction(s)", use_container_width = True):
                 for _, row in edited_df.iterrows():
@@ -1250,7 +1249,7 @@ def admin_panel(conn):
     with st.spinner("Loading User Data"):
         userData = c.execute("SELECT user_id, username, level, visible_name, password, balance, wallet, has_savings_account, deposit_quota, last_quota_reset, suspension, deposits, withdraws, incoming_transfers, outgoing_transfers, total_transactions, last_transaction_time, email FROM users").fetchall()
     df = pd.DataFrame(userData, columns = ["User ID", "Username", "Level", "Visible Name", "Pass", "Balance", "Wallet", "Has Savings Account", "Deposit Quota", "Last Quota Reset", "Suspension", "Deposits", "Withdraws", "Transfers Received", "Transfers Sent", "Total Transactions", "Last Transaction Time", "Email"])
-    edited_df = st.data_editor(df, key = "edit_table", num_rows = "fixed", use_container_width = True, hide_index = False)
+    edited_df = st.data_editor(df, key = "users_table", num_rows = "fixed", use_container_width = True, hide_index = False)
 
     for _ in range(4):
         st.text("")
@@ -1259,14 +1258,13 @@ def admin_panel(conn):
         for _, row in edited_df.iterrows():
             c.execute("UPDATE OR IGNORE users SET username = ?, level = ?, visible_name = ?, password = ?, balance = ?, wallet = ?, has_savings_account = ?, deposit_quota = ?, last_quota_reset = ?, suspension = ?, deposits = ?, withdraws = ?, incoming_transfers = ?, outgoing_transfers = ?, total_transactions = ?, last_transaction_time = ?, email = ? WHERE user_id = ?", (row["Username"], row["Level"], row["Visible Name"], row["Pass"], row["Balance"], row["Wallet"], row["Has Savings Account"], row["Deposit Quota"], row["Last Quota Reset"], row["Suspension"], row["Deposits"], row["Withdraws"], row["Transfers Received"], row["Transfers Sent"], row["Total Transactions"], row["Last Transaction Time"], row["Email"], row["User ID"]))
         conn.commit()
-        st.success("User data updated.")
         st.rerun()
 
     st.header("Savings Data", divider = "rainbow")
     with st.spinner("Loading User Data"):
         savings_data = c.execute("SELECT user_id, balance, interest_rate, last_interest_applied FROM savings").fetchall()
     df = pd.DataFrame(savings_data, columns = ["User ID", "Balance", "Interest Rate", "Last Interest Applied"])
-    edited_df = st.data_editor(df, key = "edit_table2", num_rows = "fixed", use_container_width = True, hide_index = False)
+    edited_df = st.data_editor(df, key = "savings_table", num_rows = "fixed", use_container_width = True, hide_index = False)
 
     for _ in range(4):
         st.text("")
@@ -1275,7 +1273,6 @@ def admin_panel(conn):
         for _, row in edited_df.iterrows():
             c.execute("UPDATE OR IGNORE savings SET balance = ?, interest_rate = ?, last_interest_applied = ? WHERE user_id = ?", (row["Balance"], row["Interest Rate"], row["Last Interest Applied"], row["User ID"]))
         conn.commit()
-        st.success("User data updated.")
         st.rerun()
 
     temp_user_id_to_delete_savings = st.number_input("Enter User ID to Delete Savings", min_value = 0)
