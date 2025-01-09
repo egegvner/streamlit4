@@ -758,7 +758,7 @@ def buy_item(conn, user_id, item_id):
     c = conn.cursor()
 
     item_data = c.execute("SELECT name, price, stock, boost_type, boost_value FROM marketplace_items WHERE item_id = ?", (item_id,)).fetchone()
-    name, price, stock = item_data
+    name, price, stock = item_data[0], item_data[1], item_data[2]
     if not price:
         st.toast("Item not found.")
         
