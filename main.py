@@ -777,7 +777,7 @@ def buy_item(conn, user_id, item_id):
             if item_data[3] == "quota_boost":
                 c.execute("UPDATE users SET deposit_quota = deposit_quota + ? WHERE user_id = ?", (item_data[4], user_id))
                 conn.commit()
-            if "interest" in item_data[3]:
+            if item_data[3] == "interest_boost":
                 c.execute("UPDATE savings SET interest_rate = interest_rate + ? WHERE user_id = ?", (item_data[4], user_id))
                 conn.commit()
             time.sleep(1.5)
