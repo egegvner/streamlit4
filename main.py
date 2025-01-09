@@ -18,6 +18,10 @@ st.set_page_config(
     initial_sidebar_state = "expanded"
 )
 
+@st.cache_resource
+def get_db_connection():
+    return sqlite3.connect("specialdb.db", check_same_thread = False)
+
 item_colors = {
         "Common":"",
         "Uncommon":":green",
@@ -43,8 +47,6 @@ def verifyPass(hashed_password, entered_password):
 
 admins = [
     "egegvner",
-    "believedreams",
-    ["daviddddd"]
 ]
 
 def calculate_new_quota(c, user_id):
@@ -247,20 +249,28 @@ def claim_daily_reward(conn, user_id):
     c = conn.cursor()
     last_claimed = c.execute("SELECT last_daily_reward_claimed FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
+    # Handle first-time claim
     if last_claimed:
-        last_claimed_date = datetime.datetime.strptime(last_claimed, "%Y-%m-%d")
-        if last_claimed_date.date() == datetime.datetime.today().date():
-            st.toast("You've already claimed your daily reward today!")
-        else:
-            streak = c.execute("SELECT login_streak FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
-            new_streak = streak + 1 if last_claimed else 1
-            reward = 100 + (new_streak * 2)
+        last_claimed_date = datetime.datetime.strptime(last_claimed, "%Y-%m-%d").date()
+    else:
+        last_claimed_date = None
 
-            c.execute("UPDATE users SET balance = balance + ?, last_daily_reward_claimed = ?, login_streak = ? WHERE user_id = ?", 
-                    (reward, datetime.datetime.today().strftime("%Y-%m-%d"), new_streak, user_id))
-            conn.commit()
-            
-            st.toast("🎉 You received ${reward} for logging in! (Streak: {new_streak})")
+    today = datetime.datetime.today().date()
+
+    if last_claimed_date == today:
+        st.toast("❌ You've already claimed your daily reward today!")
+    else:
+        streak = c.execute("SELECT login_streak FROM users WHERE user_id = ?", (user_id,)).fetchone()[0] or 0
+
+        new_streak = streak + 1 if last_claimed_date else 1
+        reward = 100 + (new_streak * 2)
+
+        c.execute("UPDATE users SET balance = balance + ?, last_daily_reward_claimed = ?, login_streak = ? WHERE user_id = ?", 
+                  (reward, today.strftime("%Y-%m-%d"), new_streak, user_id))
+        conn.commit()
+
+        st.toast(f"🎉 You received ${reward} for logging in! (Streak: {new_streak})")
+
 
 def register_user(conn, c, username, password, email = None, visible_name = None):
     try:
@@ -297,9 +307,7 @@ def register_user(conn, c, username, password, email = None, visible_name = None
         st.session_state.user_id = user_id_to_be_registered
         st.session_state.username = username
         time.sleep(2)
-
-        st.session_state.current_menu = "Main Account View"
-
+        
     except sqlite3.IntegrityError:
         st.error("Username already exists!")
         return False
@@ -308,7 +316,7 @@ def register_user(conn, c, username, password, email = None, visible_name = None
         return False
         
 def init_db():
-    conn = sqlite3.connect('egggggggggggg.db')
+    conn = get_db_connection()
     c = conn.cursor()
 
     c.execute('''CREATE TABLE IF NOT EXISTS users (
@@ -410,7 +418,7 @@ def deposit_dialog(conn, user_id):
     if "quota" not in st.session_state:
         st.session_state.quota = c.execute("SELECT deposit_quota FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
-    st.write(f"# Main Balance \a **•** \a :green[${format_currency(current_balance)}]")
+    st.write(f"# Main Balance   **•**  :green[${format_currency(current_balance)}]")
     st.header("", divider = "rainbow")
     
     c1, c2, c3, c4 = st.columns(4)
@@ -428,7 +436,7 @@ def deposit_dialog(conn, user_id):
         st.session_state.amount = st.session_state.top_up_value
 
     c1, c2 = st.columns(2)
-    c1.write(f"Top Up Quota \a $|$ \a :green[${format_currency(st.session_state.quota)}]")
+    c1.write(f"Top Up Quota   $|$   :green[${format_currency(st.session_state.quota)}]")
     if c2.button("Reload Quota", type = "primary", use_container_width = True):
         st.session_state.quota = c.execute("SELECT deposit_quota FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
         
@@ -438,8 +446,8 @@ def deposit_dialog(conn, user_id):
     tax = (amount / 100) * 0.5
     net = amount - tax
 
-    st.write(f"Net Deposit \a $|$ \a :green[${format_currency(net)}] \a $|$ \a :red[${format_currency(tax)} Tax*]")
-    st.write(f"New Main Balance \a $|$ \a :green[${format_currency(current_balance + amount - tax)}]")
+    st.write(f"Net Deposit   $|$   :green[${format_currency(net)}]   $|$   :red[${format_currency(tax)} Tax*]")
+    st.write(f"New Main Balance   $|$   :green[${format_currency(current_balance + amount - tax)}]")
     
     if st.button("**Confirm Top Up**", type = "primary", use_container_width = True, disabled = True if amount <= 0 else False):
         if check_cooldown(c, user_id):
@@ -473,7 +481,7 @@ def withdraw_dialog(conn, user_id):
     if "withdraw_value" not in st.session_state:
         st.session_state.withdraw_value = 0.00
 
-    st.write(f"# Balance \a **•** \a :green[${format_currency(current_balance)}]")
+    st.write(f"# Balance   **•**   :green[${format_currency(current_balance)}]")
     st.header("", divider = "rainbow")
     
     c1, c2, c3, c4 = st.columns(4)
@@ -490,9 +498,9 @@ def withdraw_dialog(conn, user_id):
     st.divider()
     tax = (amount / 100) * 0.5
     net = amount - tax
-    st.write(f"Net Withdraw \a $|$ \a :green[{format_currency(net)}] \a $|$ \a :red[${format_currency(tax)} Tax*]")
+    st.write(f"Net Withdraw   $|$   :green[{format_currency(net)}]   $|$   :red[${format_currency(tax)} Tax*]")
     c1, c2 = st.columns(2)
-    c1.write(f"Remaining Balance \a $|$ \a :green[${format_currency(current_balance - amount)}]")
+    c1.write(f"Remaining Balance   $|$   :green[${format_currency(current_balance - amount)}]")
     if (current_balance - amount) < 0:
         c2.write("**:red[Insufficent]**")
 
@@ -602,9 +610,9 @@ def deposit_to_savings_dialog(conn, user_id):
     main_balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     wallet_balance = c.execute("SELECT wallet FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
-    st.header(f"Savings \a **•** \a :green[${format_currency(current_savings)}]", divider = "rainbow")
+    st.header(f"Savings   **•**   :green[${format_currency(current_savings)}]", divider = "rainbow")
     st.write("#### Deposit Source")
-    st.session_state.deposit_source = st.radio("A", label_visibility = "collapsed", options = [f"Main Account \a • \a :green[${format_currency(main_balance)}]", f"Wallet \a • \a :green[${format_currency(wallet_balance)}]"])
+    st.session_state.deposit_source = st.radio("A", label_visibility = "collapsed", options = [f"Main Account   •   :green[${format_currency(main_balance)}]", f"Wallet   •   :green[${format_currency(wallet_balance)}]"])
 
     max_value = main_balance if "Main" in st.session_state.deposit_source else wallet_balance
 
@@ -627,8 +635,8 @@ def deposit_to_savings_dialog(conn, user_id):
     net = amount - tax
 
     st.divider()
-    st.write(f"Net Deposit \a $|$ \a :green[${format_currency(net)}] \a $|$ \a :red[${format_currency(tax)} Tax]")
-    st.write(f"New Savings \a $|$ \a :green[${format_currency(current_savings + net)}]")
+    st.write(f"Net Deposit   $|$   :green[${format_currency(net)}]   $|$   :red[${format_currency(tax)} Tax]")
+    st.write(f"New Savings   $|$   :green[${format_currency(current_savings + net)}]")
     if st.button("Confirm Deposition From Main Account" if "Main" in st.session_state.deposit_source else "Confirm Deposition From Wallet", type="primary", use_container_width = True, disabled = True if amount <= 0.00 else False):
         if check_cooldown(c, user_id):
             if "Main" in st.session_state.deposit_source:
@@ -680,9 +688,9 @@ def withdraw_from_savings_dialog(conn, user_id):
     main_balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     wallet_balance = c.execute("SELECT wallet FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
-    st.header(f"Savings \a **•** \a :green[${format_currency(current_savings)}]", divider = "rainbow")
+    st.header(f"Savings   **•**   :green[${format_currency(current_savings)}]", divider = "rainbow")
     st.write("**Target**")
-    st.session_state.withdraw_target = st.radio("A", label_visibility = "collapsed", options = [f"Main Account \a • \a :green[${format_currency(main_balance)}]", f"Wallet \a • \a :green[${format_currency(wallet_balance)}]"])
+    st.session_state.withdraw_target = st.radio("A", label_visibility = "collapsed", options = [f"Main Account   •   :green[${format_currency(main_balance)}]", f"Wallet   •   :green[${format_currency(wallet_balance)}]"])
     
     c1, c2, c3, c4 = st.columns(4)
 
@@ -731,16 +739,16 @@ def item_options(conn, user_id, item_id):
     owned_item_ids = [item_id[0] for item_id in c.execute("SELECT item_id FROM user_inventory WHERE user_id = ?", (user_id,)).fetchall()]
     item_data = c.execute("SELECT name, description, rarity, price, stock, item_id FROM marketplace_items WHERE item_id = ?", (item_id,)).fetchall()[0]
     wallet_balance = c.execute("SELECT wallet FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
-    st.header(f"{item_colors[item_data[2]]}[{item_data[0]}] :gray[\a **•** \a {item_data[2].upper()}]", divider = "rainbow")
+    st.header(f"{item_colors[item_data[2]]}[{item_data[0]}] :gray[  **•**   {item_data[2].upper()}]", divider = "rainbow")
     st.text("")
     st.text("")
     with st.container(border=True):
-        st.write(f"**:gray[EFFECT \a $|$ \a ]** {item_data[1]}.")
-        st.write(f"**:gray[PRICE \a $|$ \a ]** :green[${format_currency(item_data[3])}]")
-        st.write(f"**:gray[STOCK \a $|$ \a ]** :green[{item_data[4]}]")
+        st.write(f"**:gray[EFFECT   $|$   ]** {item_data[1]}.")
+        st.write(f"**:gray[PRICE   $|$   ]** :green[${format_currency(item_data[3])}]")
+        st.write(f"**:gray[STOCK   $|$   ]** :green[{item_data[4]}]")
 
     st.divider()
-    st.write(f"Wallet \a **•** \a :green[${format_currency(wallet_balance)}] \a **•** \a :red[INSUFFICENT]" if wallet_balance < item_data[3] else f"Wallet \a **•** \a :green[${format_currency(wallet_balance)}]")
+    st.write(f"Wallet   **•**   :green[${format_currency(wallet_balance)}]   **•**   :red[INSUFFICENT]" if wallet_balance < item_data[3] else f"Wallet   **•**   :green[${format_currency(wallet_balance)}]")
     if item_id in owned_item_ids:
         st.warning("You already own this item.")
     c1, c2 = st.columns(2)
@@ -748,7 +756,7 @@ def item_options(conn, user_id, item_id):
         st.rerun()
     if c2.button(f"**Pay :green[${format_currency(item_data[3])}] With Wallet**", type = "primary", use_container_width = True, disabled = True if wallet_balance < item_data[3] or item_id in owned_item_ids else False):
         buy_item(conn, user_id, item_id)
-    st.caption(f":gray[ID \a {item_data[5]}]")
+    st.caption(f":gray[ID   {item_data[5]}]")
 
 def leaderboard(c):
     st.header("🏆 Leaderboard")
@@ -763,11 +771,11 @@ def leaderboard(c):
 def inventory_item_options(conn, user_id, item_id):
     c = conn.cursor()
     item_data = c.execute("SELECT name, description, rarity, price FROM marketplace_items WHERE item_id = ?", (item_id,)).fetchone()
-    st.header(f"{item_colors[item_data[2]]}[{item_data[0]}] \a **•** \a :gray[{item_data[2].upper()}]", divider = "rainbow")
+    st.header(f"{item_colors[item_data[2]]}[{item_data[0]}]   **•**   :gray[{item_data[2].upper()}]", divider = "rainbow")
     with st.container(border = True):
-        st.write(f":gray[EFFECT] \a $|$ \a {item_data[1]}")
-        st.write(f":gray[BOUGHT FOR] \a $|$ \a :green[${item_data[3]}]")
-        st.write(f":gray[EFFECT] \a $|$ \a {item_data[1]}")
+        st.write(f":gray[EFFECT]   $|$   {item_data[1]}")
+        st.write(f":gray[BOUGHT FOR]   $|$   :green[${item_data[3]}]")
+        st.write(f":gray[EFFECT]   $|$   {item_data[1]}")
     if st.button(f"Sell to Bank for **:green[${item_data[3]}]**", type = "primary", use_container_width = True):
         c.execute("DELETE FROM user_inventory WHERE item_id = ?", (item_id,))
         c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (item_data[3], user_id))
@@ -810,7 +818,7 @@ def marketplace_view(conn, user_id):
     st.header("Marketplace", divider = "rainbow")
     for item in items:
         st.write(f"#### **{item_colors[item[3]]}[{item[1]}]**")
-        st.write(f":gray[{item[3].upper()}] \a • \a {item[2]}")
+        st.write(f":gray[{item[3].upper()}]   •   {item[2]}")
         st.write(f":green[${format_currency(item[4])}]")
         if st.button(f"Options", key = f"buy_{item[0]}", use_container_width = True):
             item_options(conn, user_id, item[0])
@@ -826,12 +834,12 @@ def inventory_view(conn, user_id):
     if owned_item_ids:
         for id in owned_item_ids:
             name, description, rarity = c.execute("SELECT name, description, rarity FROM marketplace_items WHERE item_id = ?", (id,)).fetchall()[0]
-            st.write(f"#### {item_colors[rarity]}[{name}] \a :gray[#{item_numbers[counter][0]}]")
+            st.write(f"#### {item_colors[rarity]}[{name}]   :gray[#{item_numbers[counter][0]}]")
             st.caption(rarity.upper())
             st.write(description)
             if st.button("**OPTIONS**", use_container_width = True, key = id):
                 inventory_item_options(conn, user_id, id)
-            st.caption(f"Acquired \a **•** \a {acquired[counter][0]}")
+            st.caption(f"Acquired   **•**   {acquired[counter][0]}")
             st.divider()
             counter += 1
     else:
@@ -856,7 +864,7 @@ def manage_pending_transfers(c, conn, receiver_id):
         tax = (amount / 100) * 0.5
         net = amount - tax
 
-        st.write(f"💸 \a | \a **{sender_username}** wants to transfer :green[${format_currency(amount)}]. You will receive :green[${format_currency(net)}]. :red[(%0.5 tax.)]")
+        st.write(f"💸   |   **{sender_username}** wants to transfer :green[${format_currency(amount)}]. You will receive :green[${format_currency(net)}]. :red[(%0.5 tax.)]")
         c1, c2 = st.columns(2)
 
         if c1.button(f"Accept", type = "primary", use_container_width = True, key = transaction_id):
@@ -891,7 +899,7 @@ def main_account_view(conn, user_id):
     current_balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
     st.header("Main Account", divider="rainbow")
-    st.write(f"Current Balance \a | \a :green[${current_balance:.2f}]")
+    st.write(f"Current Balance   |   :green[${current_balance:.2f}]")
 
     col1, col2 = st.columns(2)
     if col1.button("Top Up", type = "primary", use_container_width = True):
@@ -931,7 +939,7 @@ def main_account_view(conn, user_id):
     c2.metric("Withdrawals", withdrawals)
     c3.metric("Incoming Transfers", incoming)
     c4.metric("Outgoing Transfers", outgoing)
-    st.write(f"Total Transactions \a | \a :green[{total_transactions}]")
+    st.write(f"Total Transactions   |   :green[{total_transactions}]")
 
     st.divider()
     st.subheader("Balance Trend")
@@ -952,7 +960,7 @@ def savings_view(conn, user_id):
     has_savings_account = c.execute("SELECT has_savings_account FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
     if not has_savings_account:
-        if st.button("Set up a Savings Account (%0.5 Interest Rate) - Boostable", type="primary", use_container_width=True):
+        if st.button("Set up a Savings Account (%0.05 Interest Rate Per Minute) - Boostable", type="primary", use_container_width=True):
             with st.spinner("Setting up a savings account for you..."):
                 c.execute("UPDATE users SET has_savings_account = 1 WHERE user_id = ?", (user_id,))
                 c.execute("INSERT INTO savings (user_id, balance, interest_rate, last_interest_applied) VALUES (?, 0, 0.005, ?)", 
@@ -962,7 +970,7 @@ def savings_view(conn, user_id):
             st.rerun()
     else:
         savings_balance = c.execute("SELECT balance FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
-        st.write(f"Savings Balance \a | \a :green[${format_currency(savings_balance)}]")
+        st.write(f"Savings Balance   |   :green[${format_currency(savings_balance)}]")
 
         c1, c2 = st.columns(2)
         if c1.button("Deposit", type="primary", use_container_width=True):
@@ -1002,12 +1010,14 @@ def dashboard(conn, user_id):
 
     st.header(f"Welcome, {st.session_state.username}!", divider="rainbow")
     st.subheader("Daily Reward")
-    if st.button("🎁 \a\a\a Claim Reward \a\a\a 🎁", use_container_width = True):
+    if st.button("🎁     Claim Reward     🎁", use_container_width = True):
         claim_daily_reward(conn, user_id)
 
     balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     wallet_balance = c.execute("SELECT wallet FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
-    savings_balance = c.execute("SELECT balance FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
+    has_savings_account = c.execute("SELECT has_savings_account FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+    if has_savings_account:
+        savings_balance = c.execute("SELECT balance FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
     quota = c.execute("SELECT deposit_quota FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
     for _ in range(4):
@@ -1025,7 +1035,7 @@ def dashboard(conn, user_id):
 
     with c3:
         st.write("Savings")
-        st.subheader(f":green[${format_currency(savings_balance)}]")
+        st.subheader(f"{":red[Not Owned]" if not has_savings_account else f":green[${format_currency(savings_balance)}"}]")
 
     with c4:
         st.write("Top Up Quota")
@@ -1071,63 +1081,63 @@ def display_transaction_history(c, user_id):
 
             if t_type == "Top Up":
                 st.success(f"Top Up", icon="💵")
-                st.write(f"**Amount** \a $|$ \a :green[+${format_currency(amount)}]")
-                st.write(f"New Main Balance \a $|$ \a :green[+${format_currency(balance)}]")
+                st.write(f"**Amount**   $|$   :green[+${format_currency(amount)}]")
+                st.write(f"New Main Balance   $|$   :green[+${format_currency(balance)}]")
                 st.text("")
                 st.text("")
                 st.caption(timestamp)
 
             elif t_type == "Withdraw From Main Account To Wallet":
                 st.warning(f"{t_type}", icon="💵")
-                st.write(f"Amount \a $|$ \a :red[-${format_currency(amount)}]")
-                st.write(f"New Balance \a $|$ \a :red[${format_currency(balance)}]")
+                st.write(f"Amount   $|$   :red[-${format_currency(amount)}]")
+                st.write(f"New Balance   $|$   :red[${format_currency(balance)}]")
                 st.text("")
                 st.text("")
                 st.caption(timestamp)
 
             elif t_type == "Withdraw From Main Account To Savings":
                 st.warning(f"{t_type}", icon="💵")
-                st.write(f"Amount \a | \a :red[-${format_currency(amount)}]")
-                st.write(f"New Balance \a $|$ \a :red[${format_currency(balance)}]")
+                st.write(f"Amount   |   :red[-${format_currency(amount)}]")
+                st.write(f"New Balance   $|$   :red[${format_currency(balance)}]")
                 st.text("")
                 st.text("")
                 st.caption(timestamp)
 
             elif role == "sent" and "transfer to" in t_type.lower():
                 st.info(f"{t_type.title()} { receiver_username} $|$ (Status: **{status.capitalize()}**)", icon="💸")
-                st.write(f"Amount \a $|$ \a :red[-${format_currency(amount)}]")
-                st.write(f"New Balance \a $|$ \a :red[${format_currency(balance)}]")
+                st.write(f"Amount   $|$   :red[-${format_currency(amount)}]")
+                st.write(f"New Balance   $|$   :red[${format_currency(balance)}]")
                 st.text("")
                 st.text("")
                 st.caption(timestamp)
 
             elif role == "received" and "transfer from" in t_type.lower():
                 st.info(f"{t_type.title()} {from_username} $|$ (Status: **{status.capitalize()}**)", icon="💸")
-                st.write(f"Amount \a $|$ \a :green[+${format_currency(amount)}]")
-                st.write(f"New Balance \a $|$ \a :green[${format_currency(balance)}]")
+                st.write(f"Amount   $|$   :green[+${format_currency(amount)}]")
+                st.write(f"New Balance   $|$   :green[${format_currency(balance)}]")
                 st.text("")
                 st.text("")
                 st.caption(timestamp)
 
             elif t_type.lower().startswith("deposit to savings"):
                 st.info(f"{t_type.title()}", icon="🏦")
-                st.write(f"Amount \a $|$ \a :green[+${format_currency(amount)}]")
-                st.write(f"New Savings Balance \a $|$ \a :green[${format_currency(balance)}]")
+                st.write(f"Amount   $|$   :green[+${format_currency(amount)}]")
+                st.write(f"New Savings Balance   $|$   :green[${format_currency(balance)}]")
                 st.text("")
                 st.text("")
                 st.caption(timestamp)
 
             elif t_type.lower().startswith("withdraw to"):
                 st.warning(f"{t_type.title()}", icon="🏧")
-                st.write(f"Amount \a $|$ \a :red[-${format_currency(amount)}]")
-                st.write(f"Remaining Balance \a $|$ \a :green[${format_currency(balance)}]")
+                st.write(f"Amount   $|$   :red[-${format_currency(amount)}]")
+                st.write(f"Remaining Balance   $|$   :green[${format_currency(balance)}]")
                 st.text("")
                 st.text("")
                 st.caption(timestamp)
             else:
                 st.warning(f"Other Transaction $|$ (Status: {status})")
-                st.write(f"Amount \a $|$ \a ${format_currency(amount)}")
-                st.write(f"Balance \a $|$ \a ${format_currency(balance)}")
+                st.write(f"Amount   $|$   ${format_currency(amount)}")
+                st.write(f"Balance   $|$   ${format_currency(balance)}")
                 st.text("")
                 st.text("")                
                 st.caption(timestamp)
@@ -1363,7 +1373,7 @@ def main(conn):
                             st.session_state.username = username
                             time.sleep(1)
                             
-                    time.sleep(4)
+                    time.sleep(2)
                     st.rerun()
                 else:
                     st.error("Invalid username or password")
@@ -1400,7 +1410,7 @@ def main(conn):
         
         with st.sidebar:
             wallet = c.execute('SELECT wallet FROM users WHERE user_id = ?', (st.session_state.user_id,)).fetchone()[0]
-            st.sidebar.write(f"Wallet \a | \a :green[${format_currency(wallet)}]")
+            st.sidebar.write(f"Wallet   |   :green[${format_currency(wallet)}]")
             st.sidebar.header(" ", divider = "rainbow")
 
             c1, c2 = st.sidebar.columns(2)
@@ -1484,6 +1494,15 @@ def main(conn):
         elif st.session_state.current_menu == "Admin Panel":
                 admin_panel(conn)
 
+def add_column_if_not_exists(conn):
+    c = conn.cursor()
+
+    c.execute("PRAGMA table_info(users);")
+    columns = [column[1] for column in c.fetchall()]
+
+    conn.commit()
+
 if __name__ == "__main__":
-    conn = sqlite3.connect('egggggggggggg.db')
+    conn = get_db_connection()
+    add_column_if_not_exists(conn)
     main(conn)
