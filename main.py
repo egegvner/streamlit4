@@ -983,6 +983,9 @@ def savings_view(conn, user_id):
             apply_interest_if_due(conn, user_id)
 
     st.text("")
+    with st.container(border=True):
+        st.write(":green[%0.05] simple interest per **minute.**")
+    st.caption(":gray[HINT: Some items can boost your interest rate!]")
     st.text("")
     
     st.header("📜 Interest History", divider="rainbow")
@@ -1000,10 +1003,6 @@ def savings_view(conn, user_id):
         st.dataframe(df.set_index("Timestamp"), use_container_width = True)
     else:
         st.info("No interest history available.")
-
-    with st.container(border=True):
-        st.write(":green[%0.05] simple interest per **minute.**")
-    st.caption(":gray[HINT: Some items can boost your interest rate!]")
 
 def dashboard(conn, user_id):
     c = conn.cursor()
