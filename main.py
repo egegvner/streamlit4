@@ -1054,7 +1054,8 @@ def dashboard(conn, user_id):
     if transactions:
         df = pd.DataFrame(transactions, columns=["Timestamp", "Type", "Amount", "New Balance"])
         df["Timestamp"] = pd.to_datetime(df["Timestamp"])
-        st.dataframe(df.set_index("Timestamp"))
+        st.dataframe(df.set_index("Timestamp"), use_container_width = True)
+
     else:
         st.info("No recent transactions.")
 
