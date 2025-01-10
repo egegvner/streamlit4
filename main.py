@@ -10,6 +10,7 @@ import pandas as pd
 import datetime
 import re
 import bcrypt
+from streamlit_autorefresh import st_autorefresh
 
 st.set_page_config(
     page_title = "Bank Genova",
@@ -242,6 +243,11 @@ def claim_daily_reward(conn, user_id):
             
             st.toast("🎉 You received ${reward} for logging in! (Streak: {new_streak})")
 
+def get_latest_message_time(conn):
+    c = conn.cursor()
+    latest = c.execute("SELECT MAX(timestamp) FROM chats").fetchone()[0]
+    return latest
+
 def register_user(conn, c, username, password, email = None, visible_name = None):
     try:
 
@@ -366,6 +372,14 @@ def init_db():
               timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
               FOREIGN KEY (user_id) REFERENCES users(user_id)
               )''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS chats (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            message TEXT NOT NULL,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(user_id)
+            )''')
     
     c.execute('CREATE INDEX IF NOT EXISTS idx_user_id ON transactions(user_id)')
     c.execute('CREATE INDEX IF NOT EXISTS idx_timestamp ON transactions(timestamp)')
@@ -1041,6 +1055,23 @@ def dashboard(conn, user_id):
     else:
         st.info("No recent transactions.")
 
+def chat_view(conn):
+    last_checked = st.session_state.get("last_chat_time", None)
+    latest_message_time = get_latest_message_time(conn)
+
+    if last_checked and latest_message_time and latest_message_time > last_checked:
+        st.rerun()
+
+    st.session_state.last_chat_time = latest_message_time
+
+    # Chat UI (Text input & Send button)
+    new_message = st.text_input("Type a message...")
+    if st.button("Send"):
+        c = conn.cursor()
+        c.execute("INSERT INTO chats (user_id, message, timestamp) VALUES (?, ?, CURRENT_TIMESTAMP)", (st.session_state.user_id, new_message))
+        conn.commit()
+        st.rerun()  # Rerun immediately after sending
+
 def display_transaction_history(c, user_id):
     st.header("Transaction History", divider = "rainbow")
 
@@ -1088,7 +1119,7 @@ def display_transaction_history(c, user_id):
             elif role == "sent" and "transfer to" in t_type.lower():
                 st.info(f"{t_type.title()} { receiver_username} $|$ (Status: **{status.capitalize()}**)", icon="💸")
                 st.write(f"Amount   $|$   :red[-${format_currency(amount)}]")
-                st.write(f"New Balance   $|$   :red[${format_currency(balance)}]")
+                st.write(f"New Balance   $|$   :red[${format_currency(int(balance))}]")
                 st.text("")
                 st.text("")
                 st.caption(timestamp)
