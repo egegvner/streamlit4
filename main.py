@@ -19,6 +19,10 @@ st.set_page_config(
     initial_sidebar_state = "expanded"
 )
 
+@st.cache_resource
+def get_db_connection():
+    return sqlite3.connect("egggggggggggg.db", check_same_thread = False)
+
 item_colors = {
         "Common":"",
         "Uncommon":":green",
@@ -297,7 +301,7 @@ def register_user(conn, c, username, password, email = None, visible_name = None
         return False
         
 def init_db():
-    conn = sqlite3.connect('egggggggggggg.db')
+    conn = get_db_connection()
     c = conn.cursor()
 
     c.execute('''CREATE TABLE IF NOT EXISTS users (
@@ -1150,13 +1154,6 @@ def display_transaction_history(c, user_id):
                 st.text("")
                 st.text("")
                 st.caption(timestamp)
-            else:
-                st.warning(f"Other Transaction $|$ (Status: {status})")
-                st.write(f"Amount   $|$   ${format_currency(amount)}")
-                st.write(f"Balance   $|$   ${format_currency(float(balance))}")
-                st.text("")
-                st.text("")                
-                st.caption(timestamp)
 
             st.divider()
     else:
@@ -1508,5 +1505,5 @@ def main(conn):
                 admin_panel(conn)
 
 if __name__ == "__main__":
-    conn = sqlite3.connect('egggggggggggg.db')
+    conn = get_db_connection()
     main(conn)
