@@ -1118,39 +1118,39 @@ def display_transaction_history(c, user_id):
 
             elif role == "sent" and "transfer to" in t_type.lower():
                 st.info(f"{t_type.title()} { receiver_username} $|$ (Status: **{status.capitalize()}**)", icon="💸")
-                st.write(f"Amount   $|$   :red[-${format_currency(float(amount))}]")
-                st.write(f"New Balance   $|$   :red[${format_currency(float(balance))}]")
+                st.write(f"Amount   $|$   :red[-${format_currency(amount)}]")
+                st.write(f"New Balance   $|$   :red[${format_currency(balance)}]")
                 st.text("")
                 st.text("")
                 st.caption(timestamp)
 
             elif role == "received" and "transfer from" in t_type.lower():
                 st.info(f"{t_type.title()} {from_username} $|$ (Status: **{status.capitalize()}**)", icon="💸")
-                st.write(f"Amount   $|$   :green[+${format_currency(float(amount))}]")
-                st.write(f"New Balance   $|$   :green[${format_currency(float(balance))}]")
+                st.write(f"Amount   $|$   :green[+${format_currency(amount)}]")
+                st.write(f"New Balance   $|$   :green[${format_currency(balance)}]")
                 st.text("")
                 st.text("")
                 st.caption(timestamp)
 
             elif t_type.lower().startswith("deposit to savings"):
                 st.info(f"{t_type.title()}", icon="🏦")
-                st.write(f"Amount   $|$   :green[+${format_currency(float(amount))}]")
-                st.write(f"New Savings Balance   $|$   :green[${format_currency(float(balance))}]")
+                st.write(f"Amount   $|$   :green[+${format_currency(amount)}]")
+                st.write(f"New Savings Balance   $|$   :green[${format_currency(balance)}]")
                 st.text("")
                 st.text("")
                 st.caption(timestamp)
 
             elif t_type.lower().startswith("withdraw to"):
                 st.warning(f"{t_type.title()}", icon="🏧")
-                st.write(f"Amount   $|$   :red[-${format_currency(float(amount))}]")
-                st.write(f"Remaining Balance   $|$   :green[${format_currency(float(balance))}]")
+                st.write(f"Amount   $|$   :red[-${format_currency(amount)}]")
+                st.write(f"Remaining Balance   $|$   :green[${format_currency(balance)}]")
                 st.text("")
                 st.text("")
                 st.caption(timestamp)
             else:
                 st.warning(f"Other Transaction $|$ (Status: {status})")
-                st.write(f"Amount   $|$   ${format_currency(float(amount))}")
-                st.write(f"Balance   $|$   ${format_currency(float(balance))}")
+                st.write(f"Amount   $|$   ${format_currency(amount)}")
+                st.write(f"Balance   $|$   ${format_currency(balance)}")
                 st.text("")
                 st.text("")                
                 st.caption(timestamp)
