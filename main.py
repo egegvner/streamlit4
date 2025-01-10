@@ -21,7 +21,7 @@ st.set_page_config(
 
 @st.cache_resource
 def get_db_connection():
-    return sqlite3.connect("egggggggggggg.db", check_same_thread = False)
+    return sqlite3.connect("eggggggggggggggg.db", check_same_thread = False)
 
 item_colors = {
         "Common":"",
@@ -96,7 +96,7 @@ def apply_interest_if_due(conn, user_id):
 
     now = datetime.datetime.now()
 
-    seconds_passed = (now - last_applied_time).total_seconds() / 60
+    seconds_passed = (now - last_applied_time).total_seconds()
     if seconds_passed < 1:
         return
 
@@ -253,7 +253,7 @@ def claim_daily_reward(conn, user_id):
 def get_latest_message_time(conn):
     c = conn.cursor()
     latest = c.execute("SELECT MAX(timestamp) FROM chats").fetchone()[0]
-    return latest
+    return latest if latest else "1970-01-01 00:00:00"  # Default value
 
 def register_user(conn, c, username, password, email = None, visible_name = None):
     try:
@@ -753,13 +753,47 @@ def item_options(conn, user_id, item_id):
     st.caption(f":gray[ID   {item_data[5]}]")
 
 def leaderboard(c):
-    st.header("🏆 Leaderboard")
-    leaderboard_data = leaderboard_logic(c)
+    st.header("🏆 Leaderboard", divider="rainbow")
 
-    if leaderboard_data:
-        st.table([{"Rank": user["rank"], "Name": user["name"], "Balance": f"${user['balance']:.2f}"} for user in leaderboard_data])
-    else:
-        st.write("No users found in the database!")
+    tab1, tab2, tab3 = st.tabs(["💰 Vault", "👜 Wallet", "🏦 Savings"])
+
+    main_balance_data = c.execute("""
+        SELECT username, visible_name, balance FROM users 
+        WHERE show_main_balance_on_leaderboard = 1 
+        ORDER BY balance DESC
+    """).fetchall()
+
+    wallet_balance_data = c.execute("""
+        SELECT username, visible_name, wallet FROM users 
+        WHERE show_wallet_on_leaderboard = 1 
+        ORDER BY wallet DESC
+    """).fetchall()
+
+    savings_balance_data = c.execute("""
+        SELECT u.username, u.visible_name, s.balance 
+        FROM users u JOIN savings s ON u.user_id = s.user_id 
+        WHERE u.show_savings_balance_on_leaderboard = 1 
+        ORDER BY s.balance DESC
+    """).fetchall()
+
+    def format_leaderboard(data):
+        return [
+            {"Rank": idx + 1, "Name": user[1] if user[1] else user[0], "Balance": f"${format_currency(user[2])}"}
+            for idx, user in enumerate(data)
+        ]
+
+    with tab1:
+        st.subheader("💰 Vault Ranking")
+        st.table(format_leaderboard(main_balance_data) if main_balance_data else ["No users found."])
+
+    with tab2:
+        st.subheader("👜 Wallet Ranking")
+        st.table(format_leaderboard(wallet_balance_data) if wallet_balance_data else ["No users found."])
+
+    with tab3:
+        st.subheader("🏦 Savings Balance Ranking")
+        st.table(format_leaderboard(savings_balance_data) if savings_balance_data else ["No users found."])
+
 
 @st.dialog("Item Options")
 def inventory_item_options(conn, user_id, item_id):
@@ -986,11 +1020,6 @@ def savings_view(conn, user_id):
             apply_interest_if_due(conn, user_id)
 
     st.text("")
-    interest = c.execute("SELECT interest_rate from savings WHERE user_id = ?", (user_id,)).fetchone()[0]
-    with st.container(border=True):
-        
-        st.write(f":green[%{interest}] simple interest per **minute.**")
-    st.caption(":gray[HINT: Some items can boost your interest rate!]")
     st.text("")
     
     st.header("📜 Interest History", divider="rainbow")
@@ -1008,6 +1037,12 @@ def savings_view(conn, user_id):
         st.dataframe(df.set_index("Timestamp"), use_container_width = True)
     else:
         st.info("No interest history available.")
+
+    interest = c.execute("SELECT interest_rate from savings WHERE user_id = ?", (user_id,)).fetchone()[0]
+    with st.container(border=True):
+        
+        st.write(f":green[%{interest}] simple interest per **minute.**")
+    st.caption(":gray[HINT: Some items can boost your interest rate!]")
 
 def dashboard(conn, user_id):
     c = conn.cursor()
@@ -1062,21 +1097,75 @@ def dashboard(conn, user_id):
         st.info("No recent transactions.")
 
 def chat_view(conn):
-    last_checked = st.session_state.get("last_chat_time", None)
-    latest_message_time = get_latest_message_time(conn)
+    # Initialize session state variables
+    if "last_chat_time" not in st.session_state:
+        st.session_state.last_chat_time = "1970-01-01 00:00:00"  # Default timestamp
+        st.session_state.last_check_time = time.time()  # Timestamp for last check
+    if "rerun_count" not in st.session_state:
+        st.session_state.rerun_count = 0  # Control for how many reruns
 
-    if last_checked and latest_message_time and latest_message_time > last_checked:
-        st.rerun()
+    # Check if enough time has passed (e.g., 1 second) to check for new messages
+    current_time = time.time()
+    time_diff = current_time - st.session_state.last_check_time
 
-    st.session_state.last_chat_time = latest_message_time
+    if time_diff > 1:  # Check every 1 second (adjustable)
+        latest_message_time = get_latest_message_time(conn)
+
+        # If a new message is added, update the session state and trigger rerun
+        if latest_message_time > st.session_state.last_chat_time:
+            st.session_state.last_chat_time = latest_message_time
+            st.session_state.rerun_count += 1
+            if st.session_state.rerun_count <= 1:  # Limit reruns to avoid excessive calls
+                st.rerun()
+
+        # Update the last check time to prevent constant polling
+        st.session_state.last_check_time = current_time
+
+    # Display chat messages (most recent first)
+    c = conn.cursor()
+    messages = c.execute("""
+        SELECT u.username, c.message, c.timestamp 
+        FROM chats c 
+        JOIN users u ON c.user_id = u.user_id 
+        WHERE c.timestamp IN (
+            SELECT timestamp 
+            FROM chats 
+            ORDER BY timestamp DESC 
+            LIMIT 10
+        ) 
+        ORDER BY c.timestamp ASC
+    """).fetchall()
+
+    for username, message, timestamp in messages:
+        if username == "egegvner":
+            with st.chat_message(name="ai"):
+                st.write(f":orange[[{username}] :gray[[{timestamp.split()[1]}]]] {message}")
+        else:
+            with st.chat_message(name="user"):
+                st.write(f":gray[[{username}] :gray[[{timestamp.split()[1]}]]] {message}")
 
     # Chat UI (Text input & Send button)
-    new_message = st.text_input("Type a message...")
-    if st.button("Send"):
-        c = conn.cursor()
-        c.execute("INSERT INTO chats (user_id, message, timestamp) VALUES (?, ?, CURRENT_TIMESTAMP)", (st.session_state.user_id, new_message))
-        conn.commit()
-        st.rerun()  # Rerun immediately after sending
+    bottom_placeholder = st.empty()
+
+    with bottom_placeholder.container():
+        new_message = st.text_input("Type a message...", key="chat_input")
+        if st.button("Send"):
+            if new_message.strip():  # Prevent empty messages
+                c.execute("INSERT INTO chats (user_id, message, timestamp) VALUES (?, ?, CURRENT_TIMESTAMP)", 
+                          (st.session_state.user_id, new_message.strip()))
+                c.execute("DELETE FROM chats WHERE timestamp NOT IN (SELECT timestamp FROM chats ORDER BY timestamp DESC LIMIT 10)")
+
+                conn.commit()
+
+                # Update the last chat time and trigger rerun
+                st.session_state.last_chat_time = get_latest_message_time(conn)
+                st.rerun()
+
+# Function to get the latest message timestamp
+def get_latest_message_time(conn):
+    c = conn.cursor()
+    result = c.execute("SELECT timestamp FROM chats ORDER BY timestamp DESC LIMIT 1").fetchone()
+    return result[0] if result else "1970-01-01 00:00:00"
 
 def display_transaction_history(c, user_id):
     st.header("Transaction History", divider = "rainbow")
@@ -1313,14 +1402,14 @@ def admin_panel(conn):
         conn.commit()
         st.rerun()
 
-def settings(c, conn, username):
-    st.title("⚙️ Settings")
+def settings(conn, username):
+    c = conn.cursor()
+    st.header("⚙️ Settings", divider = "rainbow")
 
-    st.divider()
     st.subheader("🔑 Change Password")
     current_password = st.text_input("Current Password", type = "password")
     new_password = st.text_input("New Password", type = "password")
-    if st.button("Update Password"):
+    if st.button("Update Password", use_container_width = True):
         change_password(c, conn, username, current_password, new_password)
         time.sleep(2)
         st.rerun()
@@ -1330,7 +1419,7 @@ def settings(c, conn, username):
     current_email = c.execute("SELECT email FROM users WHERE username = ?", (username,)).fetchone()[0]
     st.write(f"Current Email `{current_email}`")
     email = st.text_input("Email", placeholder = "yourname@domain.com")
-    if st.button("Update Email"):
+    if st.button("Update Email", use_container_width = True):
         add_email(c, conn, username, email)
 
     st.divider()
@@ -1338,9 +1427,31 @@ def settings(c, conn, username):
     current_visible_name = c.execute("SELECT visible_name FROM users WHERE username = ?", (username,)).fetchone()[0]
     st.write(f"Current visible name `{current_visible_name}`")
     new_name = st.text_input("New Visible Name")
-    if st.button("Update Visible Name"):
+    if st.button("Update Visible Name", use_container_width = True):
         change_visible_name(c, conn, username, new_name)
     
+    visibility_settings = c.execute("""
+        SELECT show_main_balance_on_leaderboard, show_wallet_on_leaderboard, show_savings_balance_on_leaderboard 
+        FROM users WHERE user_id = ?
+    """, (st.session_state.user_id,)).fetchone()
+
+    show_main, show_wallet, show_savings = visibility_settings
+
+    st.divider()
+    st.subheader("🏆 Leaderboard Privacy")
+    show_main = st.checkbox("Show my Main (Vault) Balance", value=bool(show_main))
+    show_wallet = st.checkbox("Show my Wallet Balance", value=bool(show_wallet))
+    show_savings = st.checkbox("Show my Savings Balance", value=bool(show_savings))
+
+    if st.button("Save Preferences", use_container_width = True):
+        c.execute("""
+            UPDATE users 
+            SET show_main_balance_on_leaderboard = ?, show_wallet_on_leaderboard = ?, show_savings_balance_on_leaderboard = ? 
+            WHERE user_id = ?
+        """, (int(show_main), int(show_wallet), int(show_savings), st.session_state.user_id))
+        conn.commit()
+        st.rerun()
+
     for _ in range(5):
         st.text("")
 
@@ -1429,7 +1540,10 @@ def main(conn):
             if c2.button("Leaderboard", type = "primary", use_container_width = True):
                 st.session_state.current_menu = "Leaderboard"
             
-            if st.button("Inventory", type = "primary", use_container_width = True):
+            if st.button("#Global Chat", type = "primary", use_container_width = True):
+                st.session_state.current_menu = "Chat"
+
+            if st.button("Inventory", use_container_width = True):
                 st.session_state.current_menu = "Inventory"
             
             if st.button("Marketplace", use_container_width = True):
@@ -1488,6 +1602,9 @@ def main(conn):
         elif st.session_state.current_menu == "View Savings":
             savings_view(conn, st.session_state.user_id)
 
+        elif st.session_state.current_menu == "Chat":
+            chat_view(conn)
+
         elif st.session_state.current_menu == "Logout":
             st.sidebar.info("Logging you out...")
             time.sleep(2.5)
@@ -1498,11 +1615,28 @@ def main(conn):
             st.rerun()
 
         elif st.session_state.current_menu == "Settings":
-            settings(c, conn, st.session_state.username)
+            settings(conn, st.session_state.username)
 
         elif st.session_state.current_menu == "Admin Panel":
                 admin_panel(conn)
 
+def add_column_if_not_exists(conn):
+    c = conn.cursor()
+
+    c.execute("PRAGMA table_info(users);")
+    columns = [column[1] for column in c.fetchall()]
+
+    if "show_wallet_on_leaderboard" not in columns:
+        c.execute("ALTER TABLE users ADD COLUMN show_wallet_on_leaderboard INTEGER DEFAULT 1;")
+    if "show_main_balance_on_leaderboard" not in columns:
+        c.execute("ALTER TABLE users ADD COLUMN show_main_balance_on_leaderboard INTEGER DEFAULT 1;")
+    if "show_savings_balance_on_leaderboard" not in columns:
+        c.execute("ALTER TABLE users ADD COLUMN show_savings_balance_on_leaderboard INTEGER DEFAULT 1;")
+
+    conn.commit()
+
 if __name__ == "__main__":
     conn = get_db_connection()
+    init_db()
+    add_column_if_not_exists(conn)
     main(conn)
