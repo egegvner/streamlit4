@@ -1086,7 +1086,7 @@ def display_transaction_history(c, user_id):
             role = t[0]
             t_type = t[1]
             amount = t[2]
-            balance = t[3]
+            balance = int(t[3])
             timestamp = t[4]
             status = t[5]
             receiver_username = t[6] if role == "sent" else "N/A"
