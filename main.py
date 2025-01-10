@@ -96,7 +96,7 @@ def apply_interest_if_due(conn, user_id):
 
     now = datetime.datetime.now()
 
-    seconds_passed = (now - last_applied_time).total_seconds() / 3600
+    seconds_passed = (now - last_applied_time).total_seconds() / 60
 
     hours_fraction = seconds_passed / 60
     hourly_interest_rate = c.execute("SELECT interest_rate FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
