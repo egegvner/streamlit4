@@ -431,6 +431,7 @@ def deposit_dialog(conn, user_id):
                     c.execute("UPDATE users SET balance = balance + ? WHERE username = 'egegvner'", (tax,))
                     update_last_transaction_time(c, conn, user_id)
                     conn.commit()
+                    st.session_state.quota -= amount
                     with st.spinner("Processing..."):
                         time.sleep(random.uniform(1, 2))
                         st.success(f"Successfully deposited ${net:.2f}")
