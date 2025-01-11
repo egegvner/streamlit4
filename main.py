@@ -1232,16 +1232,6 @@ def dashboard(conn, user_id):
     else:
         st.info("No recent transactions.")
 
-import time
-import streamlit as st
-import sqlite3
-
-def get_latest_message_time(conn):
-    """Fetch the most recent timestamp from the chats table."""
-    c = conn.cursor()
-    c.execute("SELECT MAX(timestamp) FROM chats")
-    return c.fetchone()[0] or "1970-01-01 00:00:00"
-
 def chat_view(conn):
     if "last_chat_time" not in st.session_state:
         st.session_state.last_chat_time = "1970-01-01 00:00:00"
@@ -1254,7 +1244,7 @@ def chat_view(conn):
         FROM chats c 
         JOIN users u ON c.user_id = u.user_id 
         ORDER BY c.timestamp DESC 
-        LIMIT 5
+        LIMIT 6
     """).fetchall()
 
     messages.reverse()
