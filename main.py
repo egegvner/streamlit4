@@ -11,6 +11,7 @@ import datetime
 import re
 import bcrypt
 from streamlit_autorefresh import st_autorefresh
+import queue
 
 st.set_page_config(
     page_title = "Bank Genova",
@@ -31,7 +32,7 @@ def write_stream(s, delay = 0, random_delay = False):
 
 @st.cache_resource
 def get_db_connection():
-    return sqlite3.connect("egggggggggggg.db", check_same_thread = False)
+    return sqlite3.connect("egggggggggggg.db", check_same_thread = False, autocommit = True)
 
 item_colors = {
         "Common":"",
@@ -90,7 +91,7 @@ def check_and_reset_quota(conn, user_id):
         if current_quota != new_quota:
             c.execute("UPDATE users SET deposit_quota = ?, last_quota_reset = ? WHERE user_id = ?", 
                       (new_quota, now.strftime("%Y-%m-%d %H:%M:%S"), user_id))
-            conn.commit()
+             
             st.toast(f"Quota Refilled! (max: {new_quota})")
             print(f"Quota reset for user {user_id}. New quota: {new_quota}")
 
@@ -134,7 +135,7 @@ def apply_interest_if_due(conn, user_id):
         WHERE user_id = ?
     """, (new_balance, new_last_applied_time.strftime("%Y-%m-%d %H:%M:%S"), user_id))
 
-    conn.commit()
+     
 
 def change_password(c, conn, username, current_password, new_password):
     c.execute("SELECT password FROM users WHERE username = ?", (username,))
@@ -145,7 +146,7 @@ def change_password(c, conn, username, current_password, new_password):
             if len(new_password) >= 8:
                 hashed_new_password = hashPass(new_password)
                 c.execute("UPDATE users SET password = ? WHERE username = ?", (hashed_new_password, username))
-                conn.commit()
+                 
                 st.success("Password has been updated successfully.")
             else:
                 st.error("New password must contain **at least 8 chars**.")
@@ -156,14 +157,14 @@ def change_password(c, conn, username, current_password, new_password):
 
 def add_email(c, conn, username, email):
     c.execute("UPDATE users SET email = ? WHERE username = ?", (email, username))
-    conn.commit()
+     
     st.success("Success!")
     time.sleep(2)
     st.rerun()
 
 def change_visible_name(c, conn, username, new_name):
     c.execute("UPDATE users SET visible_name = ? WHERE username = ?", (new_name, username))
-    conn.commit()
+     
     st.success("Success!")
     time.sleep(2)
     st.rerun()
@@ -181,7 +182,7 @@ def check_cooldown(c, user_id):
 
 def update_last_transaction_time(c, conn, user_id):
     c.execute("UPDATE users SET last_transaction_time = ? WHERE user_id = ?", (datetime.datetime.now().isoformat(), user_id))
-    conn.commit()
+     
 
 def recent_transactions_metrics(c, user_id):
     current_time = pd.Timestamp.now()
@@ -261,7 +262,7 @@ def claim_daily_reward(conn, user_id):
 
             c.execute("UPDATE users SET balance = balance + ?, last_daily_reward_claimed = ?, login_streak = ? WHERE user_id = ?", 
                     (reward, datetime.datetime.today().strftime("%Y-%m-%d"), new_streak, user_id))
-            conn.commit()
+             
             
             st.toast(f"🎉 You received ${reward} for logging in! (Streak: {new_streak})")
 
@@ -299,7 +300,7 @@ def register_user(conn, c, username, password, email = None, visible_name = None
                    None, # Default last transaction time
                    email
                    ))
-            conn.commit()
+             
 
         st.session_state.logged_in = True
         st.session_state.user_id = user_id_to_be_registered
@@ -406,7 +407,7 @@ def init_db():
     c.execute('CREATE INDEX IF NOT EXISTS idx_user_id ON transactions(user_id)')
     c.execute('CREATE INDEX IF NOT EXISTS idx_timestamp ON transactions(timestamp)')
 
-    conn.commit()
+     
     return conn, c
 
 @st.dialog("Top Up", width = "small")
@@ -466,7 +467,7 @@ def deposit_dialog(conn, user_id):
                     c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, balance) VALUES (?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, 'Top Up', net, balance))
                     c.execute("UPDATE users SET balance = balance + ? WHERE username = 'egegvner'", (tax,))
                     update_last_transaction_time(c, conn, user_id)
-                    conn.commit()
+                     
                     st.session_state.quota -= amount
                     with st.spinner("Processing..."):
                         time.sleep(random.uniform(1, 2))
@@ -520,11 +521,11 @@ def withdraw_dialog(conn, user_id):
         if check_cooldown(c, user_id):
             c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (amount, user_id))
             c.execute("UPDATE users SET wallet = wallet + ? WHERE user_id = ?", (net, user_id))
-            conn.commit()
+             
             new_wallet = c.execute("SELECT wallet FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
             c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, balance) VALUES (?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, "Withdraw From Main Account To Wallet", net, new_wallet))
             c.execute("UPDATE users SET balance = balance + ? WHERE username = 'egegvner'", (tax,))
-            conn.commit()
+             
             update_last_transaction_time(c, conn, user_id)
             with st.spinner("Processing..."):
                 time.sleep(random.uniform(1, 2))
@@ -537,11 +538,11 @@ def withdraw_dialog(conn, user_id):
         if check_cooldown(c, user_id):
             c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (amount, user_id))
             c.execute("UPDATE savings SET balance = balance + ? WHERE user_id = ?", (net, user_id))
-            conn.commit()
+             
             new_savings_balance = c.execute("SELECT balance FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
             c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, balance) VALUES (?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, "Withdraw From Main Account To Savings", amount, new_savings_balance))
             c.execute("UPDATE users SET balance = balance + ? WHERE username = 'egegvner'", (tax,))
-            conn.commit()
+             
             update_last_transaction_time(c, conn, user_id)
             with st.spinner("Processing..."):
                 time.sleep(random.uniform(1, 2))
@@ -591,7 +592,7 @@ def transfer_dialog(conn, user_id):
                 if 0 < amount <= 1000000 and amount <= current_balance:
                     c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (amount, user_id))
                     c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, balance,  receiver_username, status) VALUES (?, ?, ?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f'Transfer to {receiver_username}', amount, current_balance, receiver_username, 'pending'))
-                    conn.commit()
+                     
                     with st.spinner("Processing"):
                         time.sleep(1)
                     st.success(f"Successfully initiated transfer of ${amount:.2f} to {receiver_username}. Awaiting acceptance.")
@@ -673,7 +674,7 @@ def deposit_to_savings_dialog(conn, user_id):
             source = "Main Account" if "Main" in st.session_state.deposit_source else "Wallet"
             c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, balance) VALUES (?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Deposit To Savings From {source}", amount, format_currency(current_savings + amount)))
             c.execute("UPDATE users SET balance = balance + ? WHERE username = 'egegvner'", (tax,))
-            conn.commit()
+             
             update_last_transaction_time(c, conn, user_id)
             with st.spinner("Processing..."):
                 time.sleep(1)
@@ -733,7 +734,7 @@ def withdraw_from_savings_dialog(conn, user_id):
             target = "Main Account" if "Main" in st.session_state.withdraw_target else "Wallet"
             c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, balance) VALUES (?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Withdraw From Savings To {target}", amount, format_currency(current_savings - amount)))
             c.execute("UPDATE users SET balance = balance + ? WHERE username = 'egegvner'", (tax,))
-            conn.commit()
+             
             update_last_transaction_time(c, conn, user_id)
             with st.spinner("Processing..."):
                 time.sleep(random.uniform(1, 2))
@@ -932,7 +933,7 @@ def inventory_item_options(conn, user_id, item_id):
         c.execute("DELETE FROM user_inventory WHERE item_id = ?", (item_id,))
         c.execute("UPDATE users SET wallet = wallet + ? WHERE user_id = ?", (item_data[3], user_id))
         c.execute("UPDATE marketplace_items SET stock = stock + 1 WHERE item_id = ?", (item_id,))
-        conn.commit()
+         
         st.rerun()
         
 def buy_item(conn, user_id, item_id):
@@ -953,14 +954,14 @@ def buy_item(conn, user_id, item_id):
             c.execute("UPDATE users SET wallet = wallet - ? WHERE user_id = ?", (price, user_id))
             c.execute("INSERT INTO user_inventory (user_id, item_id, item_number) VALUES (?, ?, ?)", (user_id, item_id, next_item_number))
             c.execute("UPDATE marketplace_items SET stock = stock - 1 WHERE item_id = ?", (item_id,))
-            conn.commit()
+             
 
             if item_data[3] == "quota_boost":
                 c.execute("UPDATE users SET deposit_quota = deposit_quota + ? WHERE user_id = ?", (item_data[4], user_id))
-                conn.commit()
+                 
             if item_data[3] == "interest_boost":
                 c.execute("UPDATE savings SET interest_rate = interest_rate + ? WHERE user_id = ?", (item_data[4], user_id))
-                conn.commit()
+                 
             time.sleep(1.5)
         st.success(f"Item purchased!")
         time.sleep(1)
@@ -1034,7 +1035,7 @@ def manage_pending_transfers(c, conn, receiver_id):
                 c.execute("UPDATE transactions SET status = 'accepted' WHERE transaction_id = ?", (transaction_id,))
                 c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (net, receiver_id))
                 c.execute("UPDATE users SET balance = balance + ? WHERE username = 'egegvner'", (tax,))
-                conn.commit()
+                 
                 time.sleep(2)
             st.toast("Transfer accepted!")
             time.sleep(2)
@@ -1044,7 +1045,7 @@ def manage_pending_transfers(c, conn, receiver_id):
             with st.spinner("Declining Transfer"):
                 c.execute("UPDATE transactions SET status = 'rejected' WHERE transaction_id = ?", (transaction_id,))
                 c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (amount, sender_id))
-                conn.commit()
+                 
                 time.sleep(2)
             st.toast("Transfer declined!")
             time.sleep(2)
@@ -1127,7 +1128,7 @@ def savings_view(conn, user_id):
                 c.execute("UPDATE users SET has_savings_account = 1 WHERE user_id = ?", (user_id,))
                 c.execute("INSERT INTO savings (user_id, balance, interest_rate, last_interest_applied) VALUES (?, 0, 0.005, ?)", 
                           (user_id, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
-                conn.commit()
+                 
                 time.sleep(2)
             st.rerun()
     else:
@@ -1230,6 +1231,11 @@ def dashboard(conn, user_id):
         st.info("No recent transactions.")
 
 def chat_view(conn):
+    if not db_queue.empty():
+        message_signal = db_queue.get()
+        if message_signal == "new_message":
+            st.rerun()
+            
     if "last_chat_time" not in st.session_state:
         st.session_state.last_chat_time = "1970-01-01 00:00:00"  # Default timestamp
         st.session_state.last_check_time = time.time()  # Timestamp for last check
@@ -1282,7 +1288,7 @@ def chat_view(conn):
                           (st.session_state.user_id, new_message.strip()))
                 c.execute("DELETE FROM chats WHERE timestamp NOT IN (SELECT timestamp FROM chats ORDER BY timestamp DESC LIMIT 10)")
 
-                conn.commit()
+                 
 
                 st.session_state.last_chat_time = get_latest_message_time(conn)
                 st.rerun()
@@ -1394,7 +1400,7 @@ def admin_panel(conn):
                 if item_id not in existing_item_ids:
                     with st.spinner("Creating item..."):
                         c.execute("INSERT INTO marketplace_items (item_id, name, description, rarity, price, stock, boost_type, boost_value) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (item_id, name, description, rarity, price, stock, boost_type, boost_value))
-                        conn.commit()
+                         
                     st.success("Item created!")
                     time.sleep(2)
                     st.rerun()
@@ -1410,7 +1416,7 @@ def admin_panel(conn):
     if st.button("Update Items", use_container_width = True):
         for _, row in edited_df.iterrows():
             c.execute("UPDATE OR IGNORE marketplace_items SET name = ?, description = ?, rarity = ?, price = ?, stock = ?, boost_type = ?, boost_value = ? WHERE item_id = ?", (row["Item Name"], row["Description"], row["Rarity"], row["Price"], row["Stock"], row["Boost Type"], row["Boost Value"], row["Item ID"]))
-        conn.commit()
+         
         with st.spinner("Processing Changes..."):
             time.sleep(2)
         time.sleep(1)
@@ -1421,7 +1427,7 @@ def admin_panel(conn):
         with st.spinner("Processing..."):
             c.execute("DELETE FROM marketplace_items WHERE item_id = ?", (item_id_to_delete,))
             time.sleep(2)
-        conn.commit()
+         
         st.success(f"Item {item_id_to_delete} deleted successfully.")
         st.rerun()
 
@@ -1442,7 +1448,7 @@ def admin_panel(conn):
             c.execute("DELETE FROM transactions WHERE user_id = ?", (temp_user_id[0],))
             c.execute("DELETE FROM user_inventory WHERE user_id = ?", (temp_user_id[0],))
             c.execute("DELETE FROM savings WHERE user_id = ?", (temp_user_id[0],))
-            conn.commit()
+             
             
             st.success(f"User {temp_user.capitalize()} and their associated data have been deleted.")
             time.sleep(2)
@@ -1470,7 +1476,7 @@ def admin_panel(conn):
                         SET type = ?, amount = ?, balance = ?,  receiver_username = ? 
                         WHERE transaction_id = ?
                     """, (row["Type"], row["Amount"], row["Balance"], row["To Username"], row["Transaction ID"]))
-                conn.commit()
+                 
                 st.success("Transactions updated successfully.")
                 st.rerun()
             
@@ -1480,7 +1486,7 @@ def admin_panel(conn):
                 with st.spinner("Processing..."):
                     c.execute("DELETE FROM transactions WHERE transaction_id = ?", (transaction_id_to_delete,))
                     time.sleep(2)
-                conn.commit()
+                 
                 st.success(f"Transaction {transaction_id_to_delete} deleted successfully.")
                 st.rerun()
 
@@ -1502,7 +1508,7 @@ def admin_panel(conn):
     if st.button("Update Data", use_container_width = True, type = "secondary"):
         for _, row in edited_df.iterrows():
             c.execute("UPDATE OR IGNORE users SET username = ?, level = ?, visible_name = ?, password = ?, balance = ?, wallet = ?, has_savings_account = ?, deposit_quota = ?, last_quota_reset = ?, suspension = ?, deposits = ?, withdraws = ?, incoming_transfers = ?, outgoing_transfers = ?, total_transactions = ?, last_transaction_time = ?, email = ?, last_daily_reward_claimed = ?, login_streak = ? WHERE user_id = ?", (row["Username"], row["Level"], row["Visible Name"], row["Pass"], row["Balance"], row["Wallet"], row["Has Savings Account"], row["Deposit Quota"], row["Last Quota Reset"], row["Suspension"], row["Deposits"], row["Withdraws"], row["Transfers Received"], row["Transfers Sent"], row["Total Transactions"], row["Last Transaction Time"], row["Email"], row["Last Daily Reward Claimed"], row["Login Streak"], row["User ID"]))
-        conn.commit()
+         
         st.rerun()
 
     st.header("Savings Data", divider = "rainbow")
@@ -1517,14 +1523,14 @@ def admin_panel(conn):
     if st.button("Update Savings Data", use_container_width = True, type = "secondary"):
         for _, row in edited_df.iterrows():
             c.execute("UPDATE OR IGNORE savings SET balance = ?, interest_rate = ?, last_interest_applied = ? WHERE user_id = ?", (row["Balance"], row["Interest Rate"], row["Last Interest Applied"], row["User ID"]))
-        conn.commit()
+         
         st.rerun()
 
     temp_user_id_to_delete_savings = st.number_input("Enter User ID to Delete Savings", min_value = 0)
     if st.button("Delete Savings Account", use_container_width = True):
         c.execute("DELETE FROM savings WHERE user_id = ?", (temp_user_id_to_delete_savings,))
         c.execute("UPDATE users SET has_savings_account = 0 WHERE user_id = ?", (temp_user_id_to_delete_savings,))
-        conn.commit()
+         
         st.rerun()
 
 def settings(conn, username):
@@ -1574,7 +1580,7 @@ def settings(conn, username):
             SET show_main_balance_on_leaderboard = ?, show_wallet_on_leaderboard = ?, show_savings_balance_on_leaderboard = ? 
             WHERE user_id = ?
         """, (int(show_main), int(show_wallet), int(show_savings), st.session_state.user_id))
-        conn.commit()
+         
         st.rerun()
 
     for _ in range(5):
@@ -1583,6 +1589,13 @@ def settings(conn, username):
     st.button("Ege Güvener • © 2024", type = "tertiary", use_container_width = True, disabled = True)
 
 def main(conn):
+    hide_github_icon = """
+    #GithubIcon {
+    visibility: hidden;
+    }
+    """
+    st.markdown(hide_github_icon, unsafe_allow_html=True)
+    
     if 'current_menu' not in st.session_state:
         st.session_state.current_menu = "Deposit"
 
@@ -1779,11 +1792,10 @@ def add_column_if_not_exists(conn):
         c.execute("ALTER TABLE users ADD COLUMN show_main_balance_on_leaderboard INTEGER DEFAULT 1;")
     if "show_savings_balance_on_leaderboard" not in columns:
         c.execute("ALTER TABLE users ADD COLUMN show_savings_balance_on_leaderboard INTEGER DEFAULT 1;")
-
-    conn.commit()
-
+     
 if __name__ == "__main__":
     conn = get_db_connection()
     init_db()
     add_column_if_not_exists(conn)
+    db_queue = queue.Queue()
     main(conn)
