@@ -1584,7 +1584,7 @@ def settings(conn, username):
 
 def main(conn):
     hide_github_icon = """
-                        #GithubIcon {
+                        #MainMenu {
                           visibility: hidden;
                         }
                         """
