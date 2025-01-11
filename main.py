@@ -1583,12 +1583,18 @@ def settings(conn, username):
     st.button("Ege Güvener • © 2024", type = "tertiary", use_container_width = True, disabled = True)
 
 def main(conn):
-    hide_github_icon = """
-                        #MainMenu {
-                          visibility: hidden;
-                        }
-                        """
-    st.markdown(hide_github_icon, unsafe_allow_html=True)
+    st.markdown(
+    """
+    <style>
+    .css-1jc7ptx, .e1ewe7hr3, .viewerBadge_container__1QSob,
+    .styles_viewerBadge__1yB5_, .viewerBadge_link__1S137,
+    .viewerBadge_text__1JaDK {
+        display: none;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+    )
     
     if 'current_menu' not in st.session_state:
         st.session_state.current_menu = "Deposit"
