@@ -74,11 +74,14 @@ def check_and_reset_quota(conn, user_id):
 
     user_data = c.execute("SELECT deposit_quota, last_quota_reset FROM users WHERE user_id = ?", (user_id,)).fetchone()
     current_quota, last_reset = user_data
-    user_items = c.execute("SELECT item_id FROM user_inventory").fetchall()[0]
+    user_items = c.execute("SELECT item_id FROM user_inventory").fetchall()
     
-    boost = 0
-    for i in user_items:
-        boost += c.execute("SELECT boost_value FROM marketplace_items WHERE item_id = ?", (i,)).fetchone()[0]
+    if user_items:
+        boost = 0
+        for i in user_items:
+            boost += c.execute("SELECT boost_value FROM marketplace_items WHERE item_id = ?", (i,)).fetchone()[0]
+    else:
+        boost = 0
     
     last_reset_time = datetime.datetime.strptime(last_reset, "%Y-%m-%d %H:%M:%S") if last_reset else datetime.datetime(1970, 1, 1)
     
@@ -1229,59 +1232,51 @@ def dashboard(conn, user_id):
     else:
         st.info("No recent transactions.")
 
+import time
+import streamlit as st
+import sqlite3
+
+def get_latest_message_time(conn):
+    """Fetch the most recent timestamp from the chats table."""
+    c = conn.cursor()
+    c.execute("SELECT MAX(timestamp) FROM chats")
+    return c.fetchone()[0] or "1970-01-01 00:00:00"
+
 def chat_view(conn):
     if "last_chat_time" not in st.session_state:
-        st.session_state.last_chat_time = "1970-01-01 00:00:00"  # Default timestamp
-        st.session_state.last_check_time = time.time()  # Timestamp for last check
-    if "rerun_count" not in st.session_state:
-        st.session_state.rerun_count = 0  # Control for how many reruns
+        st.session_state.last_chat_time = "1970-01-01 00:00:00"
 
-    current_time = time.time()
-    time_diff = current_time - st.session_state.last_check_time
-
-    if time_diff > 1:  # Check every 1 second (adjustable)
-        latest_message_time = get_latest_message_time(conn)
-
-        if latest_message_time > st.session_state.last_chat_time:
-            st.session_state.last_chat_time = latest_message_time
-            st.session_state.rerun_count += 1
-            if st.session_state.rerun_count <= 1:  # Limit reruns to avoid excessive calls
-                st.rerun()
-
-        st.session_state.last_check_time = current_time
+    st_autorefresh(interval=5000, key="chat_autorefresh")
 
     c = conn.cursor()
     messages = c.execute("""
         SELECT u.username, c.message, c.timestamp 
         FROM chats c 
         JOIN users u ON c.user_id = u.user_id 
-        WHERE c.timestamp IN (
-            SELECT timestamp 
-            FROM chats 
-            ORDER BY timestamp DESC 
-            LIMIT 10
-        ) 
-        ORDER BY c.timestamp ASC
+        ORDER BY c.timestamp DESC 
+        LIMIT 6
     """).fetchall()
 
-    for username, message, timestamp in messages:
-        if username == "egegvner":
-            with st.chat_message(name="ai"):
-                st.write(f":orange[[{username}] :gray[[{timestamp.split()[1]}]]] {message}")
-        else:
-            with st.chat_message(name="user"):
-                st.write(f":gray[[{username}] :gray[[{timestamp.split()[1]}]]] {message}")
+    messages.reverse()
 
-    bottom_placeholder = st.empty()
+    chat_container = st.container()
+    with chat_container:
+        for username, message, timestamp in messages:
+            if username == "egegvner":
+                with st.chat_message(name="ai"):
+                    st.write(f":orange[[{username}] :gray[[{timestamp.split()[1]}]]] {message}")
+            else:
+                with st.chat_message(name="user"):
+                    st.write(f":gray[[{username}] :gray[[{timestamp.split()[1]}]]] {message}")
 
-    with bottom_placeholder.container():
-        new_message = st.text_input("Type a message...", key="chat_input")
-        if st.button("Send"):
-            if new_message.strip():  # Prevent empty messages
-                c.execute("INSERT INTO chats (user_id, message, timestamp) VALUES (?, ?, CURRENT_TIMESTAMP)", 
-                          (st.session_state.user_id, new_message.strip()))
-                c.execute("DELETE FROM chats WHERE timestamp NOT IN (SELECT timestamp FROM chats ORDER BY timestamp DESC LIMIT 10)")
-
+    with st.container(border=True):
+        new_message = st.text_input("", label_visibility = "collapsed", placeholder = "Your brilliant message goes here...", key = "chat_input")
+        if st.button("Send", use_container_width = True):
+            if new_message.strip():
+                c.execute(
+                    "INSERT INTO chats (user_id, message, timestamp) VALUES (?, ?, CURRENT_TIMESTAMP)", 
+                    (st.session_state.user_id, new_message.strip())
+                )
                 conn.commit()
 
                 st.session_state.last_chat_time = get_latest_message_time(conn)
@@ -1289,8 +1284,8 @@ def chat_view(conn):
 
 def get_latest_message_time(conn):
     c = conn.cursor()
-    result = c.execute("SELECT timestamp FROM chats ORDER BY timestamp DESC LIMIT 1").fetchone()
-    return result[0] if result else "1970-01-01 00:00:00"
+    c.execute("SELECT MAX(timestamp) FROM chats")
+    return c.fetchone()[0] or "1970-01-01 00:00:00"
 
 def display_transaction_history(c, user_id):
     st.header("Transaction History", divider = "rainbow")
@@ -1583,19 +1578,6 @@ def settings(conn, username):
     st.button("Ege Güvener • © 2024", type = "tertiary", use_container_width = True, disabled = True)
 
 def main(conn):
-    st.markdown(
-    """
-    <style>
-    .css-1jc7ptx, .e1ewe7hr3, .viewerBadge_container__1QSob,
-    .styles_viewerBadge__1yB5_, .viewerBadge_link__1S137,
-    .viewerBadge_text__1JaDK {
-        display: none;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-    )
-    
     if 'current_menu' not in st.session_state:
         st.session_state.current_menu = "Deposit"
 
