@@ -248,7 +248,7 @@ def claim_daily_reward(conn, user_id):
                     (reward, datetime.datetime.today().strftime("%Y-%m-%d"), new_streak, user_id))
             conn.commit()
             
-            st.toast("🎉 You received ${reward} for logging in! (Streak: {new_streak})")
+            st.toast(f"🎉 You received ${reward} for logging in! (Streak: {new_streak})")
 
 def get_latest_message_time(conn):
     c = conn.cursor()
@@ -1097,31 +1097,26 @@ def dashboard(conn, user_id):
         st.info("No recent transactions.")
 
 def chat_view(conn):
-    # Initialize session state variables
     if "last_chat_time" not in st.session_state:
         st.session_state.last_chat_time = "1970-01-01 00:00:00"  # Default timestamp
         st.session_state.last_check_time = time.time()  # Timestamp for last check
     if "rerun_count" not in st.session_state:
         st.session_state.rerun_count = 0  # Control for how many reruns
 
-    # Check if enough time has passed (e.g., 1 second) to check for new messages
     current_time = time.time()
     time_diff = current_time - st.session_state.last_check_time
 
     if time_diff > 1:  # Check every 1 second (adjustable)
         latest_message_time = get_latest_message_time(conn)
 
-        # If a new message is added, update the session state and trigger rerun
         if latest_message_time > st.session_state.last_chat_time:
             st.session_state.last_chat_time = latest_message_time
             st.session_state.rerun_count += 1
             if st.session_state.rerun_count <= 1:  # Limit reruns to avoid excessive calls
                 st.rerun()
 
-        # Update the last check time to prevent constant polling
         st.session_state.last_check_time = current_time
 
-    # Display chat messages (most recent first)
     c = conn.cursor()
     messages = c.execute("""
         SELECT u.username, c.message, c.timestamp 
@@ -1144,7 +1139,6 @@ def chat_view(conn):
             with st.chat_message(name="user"):
                 st.write(f":gray[[{username}] :gray[[{timestamp.split()[1]}]]] {message}")
 
-    # Chat UI (Text input & Send button)
     bottom_placeholder = st.empty()
 
     with bottom_placeholder.container():
@@ -1157,11 +1151,9 @@ def chat_view(conn):
 
                 conn.commit()
 
-                # Update the last chat time and trigger rerun
                 st.session_state.last_chat_time = get_latest_message_time(conn)
                 st.rerun()
 
-# Function to get the latest message timestamp
 def get_latest_message_time(conn):
     c = conn.cursor()
     result = c.execute("SELECT timestamp FROM chats ORDER BY timestamp DESC LIMIT 1").fetchone()
