@@ -1254,7 +1254,7 @@ def chat_view(conn):
         FROM chats c 
         JOIN users u ON c.user_id = u.user_id 
         ORDER BY c.timestamp DESC 
-        LIMIT 6
+        LIMIT 5
     """).fetchall()
 
     messages.reverse()
