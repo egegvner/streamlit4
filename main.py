@@ -100,7 +100,7 @@ def apply_interest_if_due(conn, user_id):
     if seconds_passed < 1:
         return
 
-    hours_fraction = seconds_passed / 60
+    hours_fraction = seconds_passed / 3600
     hourly_interest_rate = c.execute("SELECT interest_rate FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
 
     total_interest = balance * hourly_interest_rate * hours_fraction
@@ -1020,6 +1020,11 @@ def savings_view(conn, user_id):
             apply_interest_if_due(conn, user_id)
 
     st.text("")
+    interest = c.execute("SELECT interest_rate from savings WHERE user_id = ?", (user_id,)).fetchone()[0]
+    with st.container(border=True):
+        
+        st.write(f":green[%{interest}] simple interest per **hour.**")
+    st.caption(":gray[HINT: Some items can boost your interest rate!]")
     st.text("")
     
     st.header("📜 Interest History", divider="rainbow")
@@ -1037,12 +1042,6 @@ def savings_view(conn, user_id):
         st.dataframe(df.set_index("Timestamp"), use_container_width = True)
     else:
         st.info("No interest history available.")
-
-    interest = c.execute("SELECT interest_rate from savings WHERE user_id = ?", (user_id,)).fetchone()[0]
-    with st.container(border=True):
-        
-        st.write(f":green[%{interest}] simple interest per **minute.**")
-    st.caption(":gray[HINT: Some items can boost your interest rate!]")
 
 def dashboard(conn, user_id):
     c = conn.cursor()
