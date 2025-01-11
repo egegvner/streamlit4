@@ -31,7 +31,7 @@ def write_stream(s, delay = 0, random_delay = False):
 
 @st.cache_resource
 def get_db_connection():
-    return sqlite3.connect("egggggggggggg.db", check_same_thread = False)
+    return sqlite3.connect("eggggggggggggggg.db", check_same_thread = False)
 
 item_colors = {
         "Common":"",
@@ -64,23 +64,28 @@ admins = [
     "believedreams",
 ]
 
-def calculate_new_quota(c, user_id):
+def calculate_new_quota(c, user_id, boost):
     user_level = c.execute("SELECT level FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     base_quota = user_level * 100  
-    return base_quota
+    return base_quota + boost
 
 def check_and_reset_quota(conn, user_id):
     c = conn.cursor()
 
     user_data = c.execute("SELECT deposit_quota, last_quota_reset FROM users WHERE user_id = ?", (user_id,)).fetchone()
     current_quota, last_reset = user_data
-
+    user_items = c.execute("SELECT item_id FROM user_inventory").fetchall()[0]
+    
+    boost = 0
+    for i in user_items:
+        boost += c.execute("SELECT boost_value FROM marketplace_items WHERE item_id = ?", (i,)).fetchone()[0]
+    
     last_reset_time = datetime.datetime.strptime(last_reset, "%Y-%m-%d %H:%M:%S") if last_reset else datetime.datetime(1970, 1, 1)
     
     now = datetime.datetime.now()
 
     if (now - last_reset_time).total_seconds() >= 3600:
-        new_quota = calculate_new_quota(c, user_id)
+        new_quota = calculate_new_quota(c, user_id, boost)
 
         if current_quota != new_quota:
             c.execute("UPDATE users SET deposit_quota = ?, last_quota_reset = ? WHERE user_id = ?", 
