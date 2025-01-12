@@ -79,7 +79,7 @@ def check_and_reset_quota(conn, user_id):
     if user_items:
         boost = 0
         for i in user_items:
-            boost += c.execute("SELECT boost_value FROM marketplace_items WHERE item_id = ?", (i,)).fetchone()[0]
+            boost += c.execute("SELECT boost_value FROM marketplace_items WHERE item_id = ?", (i[0],)).fetchone()[0]
     else:
         boost = 0
     
@@ -1231,6 +1231,16 @@ def dashboard(conn, user_id):
         st.dataframe(df.set_index("Timestamp"), use_container_width = True)
     else:
         st.info("No recent transactions.")
+
+import time
+import streamlit as st
+import sqlite3
+
+def get_latest_message_time(conn):
+    """Fetch the most recent timestamp from the chats table."""
+    c = conn.cursor()
+    c.execute("SELECT MAX(timestamp) FROM chats")
+    return c.fetchone()[0] or "1970-01-01 00:00:00"
 
 def chat_view(conn):
     if "last_chat_time" not in st.session_state:
