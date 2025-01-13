@@ -475,7 +475,7 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS stock_history (
             stock_id INTEGER PRIMARY KEY NOT NULL,
             price INTEGER NOT NULL,
-            timestamp DATETIME NOT NUL
+            timestamp DATETIME NOT NULL
             );''')
     
     c.execute('CREATE INDEX IF NOT EXISTS idx_user_id ON transactions(user_id)')
