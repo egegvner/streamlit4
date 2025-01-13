@@ -15,7 +15,7 @@ from streamlit_autorefresh import st_autorefresh
 st.set_page_config(
     page_title = "Bank Genova",
     page_icon = "🏦",
-    layout = "wide",
+    layout = "centered",
     initial_sidebar_state = "expanded"
 )
 
@@ -31,7 +31,7 @@ def write_stream(s, delay = 0, random_delay = False):
 
 @st.cache_resource
 def get_db_connection():
-    return sqlite3.connect("eggggggggggggg.db", check_same_thread = False)
+    return sqlite3.connect("egggggggggggg.db", check_same_thread = False)
 
 item_colors = {
         "Common":"",
@@ -277,39 +277,46 @@ def claim_daily_reward(conn, user_id):
         c.execute("UPDATE users SET last_daily_reward_claimed = ? WHERE user_id = ?", (last_claimed, user_id))
         conn.commit()
 
-import datetime
-import random
-
 def update_stock_prices(conn):
     c = conn.cursor()
     now = datetime.datetime.now()
 
+    # Fetch all stocks and their last updated time
     stocks = c.execute("SELECT stock_id, price, last_updated FROM stocks").fetchall()
 
     for stock_id, current_price, last_updated in stocks:
         if last_updated:
             last_updated = datetime.datetime.strptime(last_updated, "%Y-%m-%d %H:%M:%S")
         else:
-            last_updated = now
+            last_updated = now  # Default to now if missing
 
         elapsed_time = (now - last_updated).total_seconds()
-        num_updates = int(elapsed_time // 30)
+        num_updates = int(elapsed_time)  # Apply updates every 10 seconds
 
         if num_updates > 0:
             for _ in range(num_updates):
-                change = round(random.uniform(-3, 3), 2)
-                current_price = round(current_price * (1 + change / 100), 2)
-                if current_price < 1:
-                    current_price = 1
+                # Generate a small random fluctuation (-2% to +2%)
+                change = round(random.uniform(-2, 2), 2)
+                new_price = round(current_price * (1 + change / 100), 2)
 
+                # Ensure price never falls below $1
+                if new_price < 1:
+                    new_price = 1
+
+                # Insert historical data for smooth stock trends
+                c.execute("INSERT INTO stock_history (stock_id, price, timestamp) VALUES (?, ?, ?)", 
+                          (stock_id, new_price, last_updated.strftime("%Y-%m-%d %H:%M:%S")))
+
+                # Update current price for the next loop iteration
+                current_price = new_price
+                last_updated += datetime.timedelta(seconds=10)  # Simulate time intervals
+
+            # Final stock price update in `stocks` table
             c.execute("""
                 UPDATE stocks 
                 SET price = ?, last_updated = ? 
                 WHERE stock_id = ?
             """, (current_price, now.strftime("%Y-%m-%d %H:%M:%S"), stock_id))
-
-            c.execute("INSERT INTO stock_history (stock_id, price, timestamp) VALUES (?, ?, ?)", 
-                      (stock_id, current_price, now.strftime("%Y-%m-%d %H:%M:%S")))
 
     conn.commit()
 
@@ -470,12 +477,6 @@ def init_db():
             avg_buy_price REAL NOT NULL,
             FOREIGN KEY (user_id) REFERENCES users(user_id),
             FOREIGN KEY (stock_id) REFERENCES stocks(stock_id)
-            );''')
-
-    c.execute('''CREATE TABLE IF NOT EXISTS stock_history (
-            stock_id INTEGER NOT NULL,
-            price INTEGER NOT NULL,
-            timestamp DATETIME NOT NULL
             );''')
     
     c.execute('CREATE INDEX IF NOT EXISTS idx_user_id ON transactions(user_id)')
@@ -1505,7 +1506,7 @@ def stocks_view(conn, user_id):
     st.header("📈 Stock Market", divider="rainbow")
     update_stock_prices(conn)
     
-    st_autorefresh(interval=30000, key="stock_autorefresh")
+    st_autorefresh(interval=1000, key="stock_autorefresh")
     
     
     stocks = c.execute("SELECT stock_id, name, symbol, price, stock_amount FROM stocks").fetchall()
@@ -2007,6 +2008,12 @@ def add_column_if_not_exists(conn):
 
     c.execute("PRAGMA table_info(stocks);")
     columns = [column[1] for column in c.fetchall()]
+
+    if "stock_amount" not in columns:
+        c.execute("ALTER TABLE stocks ADD COLUMN stock_amount INTEGER NOT NULL;")
+
+    if "starting_price" not in columns:
+        c.execute("ALTER TABLE stocks ADD COLUMN starting_price REAL NOT NULL;")
 
     conn.commit()
 
