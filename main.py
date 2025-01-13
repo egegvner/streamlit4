@@ -471,6 +471,12 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(user_id),
             FOREIGN KEY (stock_id) REFERENCES stocks(stock_id)
             );''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS stock_history (
+            stock_id INTEGER PRIMARY KEY NOT NULL,
+            price INTEGER NOT NULL,
+            timestamp DATETIME NOT NUL
+            );''')
     
     c.execute('CREATE INDEX IF NOT EXISTS idx_user_id ON transactions(user_id)')
     c.execute('CREATE INDEX IF NOT EXISTS idx_timestamp ON transactions(timestamp)')
