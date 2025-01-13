@@ -473,7 +473,7 @@ def init_db():
             );''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS stock_history (
-            stock_id INTEGER PRIMARY KEY NOT NULL,
+            stock_id INTEGER NOT NULL,
             price INTEGER NOT NULL,
             timestamp DATETIME NOT NULL
             );''')
