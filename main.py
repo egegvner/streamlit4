@@ -2008,12 +2008,6 @@ def add_column_if_not_exists(conn):
     c.execute("PRAGMA table_info(stocks);")
     columns = [column[1] for column in c.fetchall()]
 
-    if "stock_amount" not in columns:
-        c.execute("ALTER TABLE stocks ADD COLUMN stock_amount INTEGER NOT NULL;")
-
-    if "starting_price" not in columns:
-        c.execute("ALTER TABLE stocks ADD COLUMN starting_price REAL NOT NULL;")
-
     conn.commit()
 
 if __name__ == "__main__":
