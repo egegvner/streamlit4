@@ -15,7 +15,7 @@ from streamlit_autorefresh import st_autorefresh
 st.set_page_config(
     page_title = "Bank Genova",
     page_icon = "🏦",
-    layout = "centered" if st.session_state.wide else "wide",
+    layout = "wide"
     initial_sidebar_state = "expanded"
 )
 
