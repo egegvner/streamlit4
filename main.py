@@ -1073,7 +1073,7 @@ def main_account_view(conn, user_id):
     current_balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
     st.header("Main Account (Vault)", divider = "rainbow")
-    st.write(f"Current Balance   |   :green[${current_balance:.2f}]")
+    st.write(f"Current Balance   |   :green[${format_balance(current_balance)}]")
 
     col1, col2 = st.columns(2)
     if col1.button("Top Up", type = "primary", use_container_width = True):
