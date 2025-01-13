@@ -272,6 +272,8 @@ def claim_daily_reward(conn, user_id):
             conn.commit()
             
             st.toast(f"🎉 You received ${reward} for logging in! (Streak: {new_streak})")
+    else:
+        last_claimed = datetime.datetime(1970, 1, 1)
 
 def get_latest_message_time(conn):
     c = conn.cursor()
