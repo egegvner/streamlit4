@@ -61,7 +61,7 @@ def verifyPass(hashed_password, entered_password):
 
 admins = [
     "egegvner",
-    "JohnyJohnyJohn",
+    "JohnyJohnyJohn"
 ]
 
 def calculate_new_quota(c, user_id, boost):
@@ -274,6 +274,8 @@ def claim_daily_reward(conn, user_id):
             st.toast(f"🎉 You received ${reward} for logging in! (Streak: {new_streak})")
     else:
         last_claimed = datetime.datetime(1970, 1, 1)
+        c.execute("UPDATE users SET last_daily_reward_claimed = ? WHERE user_id = ?", (last_claimed, user_id))
+        conn.commit()
 
 def get_latest_message_time(conn):
     c = conn.cursor()
