@@ -74,7 +74,7 @@ def check_and_reset_quota(conn, user_id):
 
     user_data = c.execute("SELECT deposit_quota, last_quota_reset FROM users WHERE user_id = ?", (user_id,)).fetchone()
     current_quota, last_reset = user_data
-    user_items = c.execute("SELECT item_id FROM user_inventory").fetchall()
+    user_items = c.execute("SELECT item_id FROM user_inventory WHERE user_id = ?", (user_id,)).fetchall()
     
     if user_items:
         boost = 0
