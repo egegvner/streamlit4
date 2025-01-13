@@ -414,6 +414,26 @@ def init_db():
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(user_id)
             )''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS stocks (
+            stock_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            symbol TEXT NOT NULL UNIQUE,
+            starting_price REAL NOT NULL,
+            price REAL NOT NULL,
+            stock_amount INTEGER NOT NULL,
+            last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );''')
+    
+    c.execute('''CREATE TABLE IF NOT EXISTS user_stocks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            stock_id INTEGER NOT NULL,
+            quantity REAL NOT NULL,
+            avg_buy_price REAL NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(user_id),
+            FOREIGN KEY (stock_id) REFERENCES stocks(stock_id)
+            );''')
     
     c.execute('CREATE INDEX IF NOT EXISTS idx_user_id ON transactions(user_id)')
     c.execute('CREATE INDEX IF NOT EXISTS idx_timestamp ON transactions(timestamp)')
@@ -1292,7 +1312,8 @@ def get_latest_message_time(conn):
     c.execute("SELECT MAX(timestamp) FROM chats")
     return c.fetchone()[0] or "1970-01-01 00:00:00"
 
-def display_transaction_history(c, user_id):
+def display_transaction_history(conn, user_id):
+    c = conn.cursor()
     st.header("Transaction History", divider = "rainbow")
 
     sent_transactions, received_transactions = get_transaction_history(c, user_id)
@@ -1372,6 +1393,117 @@ def display_transaction_history(c, user_id):
     else:
         st.info("No transactions found in your history.")
 
+def buy_stock(conn, user_id, stock_symbol, amount):
+    c = conn.cursor()
+
+    stock = c.execute("SELECT stock_id, price FROM stocks WHERE symbol = ?", (stock_symbol,)).fetchone()
+    if not stock:
+        return "❌ Stock not found."
+
+    stock_id, price = stock
+    shares = amount / price
+
+    wallet_balance = c.execute("SELECT wallet FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+    if amount > wallet_balance:
+        return "❌ Insufficient funds."
+
+    c.execute("UPDATE users SET wallet = wallet - ? WHERE user_id = ?", (amount, user_id))
+
+    existing = c.execute("SELECT quantity, avg_buy_price FROM user_stocks WHERE user_id = ? AND stock_id = ?", 
+                         (user_id, stock_id)).fetchone()
+
+    if existing:
+        new_quantity = existing[0] + shares
+        new_avg_price = ((existing[0] * existing[1]) + amount) / new_quantity
+        c.execute("UPDATE user_stocks SET quantity = ?, avg_buy_price = ? WHERE user_id = ? AND stock_id = ?", 
+                  (new_quantity, new_avg_price, user_id, stock_id))
+    else:
+        c.execute("INSERT INTO user_stocks (user_id, stock_id, quantity, avg_buy_price) VALUES (?, ?, ?, ?)", 
+                  (user_id, stock_id, shares, price))
+
+    conn.commit()
+    return f"✅ Purchased {shares:.2f} shares of {stock_symbol} at ${price:.2f} per share."
+
+def sell_stock(conn, user_id, stock_symbol, amount):
+    c = conn.cursor()
+
+    stock = c.execute("SELECT stock_id, price FROM stocks WHERE symbol = ?", (stock_symbol,)).fetchone()
+    if not stock:
+        return "❌ Stock not found."
+
+    stock_id, price = stock
+    user_stock = c.execute("SELECT quantity, avg_buy_price FROM user_stocks WHERE user_id = ? AND stock_id = ?", 
+                           (user_id, stock_id)).fetchone()
+
+    if not user_stock or user_stock[0] * price < amount:
+        return "❌ Not enough shares to sell."
+
+    shares_to_sell = amount / price
+    new_quantity = user_stock[0] - shares_to_sell
+
+    if new_quantity == 0:
+        c.execute("DELETE FROM user_stocks WHERE user_id = ? AND stock_id = ?", (user_id, stock_id))
+    else:
+        c.execute("UPDATE user_stocks SET quantity = ? WHERE user_id = ? AND stock_id = ?", 
+                  (new_quantity, user_id, stock_id))
+
+    c.execute("UPDATE users SET wallet = wallet + ? WHERE user_id = ?", (amount, user_id))
+
+    conn.commit()
+    return f"✅ Sold {shares_to_sell:.2f} shares of {stock_symbol} at ${price:.2f} per share."
+
+def stocks_view(conn):
+    st.success("Coming very soon!")
+
+def stocks_view_new(conn):
+    c = conn.cursor()
+    st.title("📈 Stock Market")
+
+    st_autorefresh(interval=10000, key="stock_refresh")
+
+    stocks = c.execute("SELECT stock_id, name, price FROM stocks").fetchall()
+    stock_options = {stock[1]: stock[0] for stock in stocks}
+    
+    selected_stock = st.selectbox("Choose a stock:", list(stock_options.keys()))
+    stock_id = stock_options[selected_stock]
+
+    stock_data = c.execute("SELECT price FROM stocks WHERE stock_id = ?", (stock_id,)).fetchone()
+    current_price = stock_data[0] if stock_data else 0
+    st.metric(label=f"💰 {selected_stock} Price", value=f"${current_price:.2f}")
+
+    history = c.execute("""
+        SELECT timestamp, price FROM stock_history 
+        WHERE stock_id = ? ORDER BY timestamp DESC LIMIT 50
+    """, (stock_id,)).fetchall()
+
+    if history:
+        df = pd.DataFrame(history, columns=["Timestamp", "Price"])
+        df["Timestamp"] = pd.to_datetime(df["Timestamp"])
+        st.line_chart(df.set_index("Timestamp"))
+    else:
+        st.warning("No historical data available.")
+
+    st.divider()
+
+    st.subheader(f"💵 Trade {selected_stock}")
+
+    c1, c2 = st.columns(2)
+
+    with c1:
+        st.write("**Buy Shares**")
+        buy_amount = st.number_input("Amount to Invest ($)", min_value=10.0, step=10.0)
+        if st.button("Buy"):
+            result = buy_stock(conn, st.session_state.user_id, selected_stock, buy_amount)
+            st.success(result)
+
+    with c2:
+        st.write("**Sell Shares**")
+        sell_amount = st.number_input("Amount to Sell ($)", min_value=10.0, step=10.0)
+        if st.button("Sell"):
+            result = sell_stock(conn, st.session_state.user_id, selected_stock, sell_amount)
+            st.success(result)
+
+
 def admin_panel(conn):
     c = conn.cursor()
     st.header("Marketplace Items", divider = "rainbow")
@@ -1425,6 +1557,55 @@ def admin_panel(conn):
         st.success(f"Item {item_id_to_delete} deleted successfully.")
         st.rerun()
 
+
+    st.header("Stocks", divider = "rainbow")
+
+    with st.expander("New Stock Creation"):
+        with st.form(key =  "Stocks"):
+            st.subheader("New Stock Creation")
+            stock_id = st.text_input("Stock ID", value = f"{random.randint(100000000, 999999999)}", disabled = True, help = "Item ID must be unique")
+            stock_name = st.text_input("Ab", label_visibility = "collapsed", placeholder = "Stock  Name")
+            stock_symbol = st.text_input("Ab", label_visibility = "collapsed", placeholder = "Symbol")
+            starting_price = st.text_input("Ab", label_visibility = "collapsed", placeholder = "Starting Price")
+            stock_amount = st.text_input("Ab", label_visibility = "collapsed", placeholder = "Stock Amount")
+            st.divider()
+            
+            if st.form_submit_button("Add to QubitTrades™", use_container_width = True):
+                existing_stock_ids = c.execute("SELECT stock_id FROM stocks").fetchall()
+                if item_id not in existing_stock_ids:
+                    c.execute("INSERT INTO stocks (stock_id, name, symbol, starting_price, price, stock_amount) VALUES (?, ?, ?, ?, ?, ?)", (stock_id, stock_name, stock_symbol, starting_price, starting_price, stock_amount))
+                    conn.commit()
+                    st.rerun()
+                else:
+                    st.error("Duplicate item_id")
+
+    st.header("Manage Stocks", divider = "rainbow")
+    with st.spinner("Loading QubitTrades™..."):
+        stock_data = c.execute("SELECT stock_id, name, symbol, starting_price, price, stock_amount FROM stocks").fetchall()
+   
+    df = pd.DataFrame(stock_data, columns = ["Stock ID", "Stock Name", "Symbol", "Starting Price", "Current Price", "Stock Amount"])
+    edited_df = st.data_editor(df, key = "stock_table", num_rows = "fixed", use_container_width = True, hide_index = True)
+    if st.button("Update Stocks", use_container_width = True):
+        for _, row in edited_df.iterrows():
+            c.execute("UPDATE OR IGNORE stocks SET name = ?, symbol = ?, price = ?, stock_amount = ? WHERE stock_id = ?", (row["Stock Name"], row["Symbol"], row["Current Price"], row["Stock Amount"], row["Stock ID"]))
+        conn.commit()
+        st.rerun()
+
+    stock_id_to_delete = st.number_input("Enter Stock ID to Delete", min_value = 0, step = 1)
+    if st.button("Delete Stock", use_container_width = True):
+        with st.spinner("Processing..."):
+            c.execute("DELETE FROM stocks WHERE stock_id = ?", (stock_id_to_delete,))
+            time.sleep(2)
+        conn.commit()
+        st.rerun()
+
+    a = '''stock_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            symbol TEXT NOT NULL UNIQUE,
+            price REAL NOT NULL,
+            last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+'''
+    
     st.header("User Removal", divider = "rainbow")
     
     users = c.execute("SELECT username FROM users").fetchall()
@@ -1672,54 +1853,59 @@ def main(conn):
             st.write('<div style="position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); color: slategray; text-align: center;"><marquee>Simple and educational bank / finance simulator by Ege. Specifically built for IB Computer Science IA.</marquee></div>', unsafe_allow_html=True)
 
 
-    if st.session_state.logged_in:
+    elif st.session_state.logged_in:
         st.sidebar.write(f"# Welcome, **{st.session_state.username}**!")
         
         with st.sidebar:
             wallet = c.execute('SELECT wallet FROM users WHERE user_id = ?', (st.session_state.user_id,)).fetchone()[0]
             st.sidebar.write(f"Wallet   |   :green[${format_currency(wallet)}]")
-            st.sidebar.header(" ", divider = "rainbow")
+            st.sidebar.header(" ", divider="rainbow")
 
-            c1, c2 = st.sidebar.columns(2)
-            if c1.button("Dashboard", type = "primary", use_container_width = True):
+        t1, t2 = st.sidebar.tabs(["🌐 Global", "💠 Personal"])
+        
+        with t1:
+            c1, c2 = st.columns(2)
+            if c1.button("Dashboard", type="primary", use_container_width=True):
                 st.session_state.current_menu = "Dashboard"
             
-            if c2.button("Leaderboard", type = "primary", use_container_width = True):
+            if c2.button("Leaderboard", type="primary", use_container_width=True):
                 st.session_state.current_menu = "Leaderboard"
             
-            if st.button("#Global Chat", type = "primary", use_container_width = True):
+            if st.button("#Global Chat", type="secondary", use_container_width=True):
                 st.session_state.current_menu = "Chat"
 
-            if st.button("Inventory", use_container_width = True):
+            if st.button("Inventory", type="primary", use_container_width=True):
                 st.session_state.current_menu = "Inventory"
             
-            if st.button("Marketplace", use_container_width = True):
+            if st.button("Marketplace", type="primary", use_container_width=True):
                 st.session_state.current_menu = "Marketplace"
-            
-            if st.button("Transaction History", use_container_width = True):
+
+            if st.button("QubitTrades™", type="primary", use_container_width=True):
+                st.session_state.current_menu = "Stocks"
+
+        with t2:
+            if st.button("Main Account", type="primary", use_container_width=True):
+                st.session_state.current_menu = "Main Account"
+
+            if st.button("Savings Account", type="primary", use_container_width=True):
+                st.session_state.current_menu = "View Savings"
+
+            if st.button("Transaction History", type="primary", use_container_width=True):
                 st.session_state.current_menu = "Transaction History"
+            
+            st.divider()
+            if st.session_state.username in admins:
+                if st.button("Admin Panel", type="secondary", use_container_width=True):
+                    st.session_state.current_menu = "Admin Panel"
 
-            with st.expander("Accounts"):
-                if st.button("Main Account", use_container_width = True):
-                    st.session_state.current_menu = "Main Account"
+            c1, c2 = st.columns(2)
+            if c1.button("Log Out", type="secondary", use_container_width=True):
+                st.session_state.current_menu = "Logout"
 
-                if st.button("Savings Account", use_container_width = True):
-                    st.session_state.current_menu = "View Savings"
-        
-        st.sidebar.divider()
+            if c2.button("Settings", type="secondary", use_container_width=True):
+                st.session_state.current_menu = "Settings"
 
-        if st.session_state.username in admins:
-            if st.sidebar.button("Admin Panel", type = "secondary", use_container_width = True):
-                st.session_state.current_menu = "Admin Panel"
-
-        c1, c2 = st.sidebar.columns(2)
-
-        if c1.button("Log Out", type = "secondary", use_container_width = True):
-            st.session_state.current_menu = "Logout"
-
-        if c2.button("Settings", type = "secondary", use_container_width = True):
-            st.session_state.current_menu = "Settings"
-
+            
 
 ############################################################################################################################################################################################################################################################################################################
 
@@ -1744,13 +1930,16 @@ def main(conn):
             manage_pending_transfers(c, conn, st.session_state.user_id)
 
         elif st.session_state.current_menu == "Transaction History":
-            display_transaction_history(c, st.session_state.user_id)
+            display_transaction_history(conn, st.session_state.user_id)
 
         elif st.session_state.current_menu == "View Savings":
             savings_view(conn, st.session_state.user_id)
 
         elif st.session_state.current_menu == "Chat":
             chat_view(conn)
+        
+        elif st.session_state.current_menu == "Stocks":
+            stocks_view(conn)
 
         elif st.session_state.current_menu == "Logout":
             st.sidebar.info("Logging you out...")
@@ -1770,15 +1959,14 @@ def main(conn):
 def add_column_if_not_exists(conn):
     c = conn.cursor()
 
-    c.execute("PRAGMA table_info(users);")
+    c.execute("PRAGMA table_info(stocks);")
     columns = [column[1] for column in c.fetchall()]
 
-    if "show_wallet_on_leaderboard" not in columns:
-        c.execute("ALTER TABLE users ADD COLUMN show_wallet_on_leaderboard INTEGER DEFAULT 1;")
-    if "show_main_balance_on_leaderboard" not in columns:
-        c.execute("ALTER TABLE users ADD COLUMN show_main_balance_on_leaderboard INTEGER DEFAULT 1;")
-    if "show_savings_balance_on_leaderboard" not in columns:
-        c.execute("ALTER TABLE users ADD COLUMN show_savings_balance_on_leaderboard INTEGER DEFAULT 1;")
+    if "stock_amount" not in columns:
+        c.execute("ALTER TABLE stocks ADD COLUMN stock_amount INTEGER NOT NULL;")
+
+    if "starting_price" not in columns:
+        c.execute("ALTER TABLE stocks ADD COLUMN starting_price REAL NOT NULL;")
 
     conn.commit()
 
