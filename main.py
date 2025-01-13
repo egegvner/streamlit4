@@ -114,7 +114,7 @@ def apply_interest_if_due(conn, user_id):
 
     now = datetime.datetime.now()
 
-    seconds_passed = (now - last_applied_time).total_seconds()
+    seconds_passed = (now - last_applied_time).total_seconds() / 60
     if seconds_passed < 1:
         return
 
