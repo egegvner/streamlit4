@@ -114,7 +114,7 @@ def apply_interest_if_due(conn, user_id):
 
     now = datetime.datetime.now()
 
-    seconds_passed = (now - last_applied_time).total_seconds() / 60
+    seconds_passed = (now - last_applied_time).total_seconds()
     if seconds_passed < 1:
         return
 
@@ -188,9 +188,15 @@ def update_last_transaction_time(c, conn, user_id):
 
 def recent_transactions_metrics(c, user_id):
     current_time = pd.Timestamp.now()
-    last_24_hours = current_time - pd.Timedelta(days = 1)
+    last_24_hours = current_time - pd.Timedelta(days=1)
+    last_24_hours_str = last_24_hours.strftime('%Y-%m-%d %H:%M:%S')
 
-    transactions = c.execute("SELECT type, COUNT(*), SUM(amount) FROM transactions WHERE user_id = ? AND timestamp >= ? GROUP BY type", (user_id, last_24_hours.strftime('%Y-%m-%d %H:%M:%S'))).fetchall()
+    transactions = c.execute("""
+        SELECT type, COUNT(*), IFNULL(SUM(amount), 0) 
+        FROM transactions 
+        WHERE user_id = ? AND timestamp >= ? 
+        GROUP BY type
+    """, (user_id, last_24_hours_str)).fetchall()
 
     metrics = {
         "Top Ups": {"count": 0, "total": 0},
@@ -201,16 +207,15 @@ def recent_transactions_metrics(c, user_id):
 
     for trans_type, count, total in transactions:
         if "top up" in trans_type.lower():
-            metrics["Deposits"] = {"count": count, "total": total}
+            metrics["Top Ups"] = {"count": count, "total": total}
         elif "withdrawal" in trans_type.lower():
             metrics["Withdrawals"] = {"count": count, "total": total}
-        elif "Transfer to" in trans_type:
+        elif trans_type.lower().startswith("transfer to"):
             metrics["Outgoing Transfers"] = {"count": count, "total": total}
-        elif "Transfer from" in trans_type:
+        elif trans_type.lower().startswith("transfer from"):
             metrics["Incoming Transfers"] = {"count": count, "total": total}
 
     return metrics
-
 def leaderboard_logic(c):
     result = c.execute("SELECT username, visible_name, balance FROM users ORDER BY balance DESC").fetchall()
 
@@ -1152,7 +1157,7 @@ def savings_view(conn, user_id):
         interest = c.execute("SELECT interest_rate from savings WHERE user_id = ?", (user_id,)).fetchone()[0]
         with st.container(border=True):
             
-            st.write(f":green[%{interest}] simple interest per **hour.**")
+            st.write(f":green[%{interest}] simple interest per **minute.**")
         st.caption(":gray[HINT: Some items can boost your interest rate!]")
     st.text("")
     
