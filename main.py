@@ -15,7 +15,7 @@ from streamlit_autorefresh import st_autorefresh
 st.set_page_config(
     page_title = "Bank Genova",
     page_icon = "🏦",
-    layout = "centered",
+    layout = "centered" if st.session_state.wide else "wide",
     initial_sidebar_state = "expanded"
 )
 
@@ -277,10 +277,47 @@ def claim_daily_reward(conn, user_id):
         c.execute("UPDATE users SET last_daily_reward_claimed = ? WHERE user_id = ?", (last_claimed, user_id))
         conn.commit()
 
+import datetime
+import random
+
+def update_stock_prices(conn):
+    c = conn.cursor()
+    now = datetime.datetime.now()
+
+    stocks = c.execute("SELECT stock_id, price, last_updated FROM stocks").fetchall()
+
+    for stock_id, current_price, last_updated in stocks:
+        if last_updated:
+            last_updated = datetime.datetime.strptime(last_updated, "%Y-%m-%d %H:%M:%S")
+        else:
+            last_updated = now
+
+        elapsed_time = (now - last_updated).total_seconds()
+        num_updates = int(elapsed_time // 30)
+
+        if num_updates > 0:
+            for _ in range(num_updates):
+                change = round(random.uniform(-3, 3), 2)
+                current_price = round(current_price * (1 + change / 100), 2)
+                if current_price < 1:
+                    current_price = 1
+
+            c.execute("""
+                UPDATE stocks 
+                SET price = ?, last_updated = ? 
+                WHERE stock_id = ?
+            """, (current_price, now.strftime("%Y-%m-%d %H:%M:%S"), stock_id))
+
+            c.execute("INSERT INTO stock_history (stock_id, price, timestamp) VALUES (?, ?, ?)", 
+                      (stock_id, current_price, now.strftime("%Y-%m-%d %H:%M:%S")))
+
+    conn.commit()
+
+
 def get_latest_message_time(conn):
     c = conn.cursor()
     latest = c.execute("SELECT MAX(timestamp) FROM chats").fetchone()[0]
-    return latest if latest else "1970-01-01 00:00:00"  # Default value
+    return latest if latest else "1970-01-01 00:00:00"
 
 def register_user(conn, c, username, password, email = None, visible_name = None):
     try:
@@ -1393,14 +1430,13 @@ def display_transaction_history(conn, user_id):
     else:
         st.info("No transactions found in your history.")
 
-def buy_stock(conn, user_id, stock_symbol, amount):
+def buy_stock(conn, user_id, stock_id, amount):
     c = conn.cursor()
 
-    stock = c.execute("SELECT stock_id, price FROM stocks WHERE symbol = ?", (stock_symbol,)).fetchone()
-    if not stock:
+    price = c.execute("SELECT price FROM stocks WHERE stock_id = ?", (stock_id,)).fetchone()[0]
+    if not price:
         return "❌ Stock not found."
 
-    stock_id, price = stock
     shares = amount / price
 
     wallet_balance = c.execute("SELECT wallet FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
@@ -1417,21 +1453,23 @@ def buy_stock(conn, user_id, stock_symbol, amount):
         new_avg_price = ((existing[0] * existing[1]) + amount) / new_quantity
         c.execute("UPDATE user_stocks SET quantity = ?, avg_buy_price = ? WHERE user_id = ? AND stock_id = ?", 
                   (new_quantity, new_avg_price, user_id, stock_id))
+        c.execute("UPDATE stocks SET stock_amount = stock_amount - ? WHERE stock_id = ?", (shares, stock_id))
     else:
         c.execute("INSERT INTO user_stocks (user_id, stock_id, quantity, avg_buy_price) VALUES (?, ?, ?, ?)", 
                   (user_id, stock_id, shares, price))
+        c.execute("UPDATE stocks SET stock_amount = stock_amount - ? WHERE stock_id = ?", (shares, stock_id))
 
     conn.commit()
-    return f"✅ Purchased {shares:.2f} shares of {stock_symbol} at ${price:.2f} per share."
+    return f"✅ Purchased {shares:.2f} shares of {stock_id} at ${price:.2f} per share."
 
-def sell_stock(conn, user_id, stock_symbol, amount):
+def sell_stock(conn, user_id, stock_id, amount):
+
     c = conn.cursor()
 
-    stock = c.execute("SELECT stock_id, price FROM stocks WHERE symbol = ?", (stock_symbol,)).fetchone()
-    if not stock:
+    price = c.execute("SELECT price FROM stocks WHERE stock_id = ?", (stock_id,)).fetchone()[0]
+    if not price:
         return "❌ Stock not found."
 
-    stock_id, price = stock
     user_stock = c.execute("SELECT quantity, avg_buy_price FROM user_stocks WHERE user_id = ? AND stock_id = ?", 
                            (user_id, stock_id)).fetchone()
 
@@ -1443,65 +1481,67 @@ def sell_stock(conn, user_id, stock_symbol, amount):
 
     if new_quantity == 0:
         c.execute("DELETE FROM user_stocks WHERE user_id = ? AND stock_id = ?", (user_id, stock_id))
+        c.execute("UPDATE stocks SET stock_amount = stock_amount + ? WHERE stock_id = ?", (shares_to_sell, stock_id))
+
     else:
         c.execute("UPDATE user_stocks SET quantity = ? WHERE user_id = ? AND stock_id = ?", 
                   (new_quantity, user_id, stock_id))
+        c.execute("UPDATE stocks SET stock_amount = stock_amount + ? WHERE stock_id = ?", (shares_to_sell, stock_id))
 
     c.execute("UPDATE users SET wallet = wallet + ? WHERE user_id = ?", (amount, user_id))
 
     conn.commit()
-    return f"✅ Sold {shares_to_sell:.2f} shares of {stock_symbol} at ${price:.2f} per share."
+    return f"✅ Sold {shares_to_sell:.2f} shares of {stock_id} at ${price:.2f} per share."
 
-def stocks_view(conn):
-    st.success("Coming very soon!")
+def stocks_view(conn, user_id):
 
-def stocks_view_new(conn):
     c = conn.cursor()
-    st.title("📈 Stock Market")
-
-    st_autorefresh(interval=10000, key="stock_refresh")
-
-    stocks = c.execute("SELECT stock_id, name, price FROM stocks").fetchall()
-    stock_options = {stock[1]: stock[0] for stock in stocks}
+    st.header("📈 Stock Market", divider="rainbow")
+    update_stock_prices(conn)
     
-    selected_stock = st.selectbox("Choose a stock:", list(stock_options.keys()))
-    stock_id = stock_options[selected_stock]
-
-    stock_data = c.execute("SELECT price FROM stocks WHERE stock_id = ?", (stock_id,)).fetchone()
-    current_price = stock_data[0] if stock_data else 0
-    st.metric(label=f"💰 {selected_stock} Price", value=f"${current_price:.2f}")
-
-    history = c.execute("""
-        SELECT timestamp, price FROM stock_history 
-        WHERE stock_id = ? ORDER BY timestamp DESC LIMIT 50
-    """, (stock_id,)).fetchall()
-
-    if history:
-        df = pd.DataFrame(history, columns=["Timestamp", "Price"])
-        df["Timestamp"] = pd.to_datetime(df["Timestamp"])
-        st.line_chart(df.set_index("Timestamp"))
-    else:
-        st.warning("No historical data available.")
-
-    st.divider()
-
-    st.subheader(f"💵 Trade {selected_stock}")
-
-    c1, c2 = st.columns(2)
-
-    with c1:
-        st.write("**Buy Shares**")
-        buy_amount = st.number_input("Amount to Invest ($)", min_value=10.0, step=10.0)
-        if st.button("Buy"):
-            result = buy_stock(conn, st.session_state.user_id, selected_stock, buy_amount)
-            st.success(result)
-
-    with c2:
-        st.write("**Sell Shares**")
-        sell_amount = st.number_input("Amount to Sell ($)", min_value=10.0, step=10.0)
-        if st.button("Sell"):
-            result = sell_stock(conn, st.session_state.user_id, selected_stock, sell_amount)
-            st.success(result)
+    st_autorefresh(interval=30000, key="stock_autorefresh")
+    
+    
+    stocks = c.execute("SELECT stock_id, name, symbol, price, stock_amount FROM stocks").fetchall()
+        
+    for stock in stocks:
+        stock_id, name, symbol, price, stock_amount = stock
+        st.title(f"{name} ({symbol})")
+        
+        st.subheader(f"Current Price $|$ :green[${format_currency(price)}]")
+        
+        history = c.execute("SELECT timestamp, price FROM stock_history WHERE stock_id = ? ORDER BY timestamp ASC", (stock_id,)).fetchall()
+        
+        c1, c2 = st.columns(2)
+        with c1:
+            if history:
+                df = pd.DataFrame(history, columns=["Timestamp", "Price"])
+                df["Timestamp"] = pd.to_datetime(df["Timestamp"])
+                st.line_chart(df.set_index("Timestamp")['Price'])
+            else:
+                st.info("No price history available.")
+        with c2:
+            user_stock = c.execute("SELECT quantity, avg_buy_price FROM user_stocks WHERE user_id = ? AND stock_id = ?", (user_id, stock_id)).fetchone()
+            user_quantity, avg_price = user_stock if user_stock else (0, 0)
+            with st.container(border = True):
+                st.write(f"[Owned Shares] :blue[{format_currency(user_quantity)}]")
+                st.write(f"[Bought at AVG Price] :orange[${format_currency(avg_price)}]")
+                st.write(f"[Total {symbol} Available] :green[{format_currency(stock_amount)}]")                                
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                buy_quantity = st.number_input(f"Buy {symbol}", min_value=0.0, step=1.0, key=f"buy_{stock_id}")
+                if st.button(f"Buy {symbol}", key=f"buy_btn_{stock_id}", type = "primary", use_container_width = True, disabled = True if buy_quantity == 0 else False):
+                    buy_stock(conn, user_id, stock_id, buy_quantity)
+                    st.rerun()
+                    
+            with col2:
+                sell_quantity = st.number_input(f"Sell {symbol}", min_value=0.0, max_value=float(user_quantity), step=1.0, key=f"sell_{stock_id}")
+                if st.button(f"Sell {symbol}", key=f"sell_btn_{stock_id}", use_container_width = True, disabled = True if sell_quantity == 0 else False):
+                    sell_stock(conn, user_id, stock_id, sell_quantity)
+                    st.rerun()
+            
+            st.divider()
 
 
 def admin_panel(conn):
@@ -1939,7 +1979,7 @@ def main(conn):
             chat_view(conn)
         
         elif st.session_state.current_menu == "Stocks":
-            stocks_view(conn)
+            stocks_view(conn, st.session_state.user_id)
 
         elif st.session_state.current_menu == "Logout":
             st.sidebar.info("Logging you out...")
