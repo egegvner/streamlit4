@@ -57,8 +57,6 @@ def format_currency(amount):
 # def format_currency(amount):
 #     return "{:,.2f}".format(amount).replace(",", "X").replace(".", ",").replace("X", ".")
 
-ph = PasswordHasher()
-
 def hashPass(password):
     return ph.hash(password)
 
