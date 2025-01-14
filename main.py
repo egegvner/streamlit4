@@ -19,12 +19,6 @@ st.set_page_config(
     initial_sidebar_state = "expanded"
 )
 
-ph = argon2.PasswordHasher(
-    memory_cost=65536,  # 64MB RAM usage (default: 10240)
-    time_cost=5,        # More iterations = stronger (default: 2)
-    parallelism=4       # Number of parallel threads (default: 1)
-)
-
 def write_stream(s, delay = 0, random_delay = False):
     if random_delay:
         for i in s:
