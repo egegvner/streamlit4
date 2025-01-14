@@ -389,7 +389,10 @@ def init_db():
                   last_transaction_time DATETIME DEFAULT NULL,
                   email TEXT,
                   last_daily_reward_claimed TIMESTAMP DEFAULT NULL,
-                  login_streak INTEGER DEFAULT 0
+                  login_streak INTEGER DEFAULT 0,
+                  show_main_balance_on_leaderboard INTEGER DEFAULT 1,
+                  show_wallet_balance_on_leaderboard INTEGER DEFAULT 1,
+                  show_savings_balance_on_leaderboard INTEGER DEFAULT 1
                   )''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS transactions (
@@ -2006,12 +2009,6 @@ def add_column_if_not_exists(conn):
 
     c.execute("PRAGMA table_info(stocks);")
     columns = [column[1] for column in c.fetchall()]
-
-    if "stock_amount" not in columns:
-        c.execute("ALTER TABLE stocks ADD COLUMN stock_amount INTEGER NOT NULL;")
-
-    if "starting_price" not in columns:
-        c.execute("ALTER TABLE stocks ADD COLUMN starting_price REAL NOT NULL;")
 
     conn.commit()
 
