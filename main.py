@@ -19,6 +19,12 @@ st.set_page_config(
     initial_sidebar_state = "expanded"
 )
 
+ph = argon2.PasswordHasher(
+    memory_cost=65536,  # 64MB RAM usage (default: 10240)
+    time_cost=5,        # More iterations = stronger (default: 2)
+    parallelism=4       # Number of parallel threads (default: 1)
+)
+
 def write_stream(s, delay = 0, random_delay = False):
     if random_delay:
         for i in s:
@@ -51,12 +57,14 @@ def format_currency(amount):
 # def format_currency(amount):
 #     return "{:,.2f}".format(amount).replace(",", "X").replace(".", ",").replace("X", ".")
 
+ph = PasswordHasher()
+
 def hashPass(password):
-    return argon2.hash_password(password)
+    return ph.hash(password)
 
 def verifyPass(hashed_password, entered_password):
     try:
-        return argon2.verify_password(hashed_password, entered_password)
+        return ph.verify(hashed_password, entered_password)
     except:
         return False
 
@@ -96,6 +104,8 @@ def check_and_reset_quota(conn, user_id):
                       (new_quota, now.strftime("%Y-%m-%d %H:%M:%S"), user_id))
             conn.commit()
             st.toast(f"Quota Refilled! (max: {new_quota})")
+            print(f"Quota reset for user {user_id}. New quota: {new_quota}")
+
         return new_quota
     return current_quota
 
