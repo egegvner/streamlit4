@@ -9,7 +9,7 @@ import time
 import pandas as pd
 import datetime
 import re
-import bcrypt
+from argon2 import PasswordHasher
 from streamlit_autorefresh import st_autorefresh
 
 st.set_page_config(
@@ -17,6 +17,12 @@ st.set_page_config(
     page_icon = "🏦",
     layout = "centered",
     initial_sidebar_state = "expanded"
+)
+
+ph = PasswordHasher(
+    memory_cost=65536,  # 64MB RAM usage (default: 10240)
+    time_cost=5,        # More iterations = stronger (default: 2)
+    parallelism=4       # Number of parallel threads (default: 1)
 )
 
 def write_stream(s, delay = 0, random_delay = False):
@@ -31,7 +37,7 @@ def write_stream(s, delay = 0, random_delay = False):
 
 @st.cache_resource
 def get_db_connection():
-    return sqlite3.connect("egggggggggggg.db", check_same_thread = False)
+    return sqlite3.connect("genovasa.db", check_same_thread = False)
 
 item_colors = {
         "Common":"",
@@ -51,13 +57,16 @@ def format_currency(amount):
 # def format_currency(amount):
 #     return "{:,.2f}".format(amount).replace(",", "X").replace(".", ",").replace("X", ".")
 
+ph = PasswordHasher()
+
 def hashPass(password):
-    return bcrypt.hashpw(password.encode(), bcrypt.gensalt())
+    return ph.hash(password)
 
 def verifyPass(hashed_password, entered_password):
-    if isinstance(hashed_password, str):
-        hashed_password = hashed_password.encode()
-    return bcrypt.checkpw(entered_password.encode(), hashed_password)
+    try:
+        return ph.verify(hashed_password, entered_password)
+    except:
+        return False
 
 admins = [
     "egegvner",
@@ -281,42 +290,29 @@ def update_stock_prices(conn):
     c = conn.cursor()
     now = datetime.datetime.now()
 
-    # Fetch all stocks and their last updated time
     stocks = c.execute("SELECT stock_id, price, last_updated FROM stocks").fetchall()
 
     for stock_id, current_price, last_updated in stocks:
         if last_updated:
             last_updated = datetime.datetime.strptime(last_updated, "%Y-%m-%d %H:%M:%S")
         else:
-            last_updated = now  # Default to now if missing
+            last_updated = now
 
         elapsed_time = (now - last_updated).total_seconds()
-        num_updates = int(elapsed_time)  # Apply updates every 10 seconds
+        num_updates = int(elapsed_time // 10)  # Apply updates every 10 seconds
 
-        if num_updates > 0:
-            for _ in range(num_updates):
-                # Generate a small random fluctuation (-2% to +2%)
-                change = round(random.uniform(-2, 2), 2)
-                new_price = round(current_price * (1 + change / 100), 2)
+        for _ in range(num_updates):
+            change = round(random.uniform(-2, 2), 2)
+            new_price = max(1, round(current_price * (1 + change / 100), 2))  # Ensure price never goes below 1
 
-                # Ensure price never falls below $1
-                if new_price < 1:
-                    new_price = 1
+            c.execute("INSERT INTO stock_history (stock_id, price, timestamp) VALUES (?, ?, ?)", 
+                      (stock_id, new_price, now.strftime("%Y-%m-%d %H:%M:%S")))
+            conn.commit()
+            current_price = new_price
+            last_updated += datetime.timedelta(seconds=10)
 
-                # Insert historical data for smooth stock trends
-                c.execute("INSERT INTO stock_history (stock_id, price, timestamp) VALUES (?, ?, ?)", 
-                          (stock_id, new_price, last_updated.strftime("%Y-%m-%d %H:%M:%S")))
-
-                # Update current price for the next loop iteration
-                current_price = new_price
-                last_updated += datetime.timedelta(seconds=10)  # Simulate time intervals
-
-            # Final stock price update in `stocks` table
-            c.execute("""
-                UPDATE stocks 
-                SET price = ?, last_updated = ? 
-                WHERE stock_id = ?
-            """, (current_price, now.strftime("%Y-%m-%d %H:%M:%S"), stock_id))
+        c.execute("UPDATE stocks SET price = ?, last_updated = ? WHERE stock_id = ?", 
+                  (current_price, now.strftime("%Y-%m-%d %H:%M:%S"), stock_id))
 
     conn.commit()
 
@@ -362,7 +358,7 @@ def register_user(conn, c, username, password, email = None, visible_name = None
         st.session_state.username = username
         time.sleep(2)
 
-        st.session_state.current_menu = "Main Account View"
+        st.session_state.current_menu = "Dashboard"
 
     except sqlite3.IntegrityError:
         st.error("Username already exists!")
@@ -399,17 +395,17 @@ def init_db():
                   )''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS transactions (
-                  transaction_id INTEGER PRIMARY KEY NOT NULL,
-                  user_id INTEGER NOT NULL,
-                  type TEXT NOT NULL,
-                  amount REAL NOT NULL,
-                  balance REAL NOT NULL,
-                  receiver_username TEXT DEFAULT None,
-                  status TEXT DEFAULT None,
-                  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                  FOREIGN KEY (user_id) REFERENCES users(user_id),
-                  FOREIGN KEY (receiver_username) REFERENCES users(username)
-                  )''')
+                transaction_id INTEGER PRIMARY KEY NOT NULL,
+                user_id INTEGER NOT NULL,
+                type TEXT NOT NULL,
+                amount REAL NOT NULL,
+                balance REAL NOT NULL,
+                receiver_username TEXT DEFAULT None,
+                status TEXT DEFAULT None,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(user_id),
+                FOREIGN KEY (receiver_username) REFERENCES users(username)
+                )''')
     
     c.execute('''CREATE TABLE IF NOT EXISTS savings (
               user_id INTEGER NOT NULL,
@@ -477,6 +473,12 @@ def init_db():
             avg_buy_price REAL NOT NULL,
             FOREIGN KEY (user_id) REFERENCES users(user_id),
             FOREIGN KEY (stock_id) REFERENCES stocks(stock_id)
+            );''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS stock_history (
+            stock_id INTEGER NOT NULL,
+            price REAL NOT NULL,
+            timestamp DATETIME NOT NULL
             );''')
     
     c.execute('CREATE INDEX IF NOT EXISTS idx_user_id ON transactions(user_id)')
@@ -1506,8 +1508,7 @@ def stocks_view(conn, user_id):
     st.header("📈 Stock Market", divider="rainbow")
     update_stock_prices(conn)
     
-    st_autorefresh(interval=1000, key="stock_autorefresh")
-    
+    st_autorefresh(interval=20000, key="stock_autorefresh")
     
     stocks = c.execute("SELECT stock_id, name, symbol, price, stock_amount FROM stocks").fetchall()
         
@@ -1549,7 +1550,6 @@ def stocks_view(conn, user_id):
                     st.rerun()
             
             st.divider()
-
 
 def admin_panel(conn):
     c = conn.cursor()
