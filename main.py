@@ -54,11 +54,11 @@ def format_currency(amount):
 ph = PasswordHasher()
 
 def hashPass(password):
-    return ph.hash(password)
+    return argon2.hash_password(password)
 
 def verifyPass(hashed_password, entered_password):
     try:
-        return ph.verify(hashed_password, entered_password)
+        return argon2.verify_password(hashed_password, entered_password)
     except:
         return False
 
@@ -98,8 +98,6 @@ def check_and_reset_quota(conn, user_id):
                       (new_quota, now.strftime("%Y-%m-%d %H:%M:%S"), user_id))
             conn.commit()
             st.toast(f"Quota Refilled! (max: {new_quota})")
-            print(f"Quota reset for user {user_id}. New quota: {new_quota}")
-
         return new_quota
     return current_quota
 
