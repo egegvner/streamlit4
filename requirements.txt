@@ -2,4 +2,4 @@ streamlit
 pandas
 bcrypt
 streamlit_autorefresh
-argon2
+argon2-cffi
