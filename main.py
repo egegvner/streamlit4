@@ -51,8 +51,6 @@ def format_currency(amount):
 # def format_currency(amount):
 #     return "{:,.2f}".format(amount).replace(",", "X").replace(".", ",").replace("X", ".")
 
-ph = PasswordHasher()
-
 def hashPass(password):
     return argon2.hash_password(password)
 
