@@ -391,7 +391,7 @@ def init_db():
                   last_daily_reward_claimed TIMESTAMP DEFAULT NULL,
                   login_streak INTEGER DEFAULT 0,
                   show_main_balance_on_leaderboard INTEGER DEFAULT 1,
-                  show_wallet_balance_on_leaderboard INTEGER DEFAULT 1,
+                  show_wallet_on_leaderboard INTEGER DEFAULT 1,
                   show_savings_balance_on_leaderboard INTEGER DEFAULT 1
                   )''')
 
