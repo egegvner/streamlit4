@@ -357,6 +357,7 @@ def register_user(conn, c, username, password, email = None, visible_name = None
         time.sleep(2)
 
         st.session_state.current_menu = "Dashboard"
+        dashboard(conn, st.session_state.user_id)
 
     except sqlite3.IntegrityError:
         st.error("Username already exists!")
