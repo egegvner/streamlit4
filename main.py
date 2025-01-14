@@ -9,7 +9,7 @@ import time
 import pandas as pd
 import datetime
 import re
-from argon2 import PasswordHasher
+import argon2
 from streamlit_autorefresh import st_autorefresh
 
 st.set_page_config(
@@ -19,7 +19,7 @@ st.set_page_config(
     initial_sidebar_state = "expanded"
 )
 
-ph = PasswordHasher(
+ph = argon2.PasswordHasher(
     memory_cost=65536,  # 64MB RAM usage (default: 10240)
     time_cost=5,        # More iterations = stronger (default: 2)
     parallelism=4       # Number of parallel threads (default: 1)
