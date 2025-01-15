@@ -2,6 +2,7 @@
 # Copyright Ege Güvener, 20/12/2024
 # License: MIT
 
+import numerize.numerize
 import streamlit as st
 import sqlite3
 import random
@@ -11,12 +12,27 @@ import datetime
 import re
 import argon2
 from streamlit_autorefresh import st_autorefresh
+from numerize.numerize import numerize
+import streamlit as st
 
+if "current_menu" not in st.session_state:
+    st.session_state.current_menu = "Dashboard"
+
+# Check if we need to rerun the app for layout change
+previous_layout = st.session_state.get("previous_layout", "centered")
+current_layout = "wide" if st.session_state.current_menu == "Stocks" else "centered"
+
+# If layout has changed, update it and force a rerun
+if previous_layout != current_layout:
+    st.session_state.previous_layout = current_layout
+    st.rerun()  # Force a rerun to apply the new layout
+
+# Set page configuration (must be at the top)
 st.set_page_config(
-    page_title = "Bank Genova",
-    page_icon = "🏦",
-    layout = "wide",
-    initial_sidebar_state = "expanded"
+    page_title="Bank Genova",
+    page_icon="🏦",
+    layout=current_layout,
+    initial_sidebar_state="expanded"
 )
 
 ph = argon2.PasswordHasher(
@@ -68,10 +84,11 @@ def verifyPass(hashed_password, entered_password):
 
 admins = [
     "egegvner",
-    "JohnyJohnJohn"
+    "JohnyJohnyJohn"
 ]
 
-def calculate_new_quota(c, user_id, boost):
+def calculate_new_quota(user_id, boost):
+    c = conn.cursor()
     user_level = c.execute("SELECT level FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     base_quota = user_level * 100  
     return base_quota + boost
@@ -95,7 +112,7 @@ def check_and_reset_quota(conn, user_id):
     now = datetime.datetime.now()
 
     if (now - last_reset_time).total_seconds() >= 3600:
-        new_quota = calculate_new_quota(c, user_id, boost)
+        new_quota = calculate_new_quota(user_id, boost)
 
         if current_quota != new_quota:
             c.execute("UPDATE users SET deposit_quota = ?, last_quota_reset = ? WHERE user_id = ?", 
@@ -107,46 +124,49 @@ def check_and_reset_quota(conn, user_id):
         return new_quota
     return current_quota
 
-def apply_interest_if_due(conn, user_id):
+def apply_interest_if_due(conn, user_id, check = True):
     c = conn.cursor()
+    current_time = time.time()
+    if check:
+        if current_time - st.session_state.last_refresh >= 5:
+            st.session_state.last_refresh = current_time
 
-    has_savings_account = c.execute("SELECT has_savings_account FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
-    if not has_savings_account:
-        return
+            has_savings_account = c.execute("SELECT has_savings_account FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+            if not has_savings_account:
+                return
 
-    savings_data = c.execute("SELECT balance, last_interest_applied FROM savings WHERE user_id = ?", (user_id,)).fetchone()
-    balance, last_applied = savings_data if savings_data else (0, None)
+            savings_data = c.execute("SELECT balance, last_interest_applied FROM savings WHERE user_id = ?", (user_id,)).fetchone()
+            balance, last_applied = savings_data if savings_data else (0, None)
 
-    last_applied_time = datetime.datetime.strptime(last_applied, "%Y-%m-%d %H:%M:%S") if last_applied else datetime.datetime(1970, 1, 1)
+            last_applied_time = datetime.datetime.strptime(last_applied, "%Y-%m-%d %H:%M:%S") if last_applied else now
 
-    now = datetime.datetime.now()
+            now = datetime.datetime.now()
 
-    seconds_passed = (now - last_applied_time).total_seconds() / 60
-    if seconds_passed < 1:
-        return
+            hours_passed = (now - last_applied_time).total_seconds() / 3600
 
-    hours_fraction = seconds_passed / 60
-    hourly_interest_rate = c.execute("SELECT interest_rate FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
+            hourly_interest_rate = c.execute("SELECT interest_rate FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
 
-    total_interest = balance * hourly_interest_rate * hours_fraction
-    new_balance = balance + total_interest
+            total_interest = balance * hourly_interest_rate * hours_passed
+            new_balance = balance + total_interest
 
-    new_last_applied_time = last_applied_time + datetime.timedelta(seconds=seconds_passed)
+            c.execute("""
+                INSERT INTO interest_history (user_id, interest_amount, new_balance)
+                VALUES (?, ?, ?)
+            """, (user_id, total_interest, new_balance))
 
-    c.execute("""
-        INSERT INTO interest_history (user_id, interest_amount, new_balance)
-        VALUES (?, ?, ?)
-    """, (user_id, total_interest, new_balance))
+            c.execute("""
+                UPDATE savings
+                SET balance = ?, last_interest_applied = ?
+                WHERE user_id = ?
+            """, (new_balance, now.strftime("%Y-%m-%d %H:%M:%S"), user_id))
 
-    c.execute("""
-        UPDATE savings
-        SET balance = ?, last_interest_applied = ?
-        WHERE user_id = ?
-    """, (new_balance, new_last_applied_time.strftime("%Y-%m-%d %H:%M:%S"), user_id))
-
-    conn.commit()
-
-def change_password(c, conn, username, current_password, new_password):
+            conn.commit()
+            st.rerun()
+        else:
+            st.toast(f"Wait {int(5 - (current_time - st.session_state.last_refresh))} seconds before refreshing again.")
+    
+def change_password(conn, username, current_password, new_password):
+    c = conn.cursor()
     c.execute("SELECT password FROM users WHERE username = ?", (username,))
     result = c.fetchone()
     real_password = result[0]
@@ -178,7 +198,8 @@ def change_visible_name(c, conn, username, new_name):
     time.sleep(2)
     st.rerun()
 
-def check_cooldown(c, user_id):
+def check_cooldown(conn, user_id):
+    c = conn.cursor()
     last_transaction = c.execute("SELECT last_transaction_time FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     if last_transaction:
         last_time = pd.to_datetime(last_transaction)
@@ -189,7 +210,8 @@ def check_cooldown(c, user_id):
             return False
     return True
 
-def update_last_transaction_time(c, conn, user_id):
+def update_last_transaction_time(conn, user_id):
+    c = conn.cursor()
     c.execute("UPDATE users SET last_transaction_time = ? WHERE user_id = ?", (datetime.datetime.now().isoformat(), user_id))
     conn.commit()
 
@@ -266,7 +288,7 @@ def claim_daily_reward(conn, user_id):
     last_claimed = c.execute("SELECT last_daily_reward_claimed FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
     if last_claimed:
-        last_claimed_date = datetime.datetime.strptime(last_claimed, "%Y-%m-%d %H:%M:%S")
+        last_claimed_date = datetime.datetime.strptime(last_claimed, "%Y-%m-%d")
         if last_claimed_date.date() == datetime.datetime.today().date():
             st.toast("You've already claimed your daily reward today!")
         else:
@@ -301,7 +323,7 @@ def update_stock_prices(conn):
 
         if num_updates > 0:
             for _ in range(num_updates):
-                change = round(random.uniform(-1.5, 1.5), 2)
+                change = round(random.uniform(-0.5, 0.5), 2)
                 current_price = max(1, round(current_price * (1 + change / 100), 2))
                 
                 c.execute("INSERT INTO stock_history (stock_id, price, timestamp) VALUES (?, ?, ?)", 
@@ -313,6 +335,58 @@ def update_stock_prices(conn):
                       (current_price, last_updated.strftime("%Y-%m-%d %H:%M:%S"), stock_id))
 
     conn.commit()
+
+def get_stock_metrics(conn, stock_id):
+    c = conn.cursor()
+    
+    last_24_hours = datetime.datetime.now() - datetime.timedelta(days=1)
+    
+    result = c.execute("""
+        SELECT MIN(price), MAX(price), price 
+        FROM stock_history 
+        WHERE stock_id = ? AND timestamp >= ?
+    """, (stock_id, last_24_hours.strftime("%Y-%m-%d %H:%M:%S"))).fetchone()
+    
+    low_24h, high_24h, last_price = result if result else (None, None, None)
+
+    c.execute("""
+        SELECT MIN(price), MAX(price) 
+        FROM stock_history 
+        WHERE stock_id = ?
+    """, (stock_id,))
+    
+    result = c.fetchone()
+    all_time_low, all_time_high = result if result else (None, None)
+
+    c.execute("""
+        SELECT price 
+        FROM stock_history 
+        WHERE stock_id = ? AND timestamp >= ?
+        ORDER BY timestamp ASC
+        LIMIT 1
+    """, (stock_id, last_24_hours.strftime("%Y-%m-%d %H:%M:%S")))
+    
+    price_24h_ago = c.fetchone()
+    price_24h_ago = price_24h_ago[0] if price_24h_ago else last_price
+
+    delta_24h_high = last_price - high_24h if high_24h else None
+    delta_24h_low = last_price - low_24h if low_24h else None
+    delta_all_time_high = last_price - all_time_high if all_time_high else None
+    delta_all_time_low = last_price - all_time_low if all_time_low else None
+    price_change_percent = ((last_price - price_24h_ago) / price_24h_ago * 100) if price_24h_ago else 0
+
+    return {
+        "low_24h": low_24h,
+        "high_24h": high_24h,
+        "all_time_low": all_time_low,
+        "all_time_high": all_time_high,
+        "price_change": price_change_percent,
+        "delta_24h_high": delta_24h_high,
+        "delta_24h_low": delta_24h_low,
+        "delta_all_time_high": delta_all_time_high,
+        "delta_all_time_low": delta_all_time_low
+    }
+
 
 def get_latest_message_time(conn):
     c = conn.cursor()
@@ -356,6 +430,7 @@ def register_user(conn, c, username, password, email = None, visible_name = None
         time.sleep(2)
 
         st.session_state.current_menu = "Dashboard"
+        st.balloons()
         dashboard(conn, st.session_state.user_id)
 
     except sqlite3.IntegrityError:
@@ -505,7 +580,7 @@ def deposit_dialog(conn, user_id):
     if "quota" not in st.session_state:
         st.session_state.quota = c.execute("SELECT deposit_quota FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
-    st.write(f"# Main Balance   **•**   :green[${format_currency(current_balance)}]")
+    st.write(f"# Main Balance   **•**   :green[${numerize(current_balance,2)}]")
     st.header("", divider = "rainbow")
     
     c1, c2, c3, c4 = st.columns(4)
@@ -523,7 +598,7 @@ def deposit_dialog(conn, user_id):
         st.session_state.amount = st.session_state.top_up_value
 
     c1, c2 = st.columns(2)
-    c1.write(f"Top Up Quota   $|$   :green[${format_currency(st.session_state.quota)}]")
+    c1.write(f"Top Up Quota   $|$   :green[${numerize(st.session_state.quota)}]")
     if c2.button("Reload Quota", type = "primary", use_container_width = True):
         st.session_state.quota = c.execute("SELECT deposit_quota FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
         
@@ -533,18 +608,18 @@ def deposit_dialog(conn, user_id):
     tax = (amount / 100) * 0.5
     net = amount - tax
 
-    st.write(f"Net Deposit   $|$   :green[${format_currency(net)}]   $|$   :red[${format_currency(tax)} Tax*]")
-    st.write(f"New Main Balance   $|$   :green[${format_currency(current_balance + amount - tax)}]")
+    st.write(f"Net Deposit   $|$   :green[${numerize(net, 2)}]   $|$   :red[${numerize(tax, 2)} Tax*]")
+    st.write(f"New Main Balance   $|$   :green[${numerize((current_balance + amount - tax), 2)}]")
     
     if st.button("**Confirm Top Up**", type = "primary", use_container_width = True, disabled = True if amount <= 0 else False):
-        if check_cooldown(c, user_id):
+        if check_cooldown(conn, user_id):
             balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
             if net > 0:
                 if net <= current_deposit_quota:
                     c.execute("UPDATE users SET balance = balance + ?, deposits = deposits + 1, deposit_quota = deposit_quota - ? WHERE user_id = ?", (net, amount, user_id))
                     c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, balance) VALUES (?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, 'Top Up', net, balance))
                     c.execute("UPDATE users SET balance = balance + ? WHERE username = 'egegvner'", (tax,))
-                    update_last_transaction_time(c, conn, user_id)
+                    update_last_transaction_time(conn, user_id)
                     conn.commit()
                     st.session_state.quota -= amount
                     with st.spinner("Processing..."):
@@ -571,7 +646,7 @@ def withdraw_dialog(conn, user_id):
     if "withdraw_value" not in st.session_state:
         st.session_state.withdraw_value = 0.00
 
-    st.write(f"# Balance   **•**   :green[${format_currency(current_balance)}]")
+    st.write(f"# Balance   **•**   :green[${numerize(current_balance, 2)}]")
     st.header("", divider = "rainbow")
     
     c1, c2, c3, c4 = st.columns(4)
@@ -588,15 +663,15 @@ def withdraw_dialog(conn, user_id):
     st.divider()
     tax = (amount / 100) * 0.5
     net = amount - tax
-    st.write(f"Net Withdraw   $|$   :green[{format_currency(net)}]   $|$   :red[${format_currency(tax)} Tax*]")
+    st.write(f"Net Withdraw   $|$   :green[{numerize(net, 2)}]   $|$   :red[${numerize(tax, 2)} Tax*]")
     c1, c2 = st.columns(2)
-    c1.write(f"Remaining Balance   $|$   :green[${format_currency(current_balance - amount)}]")
+    c1.write(f"Remaining Balance   $|$   :green[${numerize((current_balance - amount), 2)}]")
     if (current_balance - amount) < 0:
         c2.write("**:red[Insufficent]**")
 
     c1, c2 = st.columns(2)
     if c1.button("Withdraw to Wallet", type = "secondary", use_container_width = True, disabled = True if net <= 0 or (current_balance - amount) < 0 else False, help = "Insufficent funds" if net <= 0 or (current_balance - net) < 0 else None):
-        if check_cooldown(c, user_id):
+        if check_cooldown(conn, user_id):
             c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (amount, user_id))
             c.execute("UPDATE users SET wallet = wallet + ? WHERE user_id = ?", (net, user_id))
             conn.commit()
@@ -604,7 +679,7 @@ def withdraw_dialog(conn, user_id):
             c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, balance) VALUES (?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, "Withdraw From Main Account To Wallet", net, new_wallet))
             c.execute("UPDATE users SET balance = balance + ? WHERE username = 'egegvner'", (tax,))
             conn.commit()
-            update_last_transaction_time(c, conn, user_id)
+            update_last_transaction_time(conn, user_id)
             with st.spinner("Processing..."):
                 time.sleep(random.uniform(1, 2))
                 st.success(f"Successfully withdrawn ${net:.2f}")
@@ -613,7 +688,7 @@ def withdraw_dialog(conn, user_id):
             st.rerun()
             
     if c2.button("Withdraw to Savings", type = "primary", use_container_width = True, disabled = True if net <= 0 or (current_balance - amount) < 0 or not has_savings else False, help = "Insufficent funds" if net <= 0 or (current_balance - net) < 0 else None):
-        if check_cooldown(c, user_id):
+        if check_cooldown(conn, user_id):
             c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (amount, user_id))
             c.execute("UPDATE savings SET balance = balance + ? WHERE user_id = ?", (net, user_id))
             conn.commit()
@@ -621,7 +696,7 @@ def withdraw_dialog(conn, user_id):
             c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, balance) VALUES (?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, "Withdraw From Main Account To Savings", amount, new_savings_balance))
             c.execute("UPDATE users SET balance = balance + ? WHERE username = 'egegvner'", (tax,))
             conn.commit()
-            update_last_transaction_time(c, conn, user_id)
+            update_last_transaction_time(conn, user_id)
             with st.spinner("Processing..."):
                 time.sleep(random.uniform(1, 2))
                 st.success(f"Successfully withdrawn ${amount:.2f}")
@@ -645,11 +720,11 @@ def transfer_dialog(conn, user_id):
     net = amount - tax
     st.divider()
 
-    st.write(f"Net Transfer $|$ :green[${format_currency(net)}] $|$ :red[${format_currency(tax)} Tax]")
+    st.write(f"Net Transfer $|$ :green[${numerize(net, 2)}] $|$ :red[${numerize(tax, 2)} Tax]")
     st.caption("*Tax is not applied untill receiver accepts the transaction.")
     
     if st.button("Initiate Transfer", type = "primary", use_container_width = True, disabled = True if amount == 0.00 else False):
-        if check_cooldown(c, user_id):
+        if check_cooldown(conn, user_id):
             receiver_user_id = c.execute("SELECT user_id FROM users WHERE username = ?", (receiver_username,)).fetchone()
 
             if receiver_user_id:
@@ -674,7 +749,7 @@ def transfer_dialog(conn, user_id):
                     with st.spinner("Processing"):
                         time.sleep(1)
                     st.success(f"Successfully initiated transfer of ${amount:.2f} to {receiver_username}. Awaiting acceptance.")
-                    update_last_transaction_time(c, conn, user_id)
+                    update_last_transaction_time(conn, user_id)
                     time.sleep(1)
                     st.rerun()
                 else:
@@ -700,9 +775,9 @@ def deposit_to_savings_dialog(conn, user_id):
     main_balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     wallet_balance = c.execute("SELECT wallet FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
-    st.header(f"Savings   **•**   :green[${format_currency(current_savings)}]", divider = "rainbow")
+    st.header(f"Savings   **•**   :green[${numerize(current_savings, 2)}]", divider = "rainbow")
     st.write("#### Deposit Source")
-    st.session_state.deposit_source = st.radio("A", label_visibility = "collapsed", options = [f"Main Account   •   :green[${format_currency(main_balance)}]", f"Wallet   •   :green[${format_currency(wallet_balance)}]"])
+    st.session_state.deposit_source = st.radio("A", label_visibility = "collapsed", options = [f"Main Account   •   :green[${numerize(main_balance, 2)}]", f"Wallet   •   :green[${numerize(wallet_balance, 2)}]"])
 
     max_value = main_balance if "Main" in st.session_state.deposit_source else wallet_balance
 
@@ -725,10 +800,10 @@ def deposit_to_savings_dialog(conn, user_id):
     net = amount - tax
 
     st.divider()
-    st.write(f"Net Deposit   $|$   :green[${format_currency(net)}]   $|$   :red[${format_currency(tax)} Tax]")
-    st.write(f"New Savings   $|$   :green[${format_currency(current_savings + net)}]")
+    st.write(f"Net Deposit   $|$   :green[${numerize(net, )}]   $|$   :red[${numerize(tax, 2)} Tax]")
+    st.write(f"New Savings   $|$   :green[${numerize((current_savings + net), 2)}]")
     if st.button("Confirm Deposition From Main Account" if "Main" in st.session_state.deposit_source else "Confirm Deposition From Wallet", type="primary", use_container_width = True, disabled = True if amount <= 0.00 else False):
-        if check_cooldown(c, user_id):
+        if check_cooldown(conn, user_id):
             if "Main" in st.session_state.deposit_source:
                 if amount > main_balance:
                     st.error("Insufficient funds in Main Account.")
@@ -750,13 +825,13 @@ def deposit_to_savings_dialog(conn, user_id):
             c.execute("UPDATE savings SET balance = balance + ? WHERE user_id = ?", (net, user_id))
 
             source = "Main Account" if "Main" in st.session_state.deposit_source else "Wallet"
-            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, balance) VALUES (?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Deposit To Savings From {source}", amount, format_currency(current_savings + amount)))
+            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, balance) VALUES (?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Deposit To Savings From {source}", amount, numerize((current_savings + amount), 2)))
             c.execute("UPDATE users SET balance = balance + ? WHERE username = 'egegvner'", (tax,))
             conn.commit()
-            update_last_transaction_time(c, conn, user_id)
+            update_last_transaction_time(conn, user_id)
             with st.spinner("Processing..."):
                 time.sleep(1)
-            st.success(f"Successfully deposited ${format_currency(net)} from {source} to savings.")
+            st.success(f"Successfully deposited ${numerize(net, 2)} from {source} to savings.")
             time.sleep(1)
             st.rerun()
 
@@ -778,9 +853,7 @@ def withdraw_from_savings_dialog(conn, user_id):
     main_balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     wallet_balance = c.execute("SELECT wallet FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
-    st.header(f"Savings   **•**   :green[${format_currency(current_savings)}]", divider = "rainbow")
-    st.write("**Target**")
-    st.session_state.withdraw_target = st.radio("A", label_visibility = "collapsed", options = [f"Main Account   •   :green[${format_currency(main_balance)}]", f"Wallet   •   :green[${format_currency(wallet_balance)}]"])
+    st.header(f"Savings   **•**   :green[${numerize((current_savings), 2)}]", divider = "rainbow")
     
     c1, c2, c3, c4 = st.columns(4)
 
@@ -798,25 +871,40 @@ def withdraw_from_savings_dialog(conn, user_id):
     net = amount - tax
 
     st.divider()
-    st.write(f"Net Withdrawal $|$ :green[${format_currency(net)}] $|$ :red[${format_currency(tax)} Tax]")
-    st.write(f"Remaining Savings $|$ :green[${format_currency(current_savings - amount)}]")
-    if st.button("Confirm Withdrawal Into Main Account" if "Main" in st.session_state.withdraw_target else "Confirm Withdrawal Into Wallet", type = "primary", use_container_width = True, disabled = True if amount <= 0.00 else False):
-        if check_cooldown(c, user_id):
-            if "Main" in st.session_state.withdraw_target:
-                c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (amount, user_id))
-            else:
-                c.execute("UPDATE users SET wallet = wallet + ? WHERE user_id = ?", (amount, user_id))
+    st.write(f"Net Withdrawal $|$ :green[${numerize(net, 2)}] $|$ :red[${numerize(tax, 2)} Tax]")
+    st.write(f"Remaining Savings $|$ :green[${numerize((current_savings - amount), 2)}]")
+    c1, c2 = st.columns(2)
 
+    if c1.button("Withdraw to Wallet", type = "secondary", use_container_width = True, disabled = True if amount <= 0.00 else False):
+        if check_cooldown(conn, user_id):
+            c.execute("UPDATE users SET wallet = wallet + ? WHERE user_id = ?", (net, user_id))
             c.execute("UPDATE savings SET balance = balance - ? WHERE user_id = ?", (amount, user_id))
 
-            target = "Main Account" if "Main" in st.session_state.withdraw_target else "Wallet"
-            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, balance) VALUES (?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Withdraw From Savings To {target}", amount, format_currency(current_savings - amount)))
+            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, balance) VALUES (?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Withdraw from Savings to Wallet", amount, numerize((current_savings - amount), 2)))
             c.execute("UPDATE users SET balance = balance + ? WHERE username = 'egegvner'", (tax,))
             conn.commit()
-            update_last_transaction_time(c, conn, user_id)
+
+            update_last_transaction_time(conn, user_id)
             with st.spinner("Processing..."):
                 time.sleep(random.uniform(1, 2))
-            st.success(f"Successfully withdrawn ${format_currency(net)} into {target}")
+            st.success(f"Successfully withdrawn ${numerize(net, 2)} to Wallet")
+            time.sleep(1.5)
+            st.session_state.withdraw_from_savings_value = 0.0
+            st.rerun()
+
+    if c2.button("Withdraw to Vault", type = "primary", use_container_width = True, disabled = True if amount <= 0.00 else False):
+        if check_cooldown(conn, user_id):
+            c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (net, user_id))
+            c.execute("UPDATE savings SET balance = balance - ? WHERE user_id = ?", (amount, user_id))
+
+            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, balance) VALUES (?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Withdraw from Savings to Vault", amount, numerize((current_savings - amount), 2)))
+            c.execute("UPDATE users SET balance = balance + ? WHERE username = 'egegvner'", (tax,))
+            conn.commit()
+
+            update_last_transaction_time(conn, user_id)
+            with st.spinner("Processing..."):
+                time.sleep(random.uniform(1, 2))
+            st.success(f"Successfully withdrawn ${numerize(net, 2)} to Vault")
             time.sleep(1.5)
             st.session_state.withdraw_from_savings_value = 0.0
             st.rerun()
@@ -834,17 +922,17 @@ def item_options(conn, user_id, item_id):
     st.text("")
     with st.container(border=True):
         st.write(f"**:gray[EFFECT   $|$   ]** {item_data[1]}.")
-        st.write(f"**:gray[PRICE   $|$   ]** :green[${format_currency(item_data[3])}]")
+        st.write(f"**:gray[PRICE   $|$   ]** :green[${numerize(item_data[3], 2)}]")
         st.write(f"**:gray[STOCK   $|$   ]** :green[{item_data[4]}]")
 
     st.divider()
-    st.write(f"Wallet   **•**   :green[${format_currency(wallet_balance)}]   **•**   :red[INSUFFICENT]" if wallet_balance < item_data[3] else f"Wallet   **•**   :green[${format_currency(wallet_balance)}]")
+    st.write(f"Wallet   **•**   :green[${numerize(wallet_balance, 2)}]   **•**   :red[INSUFFICENT]" if wallet_balance < item_data[3] else f"Wallet   **•**   :green[${numerize(wallet_balance, 2)}]")
     if item_id in owned_item_ids:
         st.warning("You already own this item.")
     c1, c2 = st.columns(2)
     if c1.button("Cancel", use_container_width = True):
         st.rerun()
-    if c2.button(f"**Pay :green[${format_currency(item_data[3])}] With Wallet**", type = "primary", use_container_width = True, disabled = True if wallet_balance < item_data[3] or item_id in owned_item_ids else False):
+    if c2.button(f"**Pay :green[${numerize(item_data[3], 2)}] With Wallet**", type = "primary", use_container_width = True, disabled = True if wallet_balance < item_data[3] or item_id in owned_item_ids else False):
         buy_item(conn, user_id, item_id)
     st.caption(f":gray[ID   {item_data[5]}]")
 
@@ -982,7 +1070,7 @@ def leaderboard(c):
 
     def format_leaderboard(data):
         return [
-            {"Rank": idx + 1, "Name": user[1] if user[1] else user[0], "Balance": f"${format_currency(user[2])}"}
+            {"Rank": idx + 1, "Name": user[1] if user[1] else user[0], "Balance": f"${numerize(user[2], 2)}"}
             for idx, user in enumerate(data)
         ]
 
@@ -1055,7 +1143,7 @@ def marketplace_view(conn, user_id):
     for item in items:
         st.write(f"#### **{item_colors[item[3]]}[{item[1]}]**")
         st.write(f":gray[{item[3].upper()}]   •   {item[2]}")
-        st.write(f":green[${format_currency(item[4])}]")
+        st.write(f":green[${numerize(item[4], 2)}]")
         if st.button(f"Options", key = f"buy_{item[0]}", use_container_width = True):
             item_options(conn, user_id, item[0])
         st.divider()
@@ -1106,7 +1194,7 @@ def manage_pending_transfers(conn, receiver_id):
         tax = (amount / 100) * 0.5
         net = amount - tax
 
-        st.write(f"💸   |   **{sender_username}** wants to transfer :green[${format_currency(amount)}]. You will receive :green[${format_currency(net)}]. :red[(%0.5 tax.)]")
+        st.write(f"💸   |   **{sender_username}** wants to transfer :green[${numerize(amount, 2)}]. You will receive :green[${numerize(net, 2)}]. :red[(%0.5 tax.)]")
         c1, c2 = st.columns(2)
 
         if c1.button(f"Accept", type = "primary", use_container_width = True, key = transaction_id):
@@ -1141,7 +1229,7 @@ def main_account_view(conn, user_id):
     current_balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
     st.header("Main Account (Vault)", divider = "rainbow")
-    st.write(f"Current Balance   |   :green[${format_currency(current_balance)}]")
+    st.write(f"Current Balance   |   :green[${numerize(current_balance, 2)}]")
 
     col1, col2 = st.columns(2)
     if col1.button("Top Up", type = "primary", use_container_width = True):
@@ -1150,9 +1238,6 @@ def main_account_view(conn, user_id):
         withdraw_dialog(conn, user_id)
     if st.button("Transfer", use_container_width = True):
         transfer_dialog(conn, user_id)
-    if st.button("Pending Transfers", use_container_width = True):
-        st.session_state.current_menu = "Manage Pending Transfers"
-        st.rerun()
 
     for _ in range(5):
         st.text("")
@@ -1195,7 +1280,9 @@ def main_account_view(conn, user_id):
 
 def savings_view(conn, user_id):
     c = conn.cursor()
-    apply_interest_if_due(conn, user_id)
+    if "last_refresh" not in st.session_state:
+        st.session_state.last_refresh = 0
+    apply_interest_if_due(conn, user_id, check = False)
     
     st.header("Savings", divider="rainbow")
 
@@ -1208,11 +1295,11 @@ def savings_view(conn, user_id):
                 c.execute("INSERT INTO savings (user_id, balance, interest_rate, last_interest_applied) VALUES (?, 0, 0.005, ?)", 
                           (user_id, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
                 conn.commit()
-                time.sleep(2)
+                time.sleep(3)
             st.rerun()
     else:
         savings_balance = c.execute("SELECT balance FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
-        st.write(f"Savings Balance   |   :green[${format_currency(savings_balance)}]")
+        st.write(f"Savings Balance   |   :green[${numerize(savings_balance, 2)}]")
 
         c1, c2 = st.columns(2)
         if c1.button("Deposit", type="primary", use_container_width=True):
@@ -1229,7 +1316,7 @@ def savings_view(conn, user_id):
         interest = c.execute("SELECT interest_rate from savings WHERE user_id = ?", (user_id,)).fetchone()[0]
         with st.container(border=True):
             
-            st.write(f":green[%{interest}] simple interest per **minute.**")
+            st.write(f":green[%{interest}] simple interest per **hour.**")
         st.caption(":gray[HINT: Some items can boost your interest rate!]")
     st.text("")
     
@@ -1274,22 +1361,22 @@ def dashboard(conn, user_id):
 
     with c1:
         st.write("Wallet")
-        st.subheader(f":green[${format_currency(wallet_balance)}]")
+        st.subheader(f":green[${numerize(wallet_balance, 2)}]")
 
     with c2:
         st.write("Vault")
-        st.subheader(f":green[${format_currency(balance)}]")
+        st.subheader(f":green[${numerize(balance, 2)}]")
 
     with c3:
         st.write("Savings")
         if has_savings:
-            st.subheader(f":green[${format_currency(savings_balance)}]")
+            st.subheader(f":green[${numerize(savings_balance, 2)}]")
         else:
             st.subheader(f":red[Not owned]")
 
     with c4:
         st.write("Top Up Quota")
-        st.subheader(f":green[${format_currency(quota)}]")
+        st.subheader(f":green[${numerize(quota, 2)}]")
 
     st.header("", divider="rainbow")
     st.subheader("📜 Recent Transactions")
@@ -1383,56 +1470,56 @@ def display_transaction_history(conn, user_id):
 
             if t_type == "Top Up":
                 st.success(f"Top Up", icon="💵")
-                st.write(f"**Amount**   $|$   :green[+${format_currency(amount)}]")
-                st.write(f"New Main Balance   $|$   :green[+${format_currency(float(balance))}]")
+                st.write(f"**Amount**   $|$   :green[+${numerize(amount, 2)}]")
+                st.write(f"New Main Balance   $|$   :green[+${numerize(balance, 2)}]")
                 st.text("")
                 st.text("")
                 st.caption(timestamp)
 
             elif t_type == "Withdraw From Main Account To Wallet":
                 st.warning(f"{t_type}", icon="💵")
-                st.write(f"Amount   $|$   :red[-${format_currency(amount)}]")
-                st.write(f"New Balance   $|$   :red[${format_currency(float(balance))}]")
+                st.write(f"Amount   $|$   :red[-${numerize(amount, 2)}]")
+                st.write(f"New Balance   $|$   :red[${numerize(balance, 2)}]")
                 st.text("")
                 st.text("")
                 st.caption(timestamp)
 
             elif t_type == "Withdraw From Main Account To Savings":
                 st.warning(f"{t_type}", icon="💵")
-                st.write(f"Amount   |   :red[-${format_currency(amount)}]")
-                st.write(f"New Balance   $|$   :red[${format_currency(float(balance))}]")
+                st.write(f"Amount   |   :red[-${numerize(amount, 2)}]")
+                st.write(f"New Balance   $|$   :red[${numerize(balance, 2)}]")
                 st.text("")
                 st.text("")
                 st.caption(timestamp)
 
             elif role == "sent" and "transfer to" in t_type.lower():
                 st.info(f"{t_type.title()} { receiver_username} $|$ (Status: **{status.capitalize()}**)", icon="💸")
-                st.write(f"Amount   $|$   :red[-${format_currency(amount)}]")
-                st.write(f"New Balance   $|$   :red[${format_currency(float(balance))}]")
+                st.write(f"Amount   $|$   :red[-${numerize(amount, 2)}]")
+                st.write(f"New Balance   $|$   :red[${numerize(balance, 2)}]")
                 st.text("")
                 st.text("")
                 st.caption(timestamp)
 
             elif role == "received" and "transfer from" in t_type.lower():
                 st.info(f"{t_type.title()} {from_username} $|$ (Status: **{status.capitalize()}**)", icon="💸")
-                st.write(f"Amount   $|$   :green[+${format_currency(amount)}]")
-                st.write(f"New Balance   $|$   :green[${format_currency(float(balance))}]")
+                st.write(f"Amount   $|$   :green[+${numerize(amount, 2)}]")
+                st.write(f"New Balance   $|$   :green[${numerize(balance, 2)}]")
                 st.text("")
                 st.text("")
                 st.caption(timestamp)
 
             elif t_type.lower().startswith("deposit to savings"):
                 st.info(f"{t_type.title()}", icon="🏦")
-                st.write(f"Amount   $|$   :green[+${format_currency(amount)}]")
-                st.write(f"New Savings Balance   $|$   :green[${format_currency(float(balance))}]")
+                st.write(f"Amount   $|$   :green[+${numerize(amount, 2)}]")
+                st.write(f"New Savings Balance   $|$   :green[${numerize(balance, 2)}]")
                 st.text("")
                 st.text("")
                 st.caption(timestamp)
 
             elif t_type.lower().startswith("withdraw to"):
                 st.warning(f"{t_type.title()}", icon="🏧")
-                st.write(f"Amount   $|$   :red[-${format_currency(amount)}]")
-                st.write(f"Remaining Balance   $|$   :green[${format_currency(float(balance))}]")
+                st.write(f"Amount   $|$   :red[-${numerize(amount, 2)}]")
+                st.write(f"Remaining Balance   $|$   :green[${numerize(balance, 2)}]")
                 st.text("")
                 st.text("")
                 st.caption(timestamp)
@@ -1445,14 +1532,8 @@ def buy_stock(conn, user_id, stock_id, amount):
     c = conn.cursor()
 
     price = c.execute("SELECT price FROM stocks WHERE stock_id = ?", (stock_id,)).fetchone()[0]
-    if not price:
-        return "❌ Stock not found."
-
-    shares = amount / price
 
     wallet_balance = c.execute("SELECT wallet FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
-    if amount > wallet_balance:
-        return "❌ Insufficient funds."
 
     c.execute("UPDATE users SET wallet = wallet - ? WHERE user_id = ?", (amount, user_id))
 
@@ -1460,103 +1541,195 @@ def buy_stock(conn, user_id, stock_id, amount):
                          (user_id, stock_id)).fetchone()
 
     if existing:
-        new_quantity = existing[0] + shares
+        new_quantity = existing[0] + amount
         new_avg_price = ((existing[0] * existing[1]) + amount) / new_quantity
         c.execute("UPDATE user_stocks SET quantity = ?, avg_buy_price = ? WHERE user_id = ? AND stock_id = ?", 
                   (new_quantity, new_avg_price, user_id, stock_id))
-        c.execute("UPDATE stocks SET stock_amount = stock_amount - ? WHERE stock_id = ?", (shares, stock_id))
+        c.execute("UPDATE stocks SET stock_amount = stock_amount - ? WHERE stock_id = ?", (amount, stock_id))
     else:
         c.execute("INSERT INTO user_stocks (user_id, stock_id, quantity, avg_buy_price) VALUES (?, ?, ?, ?)", 
-                  (user_id, stock_id, shares, price))
-        c.execute("UPDATE stocks SET stock_amount = stock_amount - ? WHERE stock_id = ?", (shares, stock_id))
+                  (user_id, stock_id, amount, price))
+        c.execute("UPDATE stocks SET stock_amount = stock_amount - ? WHERE stock_id = ?", (amount, stock_id))
 
     conn.commit()
-    return f"✅ Purchased {shares:.2f} shares of {stock_id} at ${price:.2f} per share."
+    return f"✅ Purchased {amount:.2f} shares of {stock_id} at ${price:.2f} per share."
 
 def sell_stock(conn, user_id, stock_id, amount):
 
     c = conn.cursor()
 
     price = c.execute("SELECT price FROM stocks WHERE stock_id = ?", (stock_id,)).fetchone()[0]
-    if not price:
-        return "❌ Stock not found."
 
     user_stock = c.execute("SELECT quantity, avg_buy_price FROM user_stocks WHERE user_id = ? AND stock_id = ?", 
                            (user_id, stock_id)).fetchone()
 
-    if not user_stock or user_stock[0] * price < amount:
-        return "❌ Not enough shares to sell."
-
-    shares_to_sell = amount / price
-    new_quantity = user_stock[0] - shares_to_sell
+    new_quantity = user_stock[0] - amount
 
     if new_quantity == 0:
         c.execute("DELETE FROM user_stocks WHERE user_id = ? AND stock_id = ?", (user_id, stock_id))
-        c.execute("UPDATE stocks SET stock_amount = stock_amount + ? WHERE stock_id = ?", (shares_to_sell, stock_id))
+        c.execute("UPDATE stocks SET stock_amount = stock_amount + ? WHERE stock_id = ?", (amount, stock_id))
 
     else:
         c.execute("UPDATE user_stocks SET quantity = ? WHERE user_id = ? AND stock_id = ?", 
                   (new_quantity, user_id, stock_id))
-        c.execute("UPDATE stocks SET stock_amount = stock_amount + ? WHERE stock_id = ?", (shares_to_sell, stock_id))
+        c.execute("UPDATE stocks SET stock_amount = stock_amount + ? WHERE stock_id = ?", (amount, stock_id))
 
     c.execute("UPDATE users SET wallet = wallet + ? WHERE user_id = ?", (amount, user_id))
 
     conn.commit()
-    return f"✅ Sold {shares_to_sell:.2f} shares of {stock_id} at ${price:.2f} per share."
+    return f"✅ Sold {amount:.2f} shares of {stock_id} at ${price:.2f} per share."
 
 def stocks_view(conn, user_id):
-    
     c = conn.cursor()
-    st.toast("Scroll for more stocks.")
     st.header("📈 Stock Market", divider="rainbow")
+    
     update_stock_prices(conn)
-    
-    st_autorefresh(interval=60000, key="stock_autorefresh")
-    
+    st_autorefresh(interval=10000, key="stock_autorefresh")
+
     stocks = c.execute("SELECT stock_id, name, symbol, price, stock_amount FROM stocks").fetchall()
-        
-    for stock in stocks:
+    
+    if "selected_stock" not in st.session_state:
+        st.session_state.selected_stock = stocks[0][0]
+
+    st.write("Available Stocks:")
+    stock_buttons = st.columns(len(stocks))
+    for idx, stock in enumerate(stocks):
         stock_id, name, symbol, price, stock_amount = stock
-        st.title(f"{name} ({symbol})")
-        
-        st.subheader(f"Current Price $|$ :green[${format_currency(price)}]")
-        
-        history = c.execute("SELECT timestamp, price FROM stock_history WHERE stock_id = ? ORDER BY timestamp ASC", (stock_id,)).fetchall()
-        
-        c1, c2 = st.columns(2)
-        with c1:
-            if history:
-                df = pd.DataFrame(history, columns=["Timestamp", "Price"])
-                df['Timestamp'] = pd.to_datetime(df['Timestamp'])
-                df.set_index('Timestamp', inplace=True)
+        if stock_buttons[idx].button(f"{symbol}", key=f"stock_btn_{stock_id}", use_container_width = True):
+            st.session_state.selected_stock = stock_id
+    
+    st.divider()
 
-                df_resampled = df.resample('5T').mean()  
-                st.line_chart(df_resampled)
+    selected_stock = next(s for s in stocks if s[0] == st.session_state.selected_stock)
+    stock_id, name, symbol, price, stock_amount = selected_stock
+    history = c.execute("SELECT timestamp, price FROM stock_history WHERE stock_id = ? ORDER BY timestamp ASC", 
+                            (stock_id,)).fetchall()
+    if len(history) > 1:
+        last_price = history[-1][1]
+        previous_price = history[-2][1]
+        
+        percentage_change = ((last_price - previous_price) / previous_price) * 100
+        
+        if last_price > previous_price:
+            change_color = ":green[+{:.2f}%".format(percentage_change)  # Green for increase
+        elif last_price < previous_price:
+            change_color = ":red[-{:.2f}%".format(abs(percentage_change))  # Red for decrease
+        else:
+            change_color = ":orange[0.00%]"
+    else:
+        percentage_change = 0
+        change_color = ":orange[0.00%]"
+        
+    st.header(f"{name} ({symbol})")
+    st.header(f":green[${numerize(price, 2)}] \n ##### {change_color}]", divider="rainbow")
 
-            else:
-                st.info("No price history available.")
-        with c2:
-            user_stock = c.execute("SELECT quantity, avg_buy_price FROM user_stocks WHERE user_id = ? AND stock_id = ?", (user_id, stock_id)).fetchone()
-            user_quantity, avg_price = user_stock if user_stock else (0, 0)
-            with st.container(border = True):
-                st.write(f"[Owned Shares] :blue[{format_currency(user_quantity)}]")
-                st.write(f"[Bought at AVG Price] :orange[${format_currency(avg_price)}]")
-                st.write(f"[Total {symbol} Available] :green[{format_currency(stock_amount)}]")                                
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                buy_quantity = st.number_input(f"Buy {symbol}", min_value=0.0, step=1.0, key=f"buy_{stock_id}")
-                if st.button(f"Buy {symbol}", key=f"buy_btn_{stock_id}", type = "primary", use_container_width = True, disabled = True if buy_quantity == 0 else False):
-                    buy_stock(conn, user_id, stock_id, buy_quantity)
-                    st.rerun()
+    if len(history) > 1:
+        last_price = history[-1][1]
+        previous_price = history[-2][1]
+        
+        if last_price > previous_price:
+            st.session_state.graph_color = (0, 255, 0)  # Green if the price has risen
+        elif last_price < previous_price:
+            st.session_state.graph_color = (255, 0, 0)  # Red if the price has fallen
+        else:
+            st.session_state.graph_color = (255, 255, 0)
+    
+    if "t" not in st.session_state:
+        st.session_state.t = 1
+
+    if "graph_color" not in st.session_state:
+        st.session_state.graph_color = (0, 255, 0)
+
+    if "graph_color2" not in st.session_state:
+        st.session_state.graph_color2 = (0, 255, 0)
+    
+    c1, c2 = st.columns(2)
+    with c1:
+        if history:
+            df = pd.DataFrame(history, columns=["Timestamp", "Price"])
+            df['Timestamp'] = pd.to_datetime(df['Timestamp'])
+            df.set_index('Timestamp', inplace=True)
+            df_resampled = df.resample(f"{st.session_state.t}T").mean()  
+            st.line_chart(df_resampled, color = st.session_state.graph_color)
+        else:
+            st.info("Stock history will be available after 60 seconds of stock creation.")
+
+    with c2:
+        user_stock = c.execute("SELECT quantity, avg_buy_price FROM user_stocks WHERE user_id = ? AND stock_id = ?", 
+                                (user_id, stock_id)).fetchall()[0]
+        user_quantity, avg_price = user_stock if user_stock else (0, 0)
+
+        with st.container(border=True):
+            st.write(f"[Owned] :blue[{numerize((user_quantity), 2)} {symbol}] ~ :green[${numerize((user_quantity * price), 2)}]")
+            st.write(f"[AVG. Bought At] :green[${numerize((avg_price), 2)}]")
+
+            st.write(f"[Available] :orange[{numerize(stock_amount, 2)} {symbol}]")                                
+
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            buy_quantity = st.number_input(f"Buy {symbol}", min_value=0.0, step=0.25, key=f"buy_{stock_id}")
+            st.write(f"[Cost]  :red[${numerize((buy_quantity * price), 2)}]")
+            if st.button(f"Buy {symbol}", key=f"buy_btn_{stock_id}", type="primary", use_container_width=True, 
+                            disabled=True if buy_quantity == 0 else False):
+                buy_stock(conn, user_id, stock_id, buy_quantity)
+                st.rerun()
                     
-            with col2:
-                sell_quantity = st.number_input(f"Sell {symbol}", min_value=0.0, max_value=float(user_quantity), step=1.0, key=f"sell_{stock_id}")
-                if st.button(f"Sell {symbol}", key=f"sell_btn_{stock_id}", use_container_width = True, disabled = True if sell_quantity == 0 else False):
-                    sell_stock(conn, user_id, stock_id, sell_quantity)
-                    st.rerun()
-            
-            st.divider()
+        with col2:
+            sell_quantity = st.number_input(f"Sell {symbol}", min_value=0.0, max_value=float(user_quantity), step=0.25, key=f"sell_{stock_id}")
+            st.write(f"[Profit] :green[${numerize((sell_quantity * price), 2)}]")
+
+            if st.button(f"Sell {symbol}", key=f"sell_btn_{stock_id}", use_container_width=True, 
+                            disabled=True if sell_quantity == 0 else False):
+                sell_stock(conn, user_id, stock_id, sell_quantity)
+                st.rerun()
+
+    stock_metrics = get_stock_metrics(conn, stock_id)
+
+    st.subheader("Metrics", divider = "rainbow")
+    col1, col2, col3, col4, col5 = st.columns(5)
+    
+    col1.metric("24H High", 
+                f"${format_currency(stock_metrics['high_24h'])}" if stock_metrics['high_24h'] else "N/A",
+                f"{format_currency(stock_metrics['delta_24h_high'])}" if stock_metrics['delta_24h_high'] else None)
+    
+    col2.metric("24H Low", 
+                f"${format_currency(stock_metrics['low_24h'])}" if stock_metrics['low_24h'] else "N/A",
+                f"{format_currency(stock_metrics['delta_24h_low'])}" if stock_metrics['delta_24h_low'] else None)
+    
+    col3.metric("All-Time High", 
+                f"${format_currency(stock_metrics['all_time_high'])}" if stock_metrics['all_time_high'] else "N/A",
+                f"{format_currency(stock_metrics['delta_all_time_high'])}" if stock_metrics['delta_all_time_high'] else None)
+    
+    col4.metric("All-Time Low", 
+                f"${format_currency(stock_metrics['all_time_low'])}" if stock_metrics['all_time_low'] else "N/A",
+                f"{format_currency(stock_metrics['delta_all_time_low'])}" if stock_metrics['delta_all_time_low'] else None)
+    
+    col5.metric("24H Change", 
+                f"{stock_metrics['price_change']:.2f}%", 
+                delta_color="inverse")
+
+    st.header(f"Details for {name}", divider = "rainbow")
+    df = pd.DataFrame(history, columns=["Timestamp", "Price"])
+    df['Timestamp'] = pd.to_datetime(df['Timestamp'])
+    df.set_index('Timestamp', inplace=True)
+    df_resampled = df.resample(f"{st.session_state.t}T").mean()  
+    st.line_chart(df_resampled, color = st.session_state.graph_color2)
+    c1, c2 = st.columns(2)
+    sample_rate = c1.slider("Sample Rate (Lower = More Lag)", min_value = 1, max_value = 100, step = 1)
+    if c1.button("Set Resampling", use_container_width=True):
+        st.session_state.t = sample_rate
+        st.rerun() 
+
+    with c2.popover("Graph Color", use_container_width = True):
+        r = st.slider(":red[Red]", min_value = 0, max_value = 255, step = 1)
+        g = st.slider(":green[Green]", min_value = 0, max_value = 255, step = 1)
+        b = st.slider(":blue[Blue]", min_value = 0, max_value = 255, step = 1)
+        if st.button("Apply Color", use_container_width = True):
+            st.session_state.graph_color2 = (r, g, b)
+            st.rerun()
+        if c2.button("Price Prediction", type = "primary", use_container_width = True):
+            st.toast("Coming Soon")
 
 def admin_panel(conn):
     c = conn.cursor()
@@ -1821,7 +1994,7 @@ def main(conn):
     if not st.session_state.logged_in:
         st.title("Bank :red[Genova] ™", anchor = False)
 
-        login_option = st.radio("A", ["Login", "Register"], label_visibility="hidden")
+        login_option = st.radio("A", ["Login", "Register"], label_visibility="hidden", horizontal=True)
         
         if login_option == "Login":
             username = st.text_input("A", label_visibility="hidden", placeholder="Your remarkable username")
@@ -1846,7 +2019,8 @@ def main(conn):
                     st.rerun()
                 else:
                     st.error("Invalid username or password")
-            st.button("Password Reset", type = "secondary", use_container_width = True, help = "Not yet available")
+            st.button("Password Reset", type = "tertiary", use_container_width = True, help = "Not yet available")
+            st.text("")
             st.text("")
 
             c1, c2, c3 = st.columns([1, 1, 1])
@@ -1857,7 +2031,7 @@ def main(conn):
 
                 c2.button("Terms of Use ]", type = "tertiary")
             
-            st.write('<div style="position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); color: slategray; text-align: center;"><marquee>Simple and educational bank / finance simulator by Ege. Specifically built for IB Computer Science IA.</marquee></div>', unsafe_allow_html=True)
+            st.write('<div style="position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); color: slategray; text-align: center;"><marquee>Simple and educational bank / finance simulator by Ege. Specifically built for IB Computer Science IA. All rights of this "game" is reserved.</marquee></div>', unsafe_allow_html=True)
 
         else:
             new_username = st.text_input("A", label_visibility = "hidden", placeholder = "Choose a remarkable username")
@@ -1893,15 +2067,14 @@ def main(conn):
                     privacy_policy_dialog()
 
                 c2.button("Terms of Use ]", type = "tertiary")
-            st.write('<div style="position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); color: slategray; text-align: center;"><marquee>Simple and educational bank / finance simulator by Ege. Specifically built for IB Computer Science IA.</marquee></div>', unsafe_allow_html=True)
-
+            st.write('<div style="position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); color: slategray; text-align: center;"><marquee>Simple and educational bank / finance simulator by Ege. Specifically built for IB Computer Science IA. All rights of this "game" is reserved.</marquee></div>', unsafe_allow_html=True)
 
     elif st.session_state.logged_in:
         st.sidebar.write(f"# Welcome, **{st.session_state.username}**!")
         
         with st.sidebar:
             wallet = c.execute('SELECT wallet FROM users WHERE user_id = ?', (st.session_state.user_id,)).fetchone()[0]
-            st.sidebar.write(f"Wallet   |   :green[${format_currency(wallet)}]")
+            st.sidebar.write(f"Wallet   |   :green[${numerize(wallet, 2)}]")
             st.sidebar.header(" ", divider="rainbow")
 
         t1, t2 = st.sidebar.tabs(["🌐 Global", "💠 Personal"])
@@ -1910,46 +2083,60 @@ def main(conn):
             c1, c2 = st.columns(2)
             if c1.button("Dashboard", type="primary", use_container_width=True):
                 st.session_state.current_menu = "Dashboard"
+                st.rerun()
             
             if c2.button("Leaderboard", type="primary", use_container_width=True):
                 st.session_state.current_menu = "Leaderboard"
+                st.rerun()
             
             if st.button("#Global Chat", type="secondary", use_container_width=True):
                 st.session_state.current_menu = "Chat"
-
-            if st.button("Inventory", type="primary", use_container_width=True):
-                st.session_state.current_menu = "Inventory"
+                st.rerun()
             
-            if st.button("Marketplace", type="primary", use_container_width=True):
+            if st.button("Marketplace", type="secondary", use_container_width=True):
                 st.session_state.current_menu = "Marketplace"
+                st.rerun()
 
-            if st.button("QubitTrades™", type="primary", use_container_width=True):
+            if st.button("QubitTrades™", type="secondary", use_container_width=True):
                 st.session_state.current_menu = "Stocks"
+                st.rerun()
 
         with t2:
-            if st.button("Main Account", type="primary", use_container_width=True):
+            c1, c2 = st.columns(2)
+            if c1.button("Vault", type="primary", use_container_width=True):
                 st.session_state.current_menu = "Main Account"
+                st.rerun()
 
-            if st.button("Savings Account", type="primary", use_container_width=True):
+            if c2.button("Savings", type="primary", use_container_width=True):
                 st.session_state.current_menu = "View Savings"
+                st.rerun()
 
-            if st.button("Transaction History", type="primary", use_container_width=True):
+            if st.button("Transaction History", type="secondary", use_container_width=True):
                 st.session_state.current_menu = "Transaction History"
+                st.rerun()
 
-            if st.button("Pending Transfers", type="primary", use_container_width=True):
+            if st.button("Pending Transfers", type="secondary", use_container_width=True):
                 st.session_state.current_menu = "Manage Pending Transfers"
+                st.rerun()
             
+            if st.button("Inventory", type="secondary", use_container_width=True):
+                st.session_state.current_menu = "Inventory"
+                st.rerun()
+
             st.divider()
             if st.session_state.username in admins:
                 if st.button("Admin Panel", type="secondary", use_container_width=True):
                     st.session_state.current_menu = "Admin Panel"
+                    st.rerun()
 
             c1, c2 = st.columns(2)
             if c1.button("Log Out", type="secondary", use_container_width=True):
                 st.session_state.current_menu = "Logout"
+                st.rerun()
 
             if c2.button("Settings", type="secondary", use_container_width=True):
                 st.session_state.current_menu = "Settings"
+                st.rerun()
 
             
 
@@ -1958,7 +2145,6 @@ def main(conn):
 
         if st.session_state.current_menu == "Dashboard":
             dashboard(conn, st.session_state.user_id)
-            pass
 
         elif st.session_state.current_menu == "Leaderboard":
             leaderboard(c)
@@ -2008,8 +2194,11 @@ def main(conn):
 def add_column_if_not_exists(conn):
     c = conn.cursor()
 
-    c.execute("PRAGMA table_info(stocks);")
+    c.execute("PRAGMA table_info(users);")
     columns = [column[1] for column in c.fetchall()]
+    if "last_savings_refresh" not in columns:
+        c.execute("ALTER TABLE users ADD COLUMN last_savings_refresh DATETIME;")
+        c.execute("UPDATE users SET last_savings_refresh = CURRENT_TIMESTAMP;")
 
     conn.commit()
 
