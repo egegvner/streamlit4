@@ -245,6 +245,7 @@ def recent_transactions_metrics(c, user_id):
             metrics["Incoming Transfers"] = {"count": count, "total": total}
 
     return metrics
+    
 def leaderboard_logic(c):
     result = c.execute("SELECT username, visible_name, balance FROM users ORDER BY balance DESC").fetchall()
 
@@ -1584,7 +1585,7 @@ def stocks_view(conn, user_id):
     st.header("📈 Stock Market", divider="rainbow")
     
     update_stock_prices(conn)
-    st_autorefresh(interval=10000, key="stock_autorefresh")
+    st_autorefresh(interval=60000, key="stock_autorefresh")
 
     stocks = c.execute("SELECT stock_id, name, symbol, price, stock_amount FROM stocks").fetchall()
     
