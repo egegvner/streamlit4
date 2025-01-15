@@ -322,7 +322,7 @@ def update_stock_prices(conn):
             num_updates = int(elapsed_time // 60)
 
             for _ in range(num_updates):
-                change = round(random.uniform(-0.5, 0.5), 2)
+                change = round(random.uniform(-1, 1), 2)
                 current_price = max(1, round(current_price * (1 + change / 100), 2))
 
                 c.execute("INSERT INTO stock_history (stock_id, price, timestamp) VALUES (?, ?, ?)", 
