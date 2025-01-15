@@ -1526,8 +1526,8 @@ def stocks_view(conn, user_id):
         with c1:
             if history:
                 df = pd.DataFrame(history, columns=["Timestamp", "Price"])
-                df['timestamp'] = pd.to_datetime(df['timestamp'])
-                df.set_index('timestamp', inplace=True)
+                df['Timestamp'] = pd.to_datetime(df['Timestamp'])
+                df.set_index('Timestamp', inplace=True)
 
                 df_resampled = df.resample('5T').mean()  
                 st.line_chart(df_resampled)
