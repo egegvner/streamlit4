@@ -18,16 +18,13 @@ import streamlit as st
 if "current_menu" not in st.session_state:
     st.session_state.current_menu = "Dashboard"
 
-# Check if we need to rerun the app for layout change
 previous_layout = st.session_state.get("previous_layout", "centered")
 current_layout = "wide" if st.session_state.current_menu == "Stocks" else "centered"
 
-# If layout has changed, update it and force a rerun
 if previous_layout != current_layout:
     st.session_state.previous_layout = current_layout
-    st.rerun()  # Force a rerun to apply the new layout
+    st.rerun()
 
-# Set page configuration (must be at the top)
 st.set_page_config(
     page_title="Bank Genova",
     page_icon="🏦",
@@ -320,17 +317,18 @@ def update_stock_prices(conn):
             last_updated = now
 
         elapsed_time = (now - last_updated).total_seconds()
-        num_updates = int(elapsed_time // 60)
 
-        if num_updates > 0:
+        if elapsed_time >= 60:
+            num_updates = int(elapsed_time // 60)
+
             for _ in range(num_updates):
                 change = round(random.uniform(-0.5, 0.5), 2)
                 current_price = max(1, round(current_price * (1 + change / 100), 2))
-                
+
                 c.execute("INSERT INTO stock_history (stock_id, price, timestamp) VALUES (?, ?, ?)", 
                           (stock_id, current_price, last_updated.strftime("%Y-%m-%d %H:%M:%S")))
-                
-                last_updated += datetime.timedelta(seconds=10)
+
+                last_updated += datetime.timedelta(seconds=60)
 
             c.execute("UPDATE stocks SET price = ?, last_updated = ? WHERE stock_id = ?", 
                       (current_price, last_updated.strftime("%Y-%m-%d %H:%M:%S"), stock_id))
