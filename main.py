@@ -1531,31 +1531,37 @@ def buy_stock(conn, user_id, stock_id, quantity):
     c = conn.cursor()
 
     price = c.execute("SELECT price FROM stocks WHERE stock_id = ?", (stock_id,)).fetchone()[0]
-
     wallet_balance = c.execute("SELECT wallet FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
     cost = price * quantity
+
+    if wallet_balance < cost:
+        st.toast("Insufficient funds.")
+        return
+
     c.execute("UPDATE users SET wallet = wallet - ? WHERE user_id = ?", (cost, user_id))
 
     existing = c.execute("SELECT quantity, avg_buy_price FROM user_stocks WHERE user_id = ? AND stock_id = ?", 
                          (user_id, stock_id)).fetchone()
 
-    if wallet_balance >= price:
-        if existing:
-            new_quantity = existing[0] + quantity
-            new_avg_price = ((existing[0] * existing[1]) + quantity) / new_quantity
-            c.execute("UPDATE user_stocks SET quantity = ?, avg_buy_price = ? WHERE user_id = ? AND stock_id = ?", 
-                      (new_quantity, new_avg_price, user_id, stock_id))
-            c.execute("UPDATE stocks SET stock_amount = stock_amount - ? WHERE stock_id = ?", (quantity, stock_id))
-        else:
-            c.execute("INSERT INTO user_stocks (user_id, stock_id, quantity, avg_buy_price) VALUES (?, ?, ?, ?)", 
-                      (user_id, stock_id, quantity, price))
-            c.execute("UPDATE stocks SET stock_amount = stock_amount - ? WHERE stock_id = ?", (quantity, stock_id))
-    
-        conn.commit()
-        st.toast(f"Purchased {quantity} shares for ${numerize(cost, 2)}")
+    if existing:
+        old_quantity = existing[0]
+        old_avg_price = existing[1]
+
+        new_quantity = old_quantity + quantity
+        new_avg_price = ((old_quantity * old_avg_price) + (quantity * price)) / new_quantity
+
+        c.execute("UPDATE user_stocks SET quantity = ?, avg_buy_price = ? WHERE user_id = ? AND stock_id = ?", 
+                  (new_quantity, new_avg_price, user_id, stock_id))
     else:
-        st.toast("Insufficent funds.")
+        c.execute("INSERT INTO user_stocks (user_id, stock_id, quantity, avg_buy_price) VALUES (?, ?, ?, ?)", 
+                  (user_id, stock_id, quantity, price))
+
+    c.execute("UPDATE stocks SET stock_amount = stock_amount - ? WHERE stock_id = ?", (quantity, stock_id))
+    
+    conn.commit()
+    st.toast(f"Purchased {quantity} shares for ${numerize(cost, 2)}")
+
 
 def sell_stock(conn, user_id, stock_id, quantity):
 
