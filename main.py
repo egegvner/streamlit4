@@ -81,7 +81,7 @@ def verifyPass(hashed_password, entered_password):
 
 admins = [
     "egegvner",
-    "JohnyJohnyJohn"
+    "JohnyJohnJohn"
 ]
 
 def calculate_new_quota(user_id, boost):
