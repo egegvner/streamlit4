@@ -1513,7 +1513,7 @@ def stocks_view(conn, user_id):
     st.header("📈 Stock Market", divider="rainbow")
     update_stock_prices(conn)
     
-    st_autorefresh(interval=1000, key="stock_autorefresh")
+    st_autorefresh(interval=10000, key="stock_autorefresh")
     
     stocks = c.execute("SELECT stock_id, name, symbol, price, stock_amount FROM stocks").fetchall()
         
