@@ -1081,7 +1081,8 @@ def inventory_view(conn, user_id):
     else:
         st.write("No items.")
 
-def manage_pending_transfers(c, conn, receiver_id):
+def manage_pending_transfers(conn, receiver_id):
+    c = conn.cursor()
     st.header("📥 Pending Transfers", divider = "rainbow")
     pending_transfers = c.execute("""
         SELECT transaction_id, user_id, amount, timestamp
@@ -1934,6 +1935,9 @@ def main(conn):
 
             if st.button("Transaction History", type="primary", use_container_width=True):
                 st.session_state.current_menu = "Transaction History"
+
+            if st.button("Pending Transfers", type="prisecondarymary", use_container_width=True):
+                st.session_state.current_menu = "Manage Pending Transfers"
             
             st.divider()
             if st.session_state.username in admins:
@@ -1979,6 +1983,9 @@ def main(conn):
 
         elif st.session_state.current_menu == "Chat":
             chat_view(conn)
+
+        elif st.session_state.current_menu == "Manage Pending Transfers":
+            manage_pending_transfers(conn, st.session_state.user_id)
         
         elif st.session_state.current_menu == "Stocks":
             stocks_view(conn, st.session_state.user_id)
