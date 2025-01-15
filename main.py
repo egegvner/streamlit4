@@ -266,7 +266,7 @@ def claim_daily_reward(conn, user_id):
     last_claimed = c.execute("SELECT last_daily_reward_claimed FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
     if last_claimed:
-        last_claimed_date = datetime.datetime.strptime(last_claimed, "%Y-%m-%d")
+        last_claimed_date = datetime.datetime.strptime(last_claimed, "%Y-%m-%d %H:%M:%S")
         if last_claimed_date.date() == datetime.datetime.today().date():
             st.toast("You've already claimed your daily reward today!")
         else:
