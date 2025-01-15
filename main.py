@@ -294,29 +294,25 @@ def update_stock_prices(conn):
         if last_updated:
             last_updated = datetime.datetime.strptime(last_updated, "%Y-%m-%d %H:%M:%S")
         else:
-            last_updated = now  # Default if missing
+            last_updated = now
 
         elapsed_time = (now - last_updated).total_seconds()
-        num_updates = int(elapsed_time // 10)  # Apply updates every 10 seconds
+        num_updates = int(elapsed_time // 60)
 
         if num_updates > 0:
             for _ in range(num_updates):
-                # Apply small price change (-1.5% to +1.5%)
                 change = round(random.uniform(-1.5, 1.5), 2)
-                current_price = max(1, round(current_price * (1 + change / 100), 2))  # Prevent going below $1
+                current_price = max(1, round(current_price * (1 + change / 100), 2))
                 
-                # Store price update at correct timestamp
                 c.execute("INSERT INTO stock_history (stock_id, price, timestamp) VALUES (?, ?, ?)", 
                           (stock_id, current_price, last_updated.strftime("%Y-%m-%d %H:%M:%S")))
                 
-                # Move timestamp forward for correct spacing
                 last_updated += datetime.timedelta(seconds=10)
 
-            # Update stock price and last_updated timestamp
             c.execute("UPDATE stocks SET price = ?, last_updated = ? WHERE stock_id = ?", 
                       (current_price, last_updated.strftime("%Y-%m-%d %H:%M:%S"), stock_id))
 
-    conn.commit()  # ✅ Batch commit after all updates
+    conn.commit()
 
 def get_latest_message_time(conn):
     c = conn.cursor()
@@ -1513,7 +1509,7 @@ def stocks_view(conn, user_id):
     st.header("📈 Stock Market", divider="rainbow")
     update_stock_prices(conn)
     
-    st_autorefresh(interval=10000, key="stock_autorefresh")
+    st_autorefresh(interval=60000, key="stock_autorefresh")
     
     stocks = c.execute("SELECT stock_id, name, symbol, price, stock_amount FROM stocks").fetchall()
         
