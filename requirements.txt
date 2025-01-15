@@ -3,3 +3,4 @@ pandas
 bcrypt
 streamlit_autorefresh
 argon2-cffi
+numerize
