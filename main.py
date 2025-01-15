@@ -294,26 +294,29 @@ def update_stock_prices(conn):
         if last_updated:
             last_updated = datetime.datetime.strptime(last_updated, "%Y-%m-%d %H:%M:%S")
         else:
-            last_updated = now
+            last_updated = now  # Default if missing
 
         elapsed_time = (now - last_updated).total_seconds()
-        num_updates = int(elapsed_time)  # Apply updates every 10 seconds
+        num_updates = int(elapsed_time // 10)  # Apply updates every 10 seconds
 
-        for _ in range(num_updates):
-            change = round(random.uniform(-2, 2), 2)
-            new_price = max(1, round(current_price * (1 + change / 100), 2))  # Ensure price never goes below 1
+        if num_updates > 0:
+            for _ in range(num_updates):
+                # Apply small price change (-1.5% to +1.5%)
+                change = round(random.uniform(-1.5, 1.5), 2)
+                current_price = max(1, round(current_price * (1 + change / 100), 2))  # Prevent going below $1
+                
+                # Store price update at correct timestamp
+                c.execute("INSERT INTO stock_history (stock_id, price, timestamp) VALUES (?, ?, ?)", 
+                          (stock_id, current_price, last_updated.strftime("%Y-%m-%d %H:%M:%S")))
+                
+                # Move timestamp forward for correct spacing
+                last_updated += datetime.timedelta(seconds=10)
 
-            c.execute("INSERT INTO stock_history (stock_id, price, timestamp) VALUES (?, ?, ?)", 
-                      (stock_id, new_price, now.strftime("%Y-%m-%d %H:%M:%S")))
-            conn.commit()
-            current_price = new_price
-            last_updated += datetime.timedelta(seconds=10)
+            # Update stock price and last_updated timestamp
+            c.execute("UPDATE stocks SET price = ?, last_updated = ? WHERE stock_id = ?", 
+                      (current_price, last_updated.strftime("%Y-%m-%d %H:%M:%S"), stock_id))
 
-        c.execute("UPDATE stocks SET price = ?, last_updated = ? WHERE stock_id = ?", 
-                  (current_price, now.strftime("%Y-%m-%d %H:%M:%S"), stock_id))
-
-    conn.commit()
-
+    conn.commit()  # ✅ Batch commit after all updates
 
 def get_latest_message_time(conn):
     c = conn.cursor()
