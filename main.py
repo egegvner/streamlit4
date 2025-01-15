@@ -1527,36 +1527,37 @@ def display_transaction_history(conn, user_id):
     else:
         st.info("No transactions found in your history.")
 
-def buy_stock(conn, user_id, stock_id, amount):
+def buy_stock(conn, user_id, stock_id, quantity):
     c = conn.cursor()
 
     price = c.execute("SELECT price FROM stocks WHERE stock_id = ?", (stock_id,)).fetchone()[0]
 
     wallet_balance = c.execute("SELECT wallet FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
-    c.execute("UPDATE users SET wallet = wallet - ? WHERE user_id = ?", (amount, user_id))
+    cost = price * quantity
+    c.execute("UPDATE users SET wallet = wallet - ? WHERE user_id = ?", (cost, user_id))
 
     existing = c.execute("SELECT quantity, avg_buy_price FROM user_stocks WHERE user_id = ? AND stock_id = ?", 
                          (user_id, stock_id)).fetchone()
 
     if wallet_balance >= price:
         if existing:
-            new_quantity = existing[0] + amount
-            new_avg_price = ((existing[0] * existing[1]) + amount) / new_quantity
+            new_quantity = existing[0] + quantity
+            new_avg_price = ((existing[0] * existing[1]) + quantity) / new_quantity
             c.execute("UPDATE user_stocks SET quantity = ?, avg_buy_price = ? WHERE user_id = ? AND stock_id = ?", 
                       (new_quantity, new_avg_price, user_id, stock_id))
             c.execute("UPDATE stocks SET stock_amount = stock_amount - ? WHERE stock_id = ?", (amount, stock_id))
         else:
             c.execute("INSERT INTO user_stocks (user_id, stock_id, quantity, avg_buy_price) VALUES (?, ?, ?, ?)", 
-                      (user_id, stock_id, amount, price))
-            c.execute("UPDATE stocks SET stock_amount = stock_amount - ? WHERE stock_id = ?", (amount, stock_id))
+                      (user_id, stock_id, quantity, price))
+            c.execute("UPDATE stocks SET stock_amount = stock_amount - ? WHERE stock_id = ?", (quantity, stock_id))
     
         conn.commit()
-        st.toast(f"Purchased {amount} shares! ")
+        st.toast(f"Purchased {quantity} shares for ${cost} ")
     else:
         st.toast("Insufficent funds.")
 
-def sell_stock(conn, user_id, stock_id, amount):
+def sell_stock(conn, user_id, stock_id, quantity):
 
     c = conn.cursor()
 
@@ -1565,21 +1566,22 @@ def sell_stock(conn, user_id, stock_id, amount):
     user_stock = c.execute("SELECT quantity, avg_buy_price FROM user_stocks WHERE user_id = ? AND stock_id = ?", 
                            (user_id, stock_id)).fetchone()
 
-    new_quantity = user_stock[0] - amount
+    new_quantity = user_stock[0] - quantity
+    profit = price * quantity
 
     if new_quantity == 0:
         c.execute("DELETE FROM user_stocks WHERE user_id = ? AND stock_id = ?", (user_id, stock_id))
-        c.execute("UPDATE stocks SET stock_amount = stock_amount + ? WHERE stock_id = ?", (amount, stock_id))
+        c.execute("UPDATE stocks SET stock_amount = stock_amount + ? WHERE stock_id = ?", (quantity, stock_id))
 
     else:
         c.execute("UPDATE user_stocks SET quantity = ? WHERE user_id = ? AND stock_id = ?", 
                   (new_quantity, user_id, stock_id))
-        c.execute("UPDATE stocks SET stock_amount = stock_amount + ? WHERE stock_id = ?", (amount, stock_id))
+        c.execute("UPDATE stocks SET stock_amount = stock_amount + ? WHERE stock_id = ?", (quantity, stock_id))
 
-    c.execute("UPDATE users SET wallet = wallet + ? WHERE user_id = ?", (amount, user_id))
+    c.execute("UPDATE users SET wallet = wallet + ? WHERE user_id = ?", (profit, user_id))
 
     conn.commit()
-    return f"✅ Sold {amount:.2f} shares of {stock_id} at ${price:.2f} per share."
+    st.toast(f"Sold {quantity} shares for ${profit}") 
 
 def stocks_view(conn, user_id):
     c = conn.cursor()
@@ -1681,6 +1683,7 @@ def stocks_view(conn, user_id):
             if st.button(f"Buy {symbol}", key=f"buy_btn_{stock_id}", type="primary", use_container_width=True, 
                             disabled=True if buy_quantity == 0 else False):
                 buy_stock(conn, user_id, stock_id, buy_quantity)
+                time.sleep(2)
                 st.rerun()
                     
         with col2:
@@ -1690,6 +1693,7 @@ def stocks_view(conn, user_id):
             if st.button(f"Sell {symbol}", key=f"sell_btn_{stock_id}", use_container_width=True, 
                             disabled=True if sell_quantity == 0 else False):
                 sell_stock(conn, user_id, stock_id, sell_quantity)
+                time.sleep(2)
                 st.rerun()
 
     stock_metrics = get_stock_metrics(conn, stock_id)
