@@ -15,7 +15,7 @@ from streamlit_autorefresh import st_autorefresh
 st.set_page_config(
     page_title = "Bank Genova",
     page_icon = "🏦",
-    layout = "centered",
+    layout = "wide",
     initial_sidebar_state = "expanded"
 )
 
@@ -1936,7 +1936,7 @@ def main(conn):
             if st.button("Transaction History", type="primary", use_container_width=True):
                 st.session_state.current_menu = "Transaction History"
 
-            if st.button("Pending Transfers", type="prisecondarymary", use_container_width=True):
+            if st.button("Pending Transfers", type="primary", use_container_width=True):
                 st.session_state.current_menu = "Manage Pending Transfers"
             
             st.divider()
