@@ -1658,7 +1658,8 @@ def stocks_view(conn, user_id):
     with c2:
         user_stock = c.execute("SELECT quantity, avg_buy_price FROM user_stocks WHERE user_id = ? AND stock_id = ?", 
                                 (user_id, stock_id)).fetchall()
-        user_quantity, avg_price = user_stock if user_stock else (0, 0)
+        user_quantity = user_stock[0] if user_stock[0] else 0
+        avg_price = user_stock[1] if user_stock[1] else 0
 
         with st.container(border=True):
             st.write(f"[Owned] :blue[{numerize((user_quantity), 2)} {symbol}] ~ :green[${numerize((user_quantity * price), 2)}]")
