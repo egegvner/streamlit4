@@ -297,7 +297,7 @@ def update_stock_prices(conn):
             last_updated = now
 
         elapsed_time = (now - last_updated).total_seconds()
-        num_updates = int(elapsed_time // 10)  # Apply updates every 10 seconds
+        num_updates = int(elapsed_time)  # Apply updates every 10 seconds
 
         for _ in range(num_updates):
             change = round(random.uniform(-2, 2), 2)
