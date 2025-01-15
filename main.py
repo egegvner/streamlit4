@@ -1526,8 +1526,12 @@ def stocks_view(conn, user_id):
         with c1:
             if history:
                 df = pd.DataFrame(history, columns=["Timestamp", "Price"])
-                df["Timestamp"] = pd.to_datetime(df["Timestamp"])
-                st.line_chart(df.set_index("Timestamp")['Price'])
+                df['timestamp'] = pd.to_datetime(df['timestamp'])
+                df.set_index('timestamp', inplace=True)
+
+                df_resampled = df.resample('5T').mean()  
+                st.line_chart(df_resampled)
+
             else:
                 st.info("No price history available.")
         with c2:
