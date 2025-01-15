@@ -1504,8 +1504,9 @@ def sell_stock(conn, user_id, stock_id, amount):
     return f"✅ Sold {shares_to_sell:.2f} shares of {stock_id} at ${price:.2f} per share."
 
 def stocks_view(conn, user_id):
-
+    
     c = conn.cursor()
+    st.toast("Scroll for more stocks.")
     st.header("📈 Stock Market", divider="rainbow")
     update_stock_prices(conn)
     
