@@ -1677,7 +1677,7 @@ def stocks_view(conn, user_id):
             avg_price = 0
 
         with st.container(border=True):
-            st.write(f"[Owned] :blue[{numerize((user_quantity), 2)} {symbol}] ~ :green[${numerize((user_quantity * price), 2)}]")
+            st.write(f"[Holding] :blue[{numerize((user_quantity), 2)} {symbol}] ~ :green[${numerize((user_quantity * price), 2)}]")
             st.write(f"[AVG. Bought At] :green[${numerize((avg_price), 2)}]")
 
             st.write(f"[Available] :orange[{numerize(stock_amount, 2)} {symbol}]")                                
