@@ -1830,6 +1830,8 @@ def stocks_view(conn, user_id):
 
 def portfolio_view(conn, user_id):
     c = conn.cursor()
+    st_autorefresh(interval=10000, key="p")
+
     if "portofolio_value" not in st.session_state:
         st.session_state.portofolio_value = 0
 
@@ -1855,7 +1857,7 @@ def portfolio_view(conn, user_id):
 
     for stock_id, name, symbol, quantity, avg_buy_price, current_price in user_stocks:
         stock_worth = quantity * current_price
-        st.session_state.portofolio_value += stock_worth
+        st.session_state.portofolio_value = stock_worth
         profit_loss = (current_price - avg_buy_price) * quantity
         profit_loss_percent = ((current_price - avg_buy_price) / avg_buy_price) * 100 if avg_buy_price > 0 else 0
 
