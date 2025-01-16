@@ -2217,7 +2217,7 @@ def add_column_if_not_exists(conn):
 
     c.execute("PRAGMA table_info(stocks);")
     columns = [column[1] for column in c.fetchall()]
-    if "last_savings_refresh" not in columns:
+    if "change_rate" not in columns:
         c.execute("ALTER TABLE stocks ADD COLUMN change_rate REAL;")
         c.execute("UPDATE stocks SET change_rate 1;")
 
