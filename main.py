@@ -392,7 +392,8 @@ def get_latest_message_time(conn):
     latest = c.execute("SELECT MAX(timestamp) FROM chats").fetchone()[0]
     return latest if latest else "1970-01-01 00:00:00"
 
-def register_user(conn, c, username, password, email = None, visible_name = None):
+def register_user(conn, username, password, email = None, visible_name = None):
+    c = conn.cursor()
     try:
 
         user_id_to_be_registered = random.randint(100000, 999999)
@@ -1101,7 +1102,84 @@ def inventory_item_options(conn, user_id, item_id):
         c.execute("UPDATE marketplace_items SET stock = stock + 1 WHERE item_id = ?", (item_id,))
         conn.commit()
         st.rerun()
-        
+
+def attempt_steal(conn, attacker_id, target_username):
+    c = conn.cursor()
+
+    attacker = c.execute("SELECT wallet, attack_level, steal_cooldown FROM users WHERE user_id = ?", 
+                         (attacker_id,)).fetchone()
+    if not attacker:
+        st.error("Attacker not found.")
+        return
+
+    attacker_wallet, attack_level, steal_cooldown = attacker
+
+    if steal_cooldown:
+        last_steal = datetime.datetime.strptime(steal_cooldown, "%Y-%m-%d %H:%M:%S")
+        time_diff = (datetime.datetime.now() - last_steal).total_seconds()
+        if time_diff < 600:
+            st.warning(f"Wait {int((600 - time_diff) / 60)} minutes before stealing again!")
+            return
+
+    target = c.execute("SELECT user_id, wallet, defense_level FROM users WHERE username = ?", 
+                       (target_username,)).fetchone()
+    if not target:
+        st.error("Target user not found.")
+        return
+
+    target_id, target_wallet, defense_level = target
+
+    if target_wallet <= 0:
+        st.warning("Target has no money to steal!")
+        return
+
+    base_success_rate = 50
+    success_rate = base_success_rate + (attack_level * 5) - (defense_level * 5)
+    success_rate = max(10, min(success_rate, 90))
+
+    st.info(f"Stealing Success Rate: {success_rate}%")
+
+    if random.randint(1, 100) <= success_rate:
+        stolen_amount = round(target_wallet * random.uniform(0.1, 0.3), 2)
+        new_attacker_wallet = attacker_wallet + stolen_amount
+        new_target_wallet = target_wallet - stolen_amount
+
+        c.execute("UPDATE users SET wallet = ? WHERE user_id = ?", (new_attacker_wallet, attacker_id))
+        c.execute("UPDATE users SET wallet = ? WHERE user_id = ?", (new_target_wallet, target_id))
+        conn.commit()
+
+        st.success(f"💰 Success! You stole **${stolen_amount:.2f}** from {target_username}!")
+    else:
+        lost_amount = round(attacker_wallet * random.uniform(0.05, 0.15), 2)
+        new_attacker_wallet = max(0, attacker_wallet - lost_amount)
+
+        c.execute("UPDATE users SET wallet = ? WHERE user_id = ?", (new_attacker_wallet, attacker_id))
+        c.execute("UPDATE users SET wallet = wallet + ? WHERE user_id = ?", (lost_amount, target_id))
+        conn.commit()
+
+        st.error(f"🚨 You got caught! You lost **${lost_amount:.2f}** as a penalty!")
+
+    c.execute("UPDATE users SET steal_cooldown = ? WHERE user_id = ?", 
+              (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), attacker_id))
+    conn.commit()
+
+def steal_view(conn, user_id):
+    c = conn.cursor()
+    st.header("Heist", divider="rainbow")
+    st.subheader("Steal Money From Users")
+
+    all_users = [user[0] for user in c.execute("SELECT username FROM users WHERE username != ?", (st.session_state.username,)).fetchall()]    
+    
+    target_username = st.selectbox("Target", options = all_users)
+
+    if st.button("💰 Attempt Steal", type="primary", use_container_width=True):
+        if target_username:
+            attempt_steal(conn, user_id, target_username)
+            time.sleep(1.5)
+            st.rerun()
+        else:
+            st.warning("Enter a valid username!")
+
 def buy_item(conn, user_id, item_id):
     c = conn.cursor()
 
@@ -1451,7 +1529,7 @@ def display_transaction_history(conn, user_id):
     c = conn.cursor()
     st.header("Transaction History", divider = "rainbow")
 
-    sent_transactions, received_transactions = get_transaction_history(c, user_id)
+    sent_transactions, received_transactions = get_transaction_history(conn, user_id)
     transactions = sent_transactions + received_transactions
 
     if transactions:
@@ -1595,7 +1673,7 @@ def stocks_view(conn, user_id):
     st.header("📈 Stock Market", divider="rainbow")
     
     update_stock_prices(conn)
-    st_autorefresh(interval=10000, key="stock_autorefresh")
+    st_autorefresh(interval=60000, key="stock_autorefresh")
 
     stocks = c.execute("SELECT stock_id, name, symbol, price, stock_amount FROM stocks").fetchall()
     
@@ -1677,7 +1755,7 @@ def stocks_view(conn, user_id):
             avg_price = 0
 
         with st.container(border=True):
-            st.write(f"[Holding] :blue[{numerize((user_quantity), 2)} {symbol}] ~ :green[${numerize((user_quantity * price), 2)}]")
+            st.write(f"[Owned] :blue[{numerize((user_quantity), 2)} {symbol}] ~ :green[${numerize((user_quantity * price), 2)}]")
             st.write(f"[AVG. Bought At] :green[${numerize((avg_price), 2)}]")
 
             st.write(f"[Available] :orange[{numerize(stock_amount, 2)} {symbol}]")                                
@@ -1749,6 +1827,55 @@ def stocks_view(conn, user_id):
             st.rerun()
         if c2.button("Price Prediction", type = "primary", use_container_width = True):
             st.toast("Coming Soon")
+
+def portfolio_view(conn, user_id):
+    c = conn.cursor()
+    if "portofolio_value" not in st.session_state:
+        st.session_state.portofolio_value = 0
+
+    st.header("📊 My Portfolio", divider="rainbow")
+
+    user_stocks = c.execute("""
+        SELECT us.stock_id, s.name, s.symbol, us.quantity, us.avg_buy_price, s.price 
+        FROM user_stocks us
+        JOIN stocks s ON us.stock_id = s.stock_id
+        WHERE us.user_id = ? AND us.quantity > 0
+    """, (user_id,)).fetchall()
+
+    if not user_stocks:
+        st.info("You don't own any stocks yet. Start investing now! 🚀")
+        return
+
+    st.subheader(f"💰 Total Portfolio Value: **:green[${numerize(st.session_state.portofolio_value)}]**")
+    if st.button("Refresh", use_container_width = True):
+        st.rerun()
+    
+    st.text("")
+    st.text("")
+
+    for stock_id, name, symbol, quantity, avg_buy_price, current_price in user_stocks:
+        stock_worth = quantity * current_price
+        st.session_state.portofolio_value += stock_worth
+        profit_loss = (current_price - avg_buy_price) * quantity
+        profit_loss_percent = ((current_price - avg_buy_price) / avg_buy_price) * 100 if avg_buy_price > 0 else 0
+
+        st.subheader(f"{name} ({symbol})")
+
+        with st.container(border=True):  
+            col1, col2 = st.columns([1, 2])
+
+            with col1:
+                st.write(f"**[Holding]** :blue[{numerize(quantity)}]")
+                st.write(f"**[Avg Buy Price]** :orange[${numerize(avg_buy_price)}]")
+                st.write(f"**[Current Price]:** :green[${numerize(current_price)}]")
+                st.write(f"**[Total Value]** :green[${numerize(stock_worth)}]")
+
+            with col2:
+                st.metric("📊 Gain/Loss", f"${numerize(profit_loss)}", 
+                          f"{profit_loss_percent:.2f}%", 
+                          delta_color="inverse" if profit_loss < 0 else "normal")
+
+        st.divider()
 
 def admin_panel(conn):
     c = conn.cursor()
@@ -2068,7 +2195,8 @@ def main(conn):
                         if new_password != "":
                             if len(new_password) >= 8:
                                 if new_password == confirm_password:
-                                    register_user(conn, c, new_username, new_password)
+                                    register_user(conn, new_username, new_password)
+                                    st.rerun()
                                 else:
                                     st.error("Passwords do not match.")
                             else:
@@ -2122,6 +2250,10 @@ def main(conn):
                 st.session_state.current_menu = "Stocks"
                 st.rerun()
 
+            if st.button("Heist", type="secondary", use_container_width=True):
+                st.session_state.current_menu = "Heist"
+                st.rerun()
+
         with t2:
             c1, c2 = st.columns(2)
             if c1.button("Vault", type="primary", use_container_width=True):
@@ -2140,8 +2272,13 @@ def main(conn):
                 st.session_state.current_menu = "Manage Pending Transfers"
                 st.rerun()
             
-            if st.button("Inventory", type="secondary", use_container_width=True):
+            c1, c2 = st.columns(2)
+            if c1.button("Inventory", type="secondary", use_container_width=True):
                 st.session_state.current_menu = "Inventory"
+                st.rerun()
+
+            if c2.button("Holdings", type="secondary", use_container_width=True):
+                st.session_state.current_menu = "Holdings"
                 st.rerun()
 
             st.divider()
@@ -2180,7 +2317,7 @@ def main(conn):
             main_account_view(conn, st.session_state.user_id)
 
         elif st.session_state.current_menu == "Manage Pending Transfers":
-            manage_pending_transfers(c, conn, st.session_state.user_id)
+            manage_pending_transfers(conn, st.session_state.user_id)
 
         elif st.session_state.current_menu == "Transaction History":
             display_transaction_history(conn, st.session_state.user_id)
@@ -2196,6 +2333,12 @@ def main(conn):
         
         elif st.session_state.current_menu == "Stocks":
             stocks_view(conn, st.session_state.user_id)
+        
+        elif st.session_state.current_menu == "Holdings":
+            portfolio_view(conn, st.session_state.user_id)
+        
+        elif st.session_state.current_menu == "Heist":
+            steal_view(conn, st.session_state.user_id)
 
         elif st.session_state.current_menu == "Logout":
             st.sidebar.info("Logging you out...")
@@ -2215,11 +2358,17 @@ def main(conn):
 def add_column_if_not_exists(conn):
     c = conn.cursor()
 
-    c.execute("PRAGMA table_info(stocks);")
+    c.execute("PRAGMA table_info(users);")
     columns = [column[1] for column in c.fetchall()]
-    if "change_rate" not in columns:
-        c.execute("ALTER TABLE stocks ADD COLUMN change_rate REAL;")
-        c.execute("UPDATE stocks SET change_rate 1;")
+
+    if "steal_cooldown" not in columns:
+        c.execute("ALTER TABLE users ADD COLUMN steal_cooldown TIMESTAMP DEFAULT NULL;")
+        
+    if "defense_level" not in columns:
+        c.execute("ALTER TABLE users ADD COLUMN defense_level INTEGER DEFAULT 0;")
+    
+    if "attack_level" not in columns:
+        c.execute("ALTER TABLE users ADD COLUMN attack_level INTEGER DEFAULT 0;")
 
     conn.commit()
 
