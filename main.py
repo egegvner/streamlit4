@@ -260,7 +260,8 @@ def leaderboard_logic(c):
 
     return leaderboard
 
-def get_transaction_history(c, user_id):
+def get_transaction_history(conn, user_id):
+    c = conn.cursor()
     username = c.execute("SELECT username FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
     sender_query = """
@@ -308,30 +309,29 @@ def update_stock_prices(conn):
     c = conn.cursor()
     now = datetime.datetime.now()
 
-    stocks = c.execute("SELECT stock_id, price, last_updated FROM stocks").fetchall()
+    stocks = c.execute("SELECT stock_id, price, last_updated, change_rate FROM stocks").fetchall()
 
-    for stock_id, current_price, last_updated in stocks:
+    for stock_id, current_price, last_updated, change_rate in stocks:
         if last_updated:
             last_updated = datetime.datetime.strptime(last_updated, "%Y-%m-%d %H:%M:%S")
         else:
             last_updated = now
 
         elapsed_time = (now - last_updated).total_seconds()
+        num_updates = int(elapsed_time // 10)
 
-        if elapsed_time >= 60:
-            num_updates = int(elapsed_time // 60)
+        for _ in range(num_updates):
+            change_percent = round(random.uniform(-change_rate, change_rate), 2)
+            new_price = max(1, round(current_price * (1 + change_percent / 100), 2))
 
-            for _ in range(num_updates):
-                change = round(random.uniform(-1, 1), 2)
-                current_price = max(1, round(current_price * (1 + change / 100), 2))
+            c.execute("INSERT INTO stock_history (stock_id, price, timestamp) VALUES (?, ?, ?)", 
+                      (stock_id, new_price, now.strftime("%Y-%m-%d %H:%M:%S")))
+            
+            current_price = new_price
+            last_updated += datetime.timedelta(seconds=10)
 
-                c.execute("INSERT INTO stock_history (stock_id, price, timestamp) VALUES (?, ?, ?)", 
-                          (stock_id, current_price, last_updated.strftime("%Y-%m-%d %H:%M:%S")))
-
-                last_updated += datetime.timedelta(seconds=60)
-
-            c.execute("UPDATE stocks SET price = ?, last_updated = ? WHERE stock_id = ?", 
-                      (current_price, last_updated.strftime("%Y-%m-%d %H:%M:%S"), stock_id))
+        c.execute("UPDATE stocks SET price = ?, last_updated = ? WHERE stock_id = ?", 
+                  (current_price, now.strftime("%Y-%m-%d %H:%M:%S"), stock_id))
 
     conn.commit()
 
@@ -466,7 +466,8 @@ def init_db():
                   login_streak INTEGER DEFAULT 0,
                   show_main_balance_on_leaderboard INTEGER DEFAULT 1,
                   show_wallet_on_leaderboard INTEGER DEFAULT 1,
-                  show_savings_balance_on_leaderboard INTEGER DEFAULT 1
+                  show_savings_balance_on_leaderboard INTEGER DEFAULT 1,
+                  last_savings
                   )''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS transactions (
@@ -551,10 +552,10 @@ def init_db():
             );''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS stock_history (
-            stock_id INTEGER NOT NULL,
-            price REAL NOT NULL,
-            timestamp DATETIME NOT NULL
-            );''')
+                stock_id INTEGER NOT NULL,
+                price REAL NOT NULL,
+                timestamp DATETIME NOT NULL
+                );''')
     
     c.execute('CREATE INDEX IF NOT EXISTS idx_user_id ON transactions(user_id)')
     c.execute('CREATE INDEX IF NOT EXISTS idx_timestamp ON transactions(timestamp)')
@@ -1805,12 +1806,14 @@ def admin_panel(conn):
             stock_symbol = st.text_input("Ab", label_visibility = "collapsed", placeholder = "Symbol")
             starting_price = st.text_input("Ab", label_visibility = "collapsed", placeholder = "Starting Price")
             stock_amount = st.text_input("Ab", label_visibility = "collapsed", placeholder = "Stock Amount")
+            change_rate = st.text_input("Ab", label_visibility = "collapsed", placeholder = "Change Rate (i.e 0.5 means ±0.5% in each  update)")
+
             st.divider()
             
             if st.form_submit_button("Add to QubitTrades™", use_container_width = True):
                 existing_stock_ids = c.execute("SELECT stock_id FROM stocks").fetchall()
                 if item_id not in existing_stock_ids:
-                    c.execute("INSERT INTO stocks (stock_id, name, symbol, starting_price, price, stock_amount) VALUES (?, ?, ?, ?, ?, ?)", (stock_id, stock_name, stock_symbol, starting_price, starting_price, stock_amount))
+                    c.execute("INSERT INTO stocks (stock_id, name, symbol, starting_price, price, stock_amount, change_rate) VALUES (?, ?, ?, ?, ?, ?, ?)", (stock_id, stock_name, stock_symbol, starting_price, starting_price, stock_amount, change_rate))
                     conn.commit()
                     st.rerun()
                 else:
@@ -1818,13 +1821,13 @@ def admin_panel(conn):
 
     st.header("Manage Stocks", divider = "rainbow")
     with st.spinner("Loading QubitTrades™..."):
-        stock_data = c.execute("SELECT stock_id, name, symbol, starting_price, price, stock_amount FROM stocks").fetchall()
+        stock_data = c.execute("SELECT stock_id, name, symbol, starting_price, price, stock_amount, change_rate FROM stocks").fetchall()
    
-    df = pd.DataFrame(stock_data, columns = ["Stock ID", "Stock Name", "Symbol", "Starting Price", "Current Price", "Stock Amount"])
+    df = pd.DataFrame(stock_data, columns = ["Stock ID", "Stock Name", "Symbol", "Starting Price", "Current Price", "Stock Amount", "Change Rate"])
     edited_df = st.data_editor(df, key = "stock_table", num_rows = "fixed", use_container_width = True, hide_index = True)
     if st.button("Update Stocks", use_container_width = True):
         for _, row in edited_df.iterrows():
-            c.execute("UPDATE OR IGNORE stocks SET name = ?, symbol = ?, price = ?, stock_amount = ? WHERE stock_id = ?", (row["Stock Name"], row["Symbol"], row["Current Price"], row["Stock Amount"], row["Stock ID"]))
+            c.execute("UPDATE OR IGNORE stocks SET name = ?, symbol = ?, price = ?, stock_amount = ?, change_rate = ? WHERE stock_id = ?", (row["Stock Name"], row["Symbol"], row["Current Price"], row["Stock Amount"], row["Change Rate"], row["Stock ID"]))
         conn.commit()
         st.rerun()
 
@@ -2212,11 +2215,11 @@ def main(conn):
 def add_column_if_not_exists(conn):
     c = conn.cursor()
 
-    c.execute("PRAGMA table_info(users);")
+    c.execute("PRAGMA table_info(stocks);")
     columns = [column[1] for column in c.fetchall()]
     if "last_savings_refresh" not in columns:
-        c.execute("ALTER TABLE users ADD COLUMN last_savings_refresh DATETIME;")
-        c.execute("UPDATE users SET last_savings_refresh = CURRENT_TIMESTAMP;")
+        c.execute("ALTER TABLE stocks ADD COLUMN change_rate REAL;")
+        c.execute("UPDATE stocks SET change_rate 1;")
 
     conn.commit()
 
