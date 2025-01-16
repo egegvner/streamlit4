@@ -386,11 +386,58 @@ def get_stock_metrics(conn, stock_id):
         "delta_all_time_low": delta_all_time_low
     }
 
+def update_inflation(conn):
+    c = conn.cursor()
+    
+    today = datetime.date.today().strftime("%Y-%m-%d")
+    
+    last_entry = c.execute("SELECT date FROM inflation_history ORDER BY date DESC LIMIT 1").fetchone()
+    if last_entry and last_entry[0] == today:
+        return  # Already updated today
+    
+    new_inflation = round(random.uniform(-0.05, 0.05), 4)
+    
+    c.execute("INSERT INTO inflation_history (date, inflation_rate) VALUES (?, ?)", (today, new_inflation))
+    conn.commit()
+
 
 def get_latest_message_time(conn):
     c = conn.cursor()
     latest = c.execute("SELECT MAX(timestamp) FROM chats").fetchone()[0]
     return latest if latest else "1970-01-01 00:00:00"
+
+def get_inflation_history(c):
+    history = c.execute("SELECT date, inflation_rate FROM inflation_history ORDER BY date ASC").fetchall()
+    return pd.DataFrame(history, columns=["Date", "Inflation Rate"])
+
+def check_and_apply_loan_penalty(conn, user_id):
+    c = conn.cursor()
+    
+    user_data = c.execute("SELECT loan, loan_due_date, loan_penalty FROM users WHERE user_id = ?", (user_id,)).fetchone()
+    
+    if not user_data or user_data[0] == 0:
+        return  # No loan, no penalty
+
+    loan, due_date, penalty = user_data
+
+    if not due_date:
+        return
+
+    today = datetime.date.today()
+    due_date_obj = datetime.datetime.strptime(due_date, "%Y-%m-%d").date()
+
+    if today > due_date_obj:
+        days_overdue = (today - due_date_obj).days
+        penalty_amount = round(loan * 0.01 * days_overdue, 2)  # 1% penalty per day
+
+        new_loan = loan + penalty_amount
+        new_penalty = penalty + penalty_amount
+
+        c.execute("UPDATE users SET loan = ?, loan_penalty = ? WHERE user_id = ?", (new_loan, new_penalty, user_id))
+        conn.commit()
+
+        print(f"⚠ User {user_id} has an overdue loan! Added ${penalty_amount:.2f} penalty.")
+
 
 def register_user(conn, username, password, email = None, visible_name = None):
     c = conn.cursor()
@@ -468,7 +515,10 @@ def init_db():
                   show_main_balance_on_leaderboard INTEGER DEFAULT 1,
                   show_wallet_on_leaderboard INTEGER DEFAULT 1,
                   show_savings_balance_on_leaderboard INTEGER DEFAULT 1,
-                  last_savings
+                  last_savings_refresh DATETIME NOT NULL,
+                  steal_cooldown DATETIME DEFAULT CURRENT_TIMESTAMP,
+                  attack_level INTEGER DEFAULT 0,
+                  defense_level INTEGER DEFAULT 0
                   )''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS transactions (
@@ -556,6 +606,11 @@ def init_db():
                 stock_id INTEGER NOT NULL,
                 price REAL NOT NULL,
                 timestamp DATETIME NOT NULL
+                );''')
+    
+    c.execute('''CREATE TABLE IF NOT EXISTS inflation_history (
+                date TEXT PRIMARY KEY,  
+                inflation_rate REAL  
                 );''')
     
     c.execute('CREATE INDEX IF NOT EXISTS idx_user_id ON transactions(user_id)')
@@ -1103,7 +1158,8 @@ def inventory_item_options(conn, user_id, item_id):
         conn.commit()
         st.rerun()
 
-def attempt_steal(conn, attacker_id, target_username):
+@st.dialog("Attempt Steal Money")
+def steal_dialog(conn, attacker_id, target_id):
     c = conn.cursor()
 
     attacker = c.execute("SELECT wallet, attack_level, steal_cooldown FROM users WHERE user_id = ?", 
@@ -1114,20 +1170,19 @@ def attempt_steal(conn, attacker_id, target_username):
 
     attacker_wallet, attack_level, steal_cooldown = attacker
 
-    if steal_cooldown:
-        last_steal = datetime.datetime.strptime(steal_cooldown, "%Y-%m-%d %H:%M:%S")
-        time_diff = (datetime.datetime.now() - last_steal).total_seconds()
-        if time_diff < 600:
-            st.warning(f"Wait {int((600 - time_diff) / 60)} minutes before stealing again!")
-            return
-
-    target = c.execute("SELECT user_id, wallet, defense_level FROM users WHERE username = ?", 
-                       (target_username,)).fetchone()
+    target = c.execute("SELECT username, wallet, defense_level FROM users WHERE user_id = ?", (target_id,)).fetchone()
     if not target:
         st.error("Target user not found.")
         return
 
-    target_id, target_wallet, defense_level = target
+    target_username, target_wallet, defense_level = target
+
+    if steal_cooldown:
+        last_steal = datetime.datetime.strptime(steal_cooldown, "%Y-%m-%d %H:%M:%S")
+        time_diff = (datetime.datetime.now() - last_steal).total_seconds()
+        if time_diff < 3:
+            st.warning(f"Wait {int(3 - time_diff)} seconds before stealing again!")
+            return
 
     if target_wallet <= 0:
         st.warning("Target has no money to steal!")
@@ -1137,36 +1192,57 @@ def attempt_steal(conn, attacker_id, target_username):
     success_rate = base_success_rate + (attack_level * 5) - (defense_level * 5)
     success_rate = max(10, min(success_rate, 90))
 
-    st.info(f"Stealing Success Rate: {success_rate}%")
+    st.write(f"Target: :red[{target_username}]")
+    st.write("Target Wallet: :red[???]")
+    st.info(f"Success Rate: :green[{success_rate}%]")
 
-    if random.randint(1, 100) <= success_rate:
-        stolen_amount = round(target_wallet * random.uniform(0.1, 0.3), 2)
-        new_attacker_wallet = attacker_wallet + stolen_amount
-        new_target_wallet = target_wallet - stolen_amount
+    if st.button("💰 Initiate Attack", use_container_width=True, disabled=True if time_diff < 3 else False):
+        
+        success = random.randint(1, 100) <= success_rate
 
-        c.execute("UPDATE users SET wallet = ? WHERE user_id = ?", (new_attacker_wallet, attacker_id))
-        c.execute("UPDATE users SET wallet = ? WHERE user_id = ?", (new_target_wallet, target_id))
-        conn.commit()
+        if success:
+            stolen_percentage = random.uniform(0.1, 0.3)
+            stolen_amount = round(target_wallet * stolen_percentage, 2)  # Steal 10-30% of wallet
+            stolen_amount = min(target_wallet, stolen_amount)  # Prevent stealing more than available
 
-        st.success(f"💰 Success! You stole **${stolen_amount:.2f}** from {target_username}!")
-    else:
-        lost_amount = round(attacker_wallet * random.uniform(0.05, 0.15), 2)
-        new_attacker_wallet = max(0, attacker_wallet - lost_amount)
+            c.execute("UPDATE users SET wallet = wallet + ? WHERE user_id = ?", (stolen_amount, attacker_id))
+            c.execute("UPDATE users SET wallet = wallet - ? WHERE user_id = ?", (stolen_amount, target_id))
+            conn.commit()
+            result = "win"
+        else:
+            lost_percentage = random.uniform(0.05, 0.15)  # Lose 5-15%
+            lost_amount = round(attacker_wallet * lost_percentage, 2)
+            lost_amount = min(attacker_wallet, lost_amount)  # Prevent negative wallet
 
-        c.execute("UPDATE users SET wallet = ? WHERE user_id = ?", (new_attacker_wallet, attacker_id))
-        c.execute("UPDATE users SET wallet = wallet + ? WHERE user_id = ?", (lost_amount, target_id))
-        conn.commit()
+            c.execute("UPDATE users SET wallet = wallet - ? WHERE user_id = ?", (lost_amount, attacker_id))
+            c.execute("UPDATE users SET wallet = wallet + ? WHERE user_id = ?", (lost_amount, target_id))
+            conn.commit()
+            result = "lost"
 
-        st.error(f"🚨 You got caught! You lost **${lost_amount:.2f}** as a penalty!")
+        with st.status(f"🔍 Scanning {target_username}'s defenses...", expanded=True) as status:
+            time.sleep(1)
+            st.write("💠 Preparing attack tools...")
+            time.sleep(0.4)
+            st.write("💻 Bypassing Firewall...")
+            time.sleep(3)
+            st.write("🔓 Exploiting vulnerability...")
+            time.sleep(2)
+            st.write("🔥 Executing attack...")
+            time.sleep(4)
+            status.update(state="complete" if result == "win" else "error")
 
-    c.execute("UPDATE users SET steal_cooldown = ? WHERE user_id = ?", 
-              (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), attacker_id))
-    conn.commit()
+        if result == "win":
+            st.success(f"💰 Success! You stole **${numerize(stolen_amount)}** ({numerize(stolen_percentage * 100)}%) from {target_username}!")
+            time.sleep(3)
+            st.rerun()
+        else:
+            st.error(f"🚨 You got caught! You lost **${numerize(lost_amount)}** ({numerize(lost_percentage * 100)}%) to {target_username}!")
+            time.sleep(3)
+            st.rerun()
 
 def steal_view(conn, user_id):
     c = conn.cursor()
     st.header("Heist", divider="rainbow")
-    st.subheader("Steal Money From Users")
 
     all_users = [user[0] for user in c.execute("SELECT username FROM users WHERE username != ?", (st.session_state.username,)).fetchall()]    
     
@@ -1174,9 +1250,8 @@ def steal_view(conn, user_id):
 
     if st.button("💰 Attempt Steal", type="primary", use_container_width=True):
         if target_username:
-            attempt_steal(conn, user_id, target_username)
-            time.sleep(1.5)
-            st.rerun()
+            target_id = c.execute("SELECT user_id FROM users WHERE username = ?", (target_username,)).fetchone()[0]
+            steal_dialog(conn, user_id, target_id)
         else:
             st.warning("Enter a valid username!")
 
@@ -1205,6 +1280,12 @@ def buy_item(conn, user_id, item_id):
                 conn.commit()
             if item_data[3] == "interest_boost":
                 c.execute("UPDATE savings SET interest_rate = interest_rate + ? WHERE user_id = ?", (item_data[4], user_id))
+                conn.commit()
+            if item_data[3] == "attack_boost":
+                c.execute("UPDATE users SET attack_level = attack_level + ? WHERE user_id = ?", (item_data[4], user_id))
+                conn.commit()
+            if item_data[3] == "defense_boost":
+                c.execute("UPDATE users SET defense_level = defense_level + ? WHERE user_id = ?", (item_data[4], user_id))
                 conn.commit()
             time.sleep(1.5)
         st.success(f"Item purchased!")
@@ -1879,6 +1960,134 @@ def portfolio_view(conn, user_id):
 
         st.divider()
 
+def borrow_money(conn, user_id, amount, interest_rate):
+    c = conn.cursor()
+
+    current_loan = c.execute("SELECT loan FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+    
+    if current_loan > 0:
+        st.toast("❌ You must repay your existing loan first!")
+        return  # Prevents further execution
+
+    new_loan = round(amount * (1 + interest_rate), 2)  # Add interest
+    due_date = (datetime.date.today() + datetime.timedelta(days=7)).strftime("%Y-%m-%d")  # Due in 7 days
+
+    c.execute("UPDATE users SET loan = ?, loan_due_date = ?, balance = balance + ? WHERE user_id = ?", 
+              (new_loan, due_date, amount, user_id))
+    conn.commit()
+
+    st.toast(f"✅ Borrowed ${amount:.2f}. Due Date: {due_date}. You owe ${new_loan:.2f}.")
+    st.rerun()  # Refresh UI
+
+
+def borrow_money(conn, user_id, amount, interest_rate):
+    c = conn.cursor()
+
+    current_loan = c.execute("SELECT loan FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+    
+    if current_loan > 0:
+        st.toast("❌ You must repay your existing loan first!")
+        return  # Prevents further execution
+
+    new_loan = round(amount * (1 + interest_rate), 2)  # Add interest
+    due_date = (datetime.date.today() + datetime.timedelta(days=7)).strftime("%Y-%m-%d")  # Due in 7 days
+
+    c.execute("UPDATE users SET loan = ?, loan_due_date = ?, balance = balance + ? WHERE user_id = ?", 
+              (new_loan, due_date, amount, user_id))
+    conn.commit()
+
+    st.toast(f"✅ Borrowed ${amount:.2f}. Due Date: {due_date}. You owe ${new_loan:.2f}.")
+    st.rerun()  # Refresh UI
+
+def repay_loan(conn, user_id, amount):
+    c = conn.cursor()
+    
+    # Fetch loan and balance
+    user_data = c.execute("SELECT loan, balance FROM users WHERE user_id = ?", (user_id,)).fetchone()
+    loan, balance = user_data if user_data else (0, 0)
+    
+    if loan <= 0:
+        st.toast("✅ You have no outstanding loans!")
+        return  # Stops execution
+
+    if balance < amount:
+        st.toast("❌ Insufficient balance to repay!")
+        return  # Stops execution
+
+    # Deduct from loan and balance
+    new_loan = max(0, loan - amount)
+    new_balance = balance - amount
+
+    c.execute("UPDATE users SET loan = ?, balance = ? WHERE user_id = ?", (new_loan, new_balance, user_id))
+    conn.commit()
+    
+    st.success(f"✅ Loan repaid. Remaining debt: ${numerize(new_loan)}.")
+    st.rerun()  # Refresh UI
+
+
+def bank_view(conn, user_id):
+    st.header("🏦 The Bank", divider="rainbow")
+
+    update_inflation(conn)  # Ensure inflation updates daily
+    check_and_apply_loan_penalty(conn, user_id)  # Apply penalties if overdue
+
+    c = conn.cursor()
+    
+    # Fetch Inflation & Loan Data
+    df = get_inflation_history(c)
+
+    inflation_rate = c.execute("SELECT inflation_rate FROM inflation_history ORDER BY date DESC LIMIT 1").fetchone()
+    inflation_rate = inflation_rate[0] if inflation_rate else 0.01  # Default 1% interest
+
+    t1, t2 = st.tabs(["Economy", "Loans & Repayments"])
+    with t1:
+        st.subheader("📈 Economy Inflation Rate")
+        st.subheader(f"Inflation: :red[{numerize(inflation_rate * -100)}%]")
+
+        if not df.empty:
+            df["Date"] = pd.to_datetime(df["Date"])
+            df.set_index("Date", inplace=True)
+            st.line_chart(df["Inflation Rate"], color=(255, 0, 0))
+        else:
+            st.info("No inflation data available yet.")
+
+    with t2:
+        user_data = c.execute("SELECT balance, loan, loan_due_date, loan_penalty FROM users WHERE user_id = ?", (user_id,)).fetchone()
+        balance, loan, due_date, penalty = user_data if user_data else (0, None, None, 0)
+
+        interest_rate = max(0.01, inflation_rate + 0.02)  # Interest = Inflation + 2%
+
+        st.write(f"📊 **Inflation:** :red[{numerize(inflation_rate * -100)}%]")
+        st.write(f"💳 **Loan Interest Rate:** :red[{numerize(interest_rate * 100)}%]")
+        st.write(f"💰 **Balance:** :green[${numerize(balance)}]")
+        st.write(f"💳 **Loan Debt:** :red[${numerize(loan)}]")
+
+        # Show penalty if overdue
+        if loan > 0 and due_date:
+            due_date_obj = datetime.datetime.strptime(due_date, "%Y-%m-%d").date()
+            today = datetime.date.today()
+            
+            if today > due_date_obj:
+                st.error(f"⚠ **Your loan is overdue!** You now owe **${format_currency(loan)}** with a total penalty of **${format_currency(penalty)}**.")
+            else:
+                st.info(f"📅 [You Have an Active Loan!] **Due:** {due_date}")
+        
+        st.divider()
+        st.subheader("Borrow Loan")
+        borrow_amount = st.number_input("A", label_visibility="collapsed", min_value=10, max_value=10000, step=10)
+        if st.button("Borrow", use_container_width=True):
+            borrow_money(conn, user_id, borrow_amount, interest_rate)
+
+        st.subheader("Repay Loan")
+        c1, c2 = st.columns(2)
+
+        repay_amount = c1.number_input("d", label_visibility="collapsed", min_value=0.0, max_value=float(numerize(loan)))
+        if c2.button("Max", use_container_width=True):
+            st.session_state.repay = numerize(loan)
+        if st.button("Repay", use_container_width=True):
+            repay_loan(conn, user_id, repay_amount)
+
+
 def admin_panel(conn):
     c = conn.cursor()
     st.header("Marketplace Items", divider = "rainbow")
@@ -2244,7 +2453,7 @@ def main(conn):
                 st.session_state.current_menu = "Chat"
                 st.rerun()
             
-            if st.button("Marketplace", type="secondary", use_container_width=True):
+            if st.button("NFTs", type="secondary", use_container_width=True):
                 st.session_state.current_menu = "Marketplace"
                 st.rerun()
 
@@ -2254,6 +2463,10 @@ def main(conn):
 
             if st.button("Heist", type="secondary", use_container_width=True):
                 st.session_state.current_menu = "Heist"
+                st.rerun()
+
+            if st.button("Gov. & Economy", type="secondary", use_container_width=True):
+                st.session_state.current_menu = "Bank"
                 st.rerun()
 
         with t2:
@@ -2342,6 +2555,9 @@ def main(conn):
         elif st.session_state.current_menu == "Heist":
             steal_view(conn, st.session_state.user_id)
 
+        elif st.session_state.current_menu == "Bank":
+            bank_view(conn, st.session_state.user_id)
+
         elif st.session_state.current_menu == "Logout":
             st.sidebar.info("Logging you out...")
             time.sleep(2.5)
@@ -2372,6 +2588,15 @@ def add_column_if_not_exists(conn):
     if "attack_level" not in columns:
         c.execute("ALTER TABLE users ADD COLUMN attack_level INTEGER DEFAULT 0;")
 
+    if "loan" not in columns:
+        c.execute("ALTER TABLE users ADD COLUMN loan REAL DEFAULT 0;")
+    
+    if "loan_due_date" not in columns:
+        c.execute("ALTER TABLE users ADD COLUMN loan_due_date TEXT;")
+    
+    if "loan_penalty" not in columns:
+        c.execute("ALTER TABLE users ADD COLUMN loan_penalty REAL DEFAULT 0;")
+    
     conn.commit()
 
 if __name__ == "__main__":
