@@ -108,7 +108,7 @@ def check_and_reset_quota(conn, user_id):
     
     now = datetime.datetime.now()
 
-    if (now - last_reset_time).total_seconds() >= 3600:
+    if (now - last_reset_time).total_seconds() >= 86400:
         new_quota = calculate_new_quota(user_id, boost)
 
         if current_quota != new_quota:
