@@ -1875,7 +1875,7 @@ def portfolio_view(conn, user_id):
             with col2:
                 st.metric("📊 Gain/Loss", f"${numerize(profit_loss)}", 
                           f"{profit_loss_percent:.2f}%", 
-                          delta_color="inverse" if profit_loss < 0 else "normal")
+                          delta_color="normal")
 
         st.divider()
 
