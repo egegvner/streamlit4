@@ -1201,7 +1201,7 @@ def inventory_item_options(conn, user_id, item_id):
     
     if st.button(f"Sell to Bank for **:green[${((item_data[3]) / 100) * 25}]**", use_container_width = True):
         c.execute("DELETE FROM user_inventory WHERE item_id = ?", (item_id,))
-        c.execute("UPDATE users SET wallet = wallet + ? WHERE user_id = ?", (item_data[3], user_id))
+        c.execute("UPDATE users SET wallet = wallet + ? WHERE user_id = ?", ((item_data[3] / 100) * 25, user_id))
         c.execute("UPDATE marketplace_items SET stock = stock + 1 WHERE item_id = ?", (item_id,))
         conn.commit()
         st.rerun()
@@ -1254,8 +1254,8 @@ def steal_dialog(conn, attacker_id, target_id):
     if steal_cooldown:
         last_steal = datetime.datetime.strptime(steal_cooldown, "%Y-%m-%d %H:%M:%S")
         time_diff = (datetime.datetime.now() - last_steal).total_seconds()
-        if time_diff < 3:
-            st.warning(f"Wait {int(3 - time_diff)} seconds before stealing again!")
+        if time_diff < 300:
+            st.warning(f"Wait {int(300 - time_diff)} seconds before stealing again!")
             return
 
     if target_wallet <= 0:
