@@ -1263,7 +1263,7 @@ def steal_dialog(conn, attacker_id, target_id):
         return
 
     base_success_rate = 50
-    success_rate = base_success_rate + (attack_level * 5) - (defense_level * 5)
+    success_rate = base_success_rate + (attack_level - defense_level)
     success_rate = max(10, min(success_rate, 90))
 
     st.write(f"Target: :red[{target_username}]")
