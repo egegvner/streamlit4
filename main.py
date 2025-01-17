@@ -1863,10 +1863,10 @@ def stocks_view(conn, user_id):
         elif last_price < previous_price:
             change_color = ":red[-{:.2f}%".format(abs(percentage_change))  # Red for decrease
         else:
-            change_color = ":orange[0.00%]"
+            change_color = ":orange[0.00%"
     else:
         percentage_change = 0
-        change_color = ":orange[0.00%]"
+        change_color = ":orange[0.00%"
         
     st.subheader(f"{name} ({symbol})")
     st.header(f":green[${numerize(price, 2)}] \n ##### {change_color}]")
