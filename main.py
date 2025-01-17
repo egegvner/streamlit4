@@ -320,20 +320,22 @@ def update_stock_prices(conn):
         elapsed_time = (now - last_updated).total_seconds()
         num_updates = int(elapsed_time // 10)
 
-        for _ in range(num_updates):
+        for i in range(num_updates):
             change_percent = round(random.uniform(-change_rate, change_rate), 2)
             new_price = max(1, round(current_price * (1 + change_percent / 100), 2))
 
+            timestamp = last_updated + datetime.timedelta(seconds=(i+1) * 10)
+
             c.execute("INSERT INTO stock_history (stock_id, price, timestamp) VALUES (?, ?, ?)", 
-                      (stock_id, new_price, now.strftime("%Y-%m-%d %H:%M:%S")))
+                      (stock_id, new_price, timestamp.strftime("%Y-%m-%d %H:%M:%S")))
             
             current_price = new_price
-            last_updated += datetime.timedelta(seconds=10)
 
         c.execute("UPDATE stocks SET price = ?, last_updated = ? WHERE stock_id = ?", 
                   (current_price, now.strftime("%Y-%m-%d %H:%M:%S"), stock_id))
 
     conn.commit()
+
 
 def get_stock_metrics(conn, stock_id):
     c = conn.cursor()
