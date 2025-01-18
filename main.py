@@ -2295,28 +2295,29 @@ def investments_view(conn, user_id):
             st.error("Insufficient balance!")
         else:
             with st.spinner("Processing Investment"):
-                return_rate = calculate_investment_return((selected_company['risk_level'] * 100), investment_amount)
+                return_rate = calculate_investment_return(st.session_state.s_c['risk_level'], investment_amount)
                 start_date = datetime.date.today()
                 end_date = start_date + datetime.timedelta(days=random.randint(1, 3))
-
+    
                 c.execute("UPDATE users SET wallet = wallet - ? WHERE user_id = ?", (investment_amount, user_id))
                 c.execute("""
                     INSERT INTO investments (user_id, company_name, amount, risk_level, return_rate, start_date, end_date)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
                 """, (
                     user_id,
-                    selected_company['name'],
+                    st.session_state.s_c['name'],
                     investment_amount,
-                    selected_company['risk_level'],
+                    st.session_state.s_c['risk_level'],
                     return_rate,
                     start_date,
                     end_date,
                 ))
                 conn.commit()
                 time.sleep(3)
-            st.toast(f"Investment of :green[${numerize(amount)}] in {selected_company['name']} is active! Ends on {end_date}.")
+            st.toast(f"Investment of :green[${numerize(investment_amount)}] in {st.session_state.s_c['name']} is active! Ends on {end_date}.")
             time.sleep(2)
             st.rerun()
+
 
     st.subheader("📊 Active Investments")
     active_investments = c.execute("""
