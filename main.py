@@ -2255,7 +2255,7 @@ def investments_view(conn, user_id):
     c = conn.cursor()
 
     if "s_c" not in st.session_state:
-        st.session_state.s_c = "None"
+        st.session_state.s_c = None
 
     balance = c.execute("SELECT wallet FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     st.subheader(f"💰 Wallet: **:green[${numerize(balance)}]**")
