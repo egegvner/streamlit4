@@ -2266,9 +2266,9 @@ def investments_view(conn, user_id):
     st.subheader("Available Companies")
     selected_company = None
     columns = st.columns(len(companies))
-    for idx, (company_id, company_name, risk_rate) in enumerate(companies):
+    for idx, (company_id, company_name, risk_level) in enumerate(companies):
         if columns[idx].button(company_name, use_container_width=True):
-            selected_company = {"id": company_id, "name": company_name, "risk_rate": risk_rate}
+            selected_company = {"id": company_id, "name": company_name, "risk_level": risk_level}
 
     if not selected_company:
         st.info("Click on a company to view investment options.")
@@ -2277,7 +2277,7 @@ def investments_view(conn, user_id):
     st.divider()
 
     st.subheader(f"💼 {selected_company['name']}")
-    st.subheader(f"**Risk:** :red[{numerize(selected_company['risk_rate'] * 100)}%]")
+    st.subheader(f"**Risk:** :red[{numerize(selected_company['risk_level'] * 100)}%]")
 
     investment_amount = st.number_input(
         "Investment Amount",
@@ -2292,7 +2292,7 @@ def investments_view(conn, user_id):
             st.error("Insufficient balance!")
         else:
             with st.spinner("Processing Investment"):
-                return_rate = calculate_investment_return(selected_company['risk_rate'], investment_amount)
+                return_rate = calculate_investment_return(selected_company['risk_level'], investment_amount)
                 start_date = datetime.date.today()
                 end_date = start_date + datetime.timedelta(days=random.randint(1, 3))
 
@@ -2304,14 +2304,14 @@ def investments_view(conn, user_id):
                     user_id,
                     selected_company['name'],
                     investment_amount,
-                    selected_company['risk_rate'],
+                    selected_company['risk_level'],
                     return_rate,
                     start_date,
                     end_date,
                 ))
                 conn.commit()
                 time.sleep(3)
-            st.toast(f"Investment of ${investment_amount:.2f} in {selected_company['name']} is active! Ends on {end_date}.")
+            st.toast(f"Investment of :green[${numerize(amount}] in {selected_company['name']} is active! Ends on {end_date}.")
             time.sleep(2)
             st.rerun()
 
