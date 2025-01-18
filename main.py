@@ -2254,6 +2254,9 @@ def investments_view(conn, user_id):
     st.header("📈 Investments", divider="rainbow")
     c = conn.cursor()
 
+    if "s_c" not in st.session_state:
+        st.session_state.s_c = "None"
+
     balance = c.execute("SELECT wallet FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     st.subheader(f"💰 Wallet: **:green[${numerize(balance)}]**")
 
@@ -2264,20 +2267,20 @@ def investments_view(conn, user_id):
         return
 
     st.subheader("Available Companies")
-    selected_company = None
+    selected_company = st.session_state.s_c
     columns = st.columns(len(companies))
     for idx, (company_id, company_name, risk_level) in enumerate(companies):
         if columns[idx].button(company_name, use_container_width=True):
-            selected_company = {"id": company_id, "name": company_name, "risk_level": risk_level}
+            st.session_state.s_c = {"id": company_id, "name": company_name, "risk_level": risk_level}
 
-    if not selected_company:
+    if not st.session_state.s_c:
         st.info("Click on a company to view investment options.")
         return
 
     st.divider()
 
-    st.subheader(f"💼 {selected_company['name']}")
-    st.subheader(f"**Risk:** :red[{numerize(selected_company['risk_level'] * 100)}%]")
+    st.subheader(f"💼 {st.session_state.s_c['name']}")
+    st.subheader(f"**Risk:** :red[{numerize(st.session_state.s_c['risk_level'] * 100)}%]")
 
     investment_amount = st.number_input(
         "Investment Amount",
