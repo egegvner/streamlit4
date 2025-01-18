@@ -2292,7 +2292,7 @@ def investments_view(conn, user_id):
             st.error("Insufficient balance!")
         else:
             with st.spinner("Processing Investment"):
-                return_rate = calculate_investment_return(selected_company['risk_level'], investment_amount)
+                return_rate = calculate_investment_return((selected_company['risk_level'] * 100), investment_amount)
                 start_date = datetime.date.today()
                 end_date = start_date + datetime.timedelta(days=random.randint(1, 3))
 
