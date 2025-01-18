@@ -2249,6 +2249,7 @@ def bank_view(conn, user_id):
             st.session_state.repay = numerize(loan)
         if st.button("Repay", use_container_width=True):
             repay_loan(conn, user_id, repay_amount)
+            
 def investments_view(conn, user_id):
     st.header("📈 Investments", divider="rainbow")
     c = conn.cursor()
@@ -2312,7 +2313,7 @@ def investments_view(conn, user_id):
                 time.sleep(3)
             st.toast(f"Investment of ${investment_amount:.2f} in {selected_company['name']} is active! Ends on {end_date}.")
             time.sleep(2)
-            st.rerun
+            st.rerun()
 
     st.subheader("📊 Active Investments")
     active_investments = c.execute("""
