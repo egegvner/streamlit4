@@ -2267,7 +2267,6 @@ def investments_view(conn, user_id):
         return
 
     st.subheader("Available Companies")
-    selected_company = st.session_state.s_c
     columns = st.columns(len(companies))
     for idx, (company_id, company_name, risk_level) in enumerate(companies):
         if columns[idx].button(company_name, use_container_width=True):
@@ -2277,17 +2276,18 @@ def investments_view(conn, user_id):
         st.info("Click on a company to view investment options.")
         return
 
-    st.divider()
+    selected_company = st.session_state.s_c  # Safely use the selected company
 
-    st.subheader(f"💼 {st.session_state.s_c['name']}")
-    st.subheader(f"**Risk:** :red[{numerize(st.session_state.s_c['risk_level'] * 100)}%]")
+    st.divider()
+    st.subheader(f"💼 {selected_company['name']}")
+    st.subheader(f"**Risk:** :red[{numerize(selected_company['risk_level'] * 100)}%]")
 
     investment_amount = st.number_input(
         "Investment Amount",
         min_value=1.0,
         max_value=balance,
         step=0.1,
-        key=f"investment_{selected_company['id']}",
+        key=f"investment_{selected_company['id']}",  # Use company ID as key
     )
 
     if st.button("Invest Now", use_container_width=True, type="primary"):
@@ -2295,54 +2295,29 @@ def investments_view(conn, user_id):
             st.error("Insufficient balance!")
         else:
             with st.spinner("Processing Investment"):
-                return_rate = calculate_investment_return(st.session_state.s_c['risk_level'], investment_amount)
+                return_rate = calculate_investment_return(selected_company['risk_level'], investment_amount)
                 start_date = datetime.date.today()
                 end_date = start_date + datetime.timedelta(days=random.randint(1, 3))
-    
+
                 c.execute("UPDATE users SET wallet = wallet - ? WHERE user_id = ?", (investment_amount, user_id))
                 c.execute("""
                     INSERT INTO investments (user_id, company_name, amount, risk_level, return_rate, start_date, end_date)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
                 """, (
                     user_id,
-                    st.session_state.s_c['name'],
+                    selected_company['name'],
                     investment_amount,
-                    st.session_state.s_c['risk_level'],
+                    selected_company['risk_level'],
                     return_rate,
                     start_date,
                     end_date,
                 ))
                 conn.commit()
                 time.sleep(3)
-            st.toast(f"Investment of :green[${numerize(investment_amount)}] in {st.session_state.s_c['name']} is active! Ends on {end_date}.")
+            st.toast(f"Investment of :green[${numerize(investment_amount)}] in {selected_company['name']} is active! Ends on {end_date}.")
             time.sleep(2)
             st.rerun()
 
-
-    st.subheader("📊 Active Investments")
-    active_investments = c.execute("""
-        SELECT company_name, amount, risk_level, start_date, end_date
-        FROM investments WHERE user_id = ? AND status = 'pending'
-    """, (user_id,)).fetchall()
-
-    if active_investments:
-        for company, amount, risk, start, end in active_investments:
-            st.write(f"**{company}** - Invested: :green[${numerize(amount)}], Risk: :red[{numerize(risk) * 100}%], Ends: {end}")
-    else:
-        st.info("No active investments!")
-
-    st.subheader("✅ Completed Investments")
-    completed_investments = c.execute("""
-        SELECT company_name, amount, return_rate, status
-        FROM investments WHERE user_id = ? AND status != 'pending'
-    """, (user_id,)).fetchall()
-
-    if completed_investments:
-        for company, amount, rate, status in completed_investments:
-            outcome = "Profit" if rate > 0 else "Loss"
-            st.write(f"**{company}** - {outcome}: :green[${numerize(rate)}] ({status.title()})")
-    else:
-        st.info("No completed investments yet.")
 
 def admin_panel(conn):
     c = conn.cursor()
