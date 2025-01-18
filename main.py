@@ -2284,13 +2284,12 @@ def investments_view(conn, user_id):
 
     investment_amount = st.number_input(
         "Investment Amount",
-        min_value=1.00,
+        min_value=0.01,
         max_value=balance,
         step=0.10,
-        value=0.01,  # Set default value to the smaller of balance or 1.0
+        value=float(balance),  # Set default value to the smaller of balance or 1.0
         key=f"investment_{selected_company['id']}",
     )
-
 
     if st.button("Invest Now", use_container_width=True, type="primary"):
         if investment_amount > balance:
@@ -2319,6 +2318,31 @@ def investments_view(conn, user_id):
             st.toast(f"Investment of :green[${numerize(investment_amount)}] in {selected_company['name']} is active! Ends on {end_date}.")
             time.sleep(2)
             st.rerun()
+
+    st.subheader("📊 Active Investments")
+    active_investments = c.execute("""
+        SELECT company_name, amount, risk_level, start_date, end_date
+        FROM investments WHERE user_id = ? AND status = 'pending'
+    """, (user_id,)).fetchall()
+
+    if active_investments:
+        for company, amount, risk, start, end in active_investments:
+            st.write(f"**{company}** - Invested: :green[${numerize(amount)}], Risk: :red[{numerize(risk * 100)}%], Ends: {end}")
+    else:
+        st.info("No active investments!")
+
+    st.subheader("✅ Completed Investments")
+    completed_investments = c.execute("""
+        SELECT company_name, amount, return_rate, status
+        FROM investments WHERE user_id = ? AND status != 'pending'
+    """, (user_id,)).fetchall()
+
+    if completed_investments:
+        for company, amount, rate, status in completed_investments:
+            outcome = "Profit" if rate > 0 else "Loss"
+            st.write(f"**{company}** - {outcome}: :green[${numerize(rate)}] ({status.title()})")
+    else:
+        st.info("No completed investments yet.")
 
 
 def admin_panel(conn):
