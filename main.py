@@ -320,22 +320,20 @@ def update_stock_prices(conn):
         elapsed_time = (now - last_updated).total_seconds()
         num_updates = int(elapsed_time // 10)
 
-        for i in range(num_updates):
+        for _ in range(num_updates):
             change_percent = round(random.uniform(-change_rate, change_rate), 2)
             new_price = max(1, round(current_price * (1 + change_percent / 100), 2))
 
-            timestamp = last_updated + datetime.timedelta(seconds=(i+1) * 10)
-
             c.execute("INSERT INTO stock_history (stock_id, price, timestamp) VALUES (?, ?, ?)", 
-                      (stock_id, new_price, timestamp.strftime("%Y-%m-%d %H:%M:%S")))
+                      (stock_id, new_price, now.strftime("%Y-%m-%d %H:%M:%S")))
             
             current_price = new_price
+            last_updated += datetime.timedelta(seconds=10)
 
         c.execute("UPDATE stocks SET price = ?, last_updated = ? WHERE stock_id = ?", 
                   (current_price, now.strftime("%Y-%m-%d %H:%M:%S"), stock_id))
 
     conn.commit()
-
 
 def get_stock_metrics(conn, stock_id):
     c = conn.cursor()
@@ -439,6 +437,15 @@ def check_and_apply_loan_penalty(conn, user_id):
         conn.commit()
 
         print(f"⚠ User {user_id} has an overdue loan! Added ${penalty_amount:.2f} penalty.")
+
+def calculate_investment_return(risk_rate, amount):
+    success_rate = max(0.1, min(1, 1 - risk_rate))  # Higher risk means lower success chance
+    success = random.random() <= success_rate
+
+    if success:
+        return round(amount * random.uniform(risk_rate, risk_rate * 2), 2)  # High risk => high return
+    else:
+        return -amount  # Total loss on failure
 
 
 def register_user(conn, username, password, email = None, visible_name = None):
@@ -615,6 +622,26 @@ def init_db():
                 inflation_rate REAL  
                 );''')
     
+    c.execute('''CREATE TABLE IF NOT EXISTS investments (
+                investment_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                company_name TEXT NOT NULL,
+                amount REAL NOT NULL,
+                risk_level TEXT NOT NULL,
+                return_rate REAL NOT NULL,
+                start_date DATE NOT NULL,
+                end_date DATE NOT NULL,
+                status TEXT DEFAULT 'pending',
+                FOREIGN KEY (user_id) REFERENCES users(user_id)
+                );''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS investment_companies (
+                company_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                company_name TEXT NOT NULL,
+                risk_level REAL NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );''')
+
     c.execute('CREATE INDEX IF NOT EXISTS idx_user_id ON transactions(user_id)')
     c.execute('CREATE INDEX IF NOT EXISTS idx_timestamp ON transactions(timestamp)')
 
@@ -1201,7 +1228,7 @@ def inventory_item_options(conn, user_id, item_id):
     
     if st.button(f"Sell to Bank for **:green[${((item_data[3]) / 100) * 25}]**", use_container_width = True):
         c.execute("DELETE FROM user_inventory WHERE item_id = ?", (item_id,))
-        c.execute("UPDATE users SET wallet = wallet + ? WHERE user_id = ?", ((item_data[3] / 100) * 25, user_id))
+        c.execute("UPDATE users SET wallet = wallet + ? WHERE user_id = ?", (item_data[3], user_id))
         c.execute("UPDATE marketplace_items SET stock = stock + 1 WHERE item_id = ?", (item_id,))
         conn.commit()
         st.rerun()
@@ -1254,8 +1281,8 @@ def steal_dialog(conn, attacker_id, target_id):
     if steal_cooldown:
         last_steal = datetime.datetime.strptime(steal_cooldown, "%Y-%m-%d %H:%M:%S")
         time_diff = (datetime.datetime.now() - last_steal).total_seconds()
-        if time_diff < 300:
-            st.warning(f"Wait {int(300 - time_diff)} seconds before stealing again!")
+        if time_diff < 3:
+            st.warning(f"Wait {int(3 - time_diff)} seconds before stealing again!")
             return
 
     if target_wallet <= 0:
@@ -1263,7 +1290,7 @@ def steal_dialog(conn, attacker_id, target_id):
         return
 
     base_success_rate = 50
-    success_rate = base_success_rate + (attack_level - defense_level)
+    success_rate = base_success_rate + (attack_level * 5) - (defense_level * 5)
     success_rate = max(10, min(success_rate, 90))
 
     st.write(f"Target: :red[{target_username}]")
@@ -1865,10 +1892,10 @@ def stocks_view(conn, user_id):
         elif last_price < previous_price:
             change_color = ":red[-{:.2f}%".format(abs(percentage_change))  # Red for decrease
         else:
-            change_color = ":orange[0.00%"
+            change_color = ":orange[0.00%]"
     else:
         percentage_change = 0
-        change_color = ":orange[0.00%"
+        change_color = ":orange[0.00%]"
         
     st.subheader(f"{name} ({symbol})")
     st.header(f":green[${numerize(price, 2)}] \n ##### {change_color}]")
@@ -2106,9 +2133,9 @@ def borrow_money(conn, user_id, amount, interest_rate):
     
     if current_loan > 0:
         st.toast("❌ You must repay your existing loan first!")
-        return  # Prevents further execution
+        return
 
-    new_loan = round(amount * (1 + interest_rate), 2)  # Add interest
+    new_loan = round(amount * (1 + interest_rate), 2)
     due_date = (datetime.date.today() + datetime.timedelta(days=7)).strftime("%Y-%m-%d")  # Due in 7 days
 
     c.execute("UPDATE users SET loan = ?, loan_due_date = ?, balance = balance + ? WHERE user_id = ?", 
@@ -2116,7 +2143,7 @@ def borrow_money(conn, user_id, amount, interest_rate):
     conn.commit()
 
     st.toast(f"✅ Borrowed ${amount:.2f}. Due Date: {due_date}. You owe ${new_loan:.2f}.")
-    st.rerun()  # Refresh UI
+    st.rerun()
 
 
 def borrow_money(conn, user_id, amount, interest_rate):
@@ -2126,9 +2153,9 @@ def borrow_money(conn, user_id, amount, interest_rate):
     
     if current_loan > 0:
         st.toast("❌ You must repay your existing loan first!")
-        return  # Prevents further execution
+        return
 
-    new_loan = round(amount * (1 + interest_rate), 2)  # Add interest
+    new_loan = round(amount * (1 + interest_rate), 2)
     due_date = (datetime.date.today() + datetime.timedelta(days=7)).strftime("%Y-%m-%d")  # Due in 7 days
 
     c.execute("UPDATE users SET loan = ?, loan_due_date = ?, balance = balance + ? WHERE user_id = ?", 
@@ -2136,43 +2163,40 @@ def borrow_money(conn, user_id, amount, interest_rate):
     conn.commit()
 
     st.toast(f"✅ Borrowed ${amount:.2f}. Due Date: {due_date}. You owe ${new_loan:.2f}.")
-    st.rerun()  # Refresh UI
+    st.rerun()
 
 def repay_loan(conn, user_id, amount):
     c = conn.cursor()
     
-    # Fetch loan and balance
     user_data = c.execute("SELECT loan, balance FROM users WHERE user_id = ?", (user_id,)).fetchone()
     loan, balance = user_data if user_data else (0, 0)
     
     if loan <= 0:
         st.toast("✅ You have no outstanding loans!")
-        return  # Stops execution
+        return
 
     if balance < amount:
         st.toast("❌ Insufficient balance to repay!")
-        return  # Stops execution
+        return
 
-    # Deduct from loan and balance
     new_loan = max(0, loan - amount)
     new_balance = balance - amount
 
     c.execute("UPDATE users SET loan = ?, balance = ? WHERE user_id = ?", (new_loan, new_balance, user_id))
     conn.commit()
     
-    st.success(f"✅ Loan repaid. Remaining debt: ${numerize(new_loan)}.")
-    st.rerun()  # Refresh UI
-
+    st.toast(f"✅ Loan repaid. Remaining debt: ${numerize(new_loan)}.")
+    time.sleep(2)
+    st.rerun()
 
 def bank_view(conn, user_id):
     st.header("🏦 The Bank", divider="rainbow")
 
-    update_inflation(conn)  # Ensure inflation updates daily
-    check_and_apply_loan_penalty(conn, user_id)  # Apply penalties if overdue
+    update_inflation(conn)
+    check_and_apply_loan_penalty(conn, user_id)
 
     c = conn.cursor()
     
-    # Fetch Inflation & Loan Data
     df = get_inflation_history(c)
 
     inflation_rate = c.execute("SELECT inflation_rate FROM inflation_history ORDER BY date DESC LIMIT 1").fetchone()
@@ -2225,7 +2249,95 @@ def bank_view(conn, user_id):
             st.session_state.repay = numerize(loan)
         if st.button("Repay", use_container_width=True):
             repay_loan(conn, user_id, repay_amount)
+def investments_view(conn, user_id):
+    st.header("📈 Investments", divider="rainbow")
+    c = conn.cursor()
 
+    balance = c.execute("SELECT wallet FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+    st.subheader(f"💰 Wallet: **:green[${numerize(balance)}]**")
+
+    companies = c.execute("SELECT company_id, company_name, risk_level FROM investment_companies").fetchall()
+
+    if not companies:
+        st.info("No investment opportunities are currently available.")
+        return
+
+    st.subheader("Available Companies")
+    selected_company = None
+    columns = st.columns(len(companies))
+    for idx, (company_id, company_name, risk_rate) in enumerate(companies):
+        if columns[idx].button(company_name, use_container_width=True):
+            selected_company = {"id": company_id, "name": company_name, "risk_rate": risk_rate}
+
+    if not selected_company:
+        st.info("Click on a company to view investment options.")
+        return
+
+    st.divider()
+
+    st.subheader(f"💼 {selected_company['name']}")
+    st.subheader(f"**Risk:** :red[{numerize(selected_company['risk_rate'] * 100)}%]")
+
+    investment_amount = st.number_input(
+        "Investment Amount",
+        min_value=1.0,
+        max_value=balance,
+        step=0.1,
+        key=f"investment_{selected_company['id']}",
+    )
+
+    if st.button("Invest Now", use_container_width=True, type="primary"):
+        if investment_amount > balance:
+            st.error("Insufficient balance!")
+        else:
+            with st.spinner("Processing Investment"):
+                return_rate = calculate_investment_return(selected_company['risk_rate'], investment_amount)
+                start_date = datetime.date.today()
+                end_date = start_date + datetime.timedelta(days=random.randint(1, 3))
+
+                c.execute("UPDATE users SET wallet = wallet - ? WHERE user_id = ?", (investment_amount, user_id))
+                c.execute("""
+                    INSERT INTO investments (user_id, company_name, amount, risk_level, return_rate, start_date, end_date)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    user_id,
+                    selected_company['name'],
+                    investment_amount,
+                    selected_company['risk_rate'],
+                    return_rate,
+                    start_date,
+                    end_date,
+                ))
+                conn.commit()
+                time.sleep(3)
+            st.toast(f"Investment of ${investment_amount:.2f} in {selected_company['name']} is active! Ends on {end_date}.")
+            time.sleep(2)
+            st.rerun
+
+    st.subheader("📊 Active Investments")
+    active_investments = c.execute("""
+        SELECT company_name, amount, risk_level, start_date, end_date
+        FROM investments WHERE user_id = ? AND status = 'pending'
+    """, (user_id,)).fetchall()
+
+    if active_investments:
+        for company, amount, risk, start, end in active_investments:
+            st.write(f"**{company}** - Invested: :green[${numerize(amount)}], Risk: :red[{numerize(risk * 100)}%], Ends: {end}")
+    else:
+        st.info("No active investments!")
+
+    st.subheader("✅ Completed Investments")
+    completed_investments = c.execute("""
+        SELECT company_name, amount, return_rate, status
+        FROM investments WHERE user_id = ? AND status != 'pending'
+    """, (user_id,)).fetchall()
+
+    if completed_investments:
+        for company, amount, rate, status in completed_investments:
+            outcome = "Profit" if rate > 0 else "Loss"
+            st.write(f"**{company}** - {outcome}: :green[${numerize(rate)}] ({status.title()})")
+    else:
+        st.info("No completed investments yet.")
 
 def admin_panel(conn):
     c = conn.cursor()
@@ -2314,13 +2426,44 @@ def admin_panel(conn):
             c.execute("DELETE FROM stocks WHERE stock_id = ?", (stock_id_to_delete,))
         conn.commit()
         st.rerun()
+        
+    st.header("Investment Companies", divider = "rainbow")
 
-    a = '''stock_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            symbol TEXT NOT NULL UNIQUE,
-            price REAL NOT NULL,
-            last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-'''
+    with st.expander("New Company Creation"):
+        with st.form(key =  "Company"):
+            st.subheader("New Company Creation")
+            comp_id = st.text_input("Company ID", value = f"{random.randint(100000000, 999999999)}", disabled = True, help = "Item ID must be unique")
+            comp_name = st.text_input("Ab", label_visibility = "collapsed", placeholder = "Company Name")
+            risk_level = st.text_input("Ab", label_visibility = "collapsed", placeholder = "Risk Level (0.5 means 50%)")
+
+            st.divider()
+            
+            if st.form_submit_button("Add to Investronix™", use_container_width = True):
+                existing_company_ids = c.execute("SELECT company_id FROM investment_companies").fetchall()
+                if item_id not in existing_company_ids:
+                    c.execute("INSERT INTO investment_companies (company_id, company_name, risk_level) VALUES (?, ?, ?)", (comp_id, comp_name, risk_level))
+                    conn.commit()
+                    st.rerun()
+                else:
+                    st.error("Duplicate item_id")
+
+    st.header("Manage Companies", divider = "rainbow")
+    with st.spinner("Loading Investronix™..."):
+        company_data = c.execute("SELECT company_id, company_name, risk_level FROM investment_companies").fetchall()
+    df = pd.DataFrame(company_data, columns = ["Company ID", "Name", "Risk Level"])
+    edited_df = st.data_editor(df, key = "company_table", num_rows = "fixed", use_container_width = True, hide_index = True)
+    if st.button("Update Companies", use_container_width = True):
+        for _, row in edited_df.iterrows():
+            c.execute("UPDATE OR IGNORE investment_companies SET company_name = ?, risk_level = ? WHERE company_id = ?", (row["Name"], row["Risk Level"], row["Company ID"]))
+        conn.commit()
+        st.rerun()
+
+    company_id_to_delete = st.number_input("Enter Company ID to Delete", min_value = 0, step = 1)
+    if st.button("Delete Company", use_container_width = True):
+        with st.spinner("Processing..."):
+            c.execute("DELETE FROM investment_companies WHERE company_id = ?", (company_id_to_delete,))
+        conn.commit()
+        st.rerun()
     
     st.header("User Removal", divider = "rainbow")
     
@@ -2363,7 +2506,7 @@ def admin_panel(conn):
             if st.button("Update Transaction(s)", use_container_width = True):
                 for _, row in edited_df.iterrows():
                     c.execute("""
-                        UPDATE OR IGNOREtransactions 
+                        UPDATE OR IGNORE transactions 
                         SET type = ?, amount = ?, balance = ?,  receiver_username = ? 
                         WHERE transaction_id = ?
                     """, (row["Type"], row["Amount"], row["Balance"], row["To Username"], row["Transaction ID"]))
@@ -2587,6 +2730,10 @@ def main(conn):
             if c2.button("Leaderboard", type="primary", use_container_width=True):
                 st.session_state.current_menu = "Leaderboard"
                 st.rerun()
+
+            if st.button("Investments", type="primary", use_container_width=True):
+                st.session_state.current_menu = "Investments"
+                st.rerun()
             
             if st.button("#Global Chat", type="secondary", use_container_width=True):
                 st.session_state.current_menu = "Chat"
@@ -2696,6 +2843,9 @@ def main(conn):
 
         elif st.session_state.current_menu == "Bank":
             bank_view(conn, st.session_state.user_id)
+
+        elif st.session_state.current_menu == "Investments":
+            investments_view(conn, st.session_state.user_id)
 
         elif st.session_state.current_menu == "Logout":
             st.sidebar.info("Logging you out...")
