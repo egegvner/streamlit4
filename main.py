@@ -2284,7 +2284,7 @@ def investments_view(conn, user_id):
 
     investment_amount = st.number_input(
         "Investment Amount",
-        min_value=1.0,
+        min_value=0.0,
         max_value=balance,
         step=1.0,
         value=balance,  # Set default value to the smaller of balance or 1.0
