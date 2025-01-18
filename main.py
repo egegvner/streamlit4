@@ -2327,7 +2327,7 @@ def investments_view(conn, user_id):
 
     if active_investments:
         for company, amount, risk, start, end in active_investments:
-            st.write(f"**{company}** - Invested: :green[${numerize(amount)}], Risk: :red[{risk * 100}%], Ends: {end}")
+            st.write(f"**{company}** - Invested: :green[${numerize(amount)}], Risk: :red[{(risk * 100)}%], Ends: {end}")
     else:
         st.info("No active investments!")
 
