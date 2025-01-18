@@ -2287,8 +2287,10 @@ def investments_view(conn, user_id):
         min_value=1.0,
         max_value=balance,
         step=0.1,
-        key=f"investment_{selected_company['id']}",  # Use company ID as key
+        value=min(balance, 1.0),  # Set default value to the smaller of balance or 1.0
+        key=f"investment_{selected_company['id']}",
     )
+
 
     if st.button("Invest Now", use_container_width=True, type="primary"):
         if investment_amount > balance:
