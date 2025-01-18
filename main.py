@@ -2311,7 +2311,7 @@ def investments_view(conn, user_id):
                 ))
                 conn.commit()
                 time.sleep(3)
-            st.toast(f"Investment of :green[${numerize(amount}] in {selected_company['name']} is active! Ends on {end_date}.")
+            st.toast(f"Investment of :green[${numerize(amount)}] in {selected_company['name']} is active! Ends on {end_date}.")
             time.sleep(2)
             st.rerun()
 
