@@ -1624,7 +1624,6 @@ def savings_view(conn, user_id):
 def dashboard(conn, user_id):
     c = conn.cursor()
 
-    st.image("/Users/egeguvener/Desktop/Main/Python/NewProjects/BankingWebApp/Image100.png")
     st.header(f"Welcome, {st.session_state.username}!", divider="rainbow")
     st.subheader("Daily Reward")
     if st.button("🎁     Claim Reward     🎁", use_container_width = True):
