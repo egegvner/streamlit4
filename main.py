@@ -2281,7 +2281,7 @@ def investments_view(conn, user_id):
     selected_company = st.session_state.s_c  # Safely use the selected company
 
     st.divider()
-    st.subheader(f"💼 {selected_company['name']}", divider="rainbow")
+    st.title(f"💼 {selected_company['name']}", divider="rainbow")
     st.subheader(f"**Risk:** :red[{numerize(selected_company['risk_level'] * 100)}%]")
 
     c1, c2, c3, c4 = st.columns(4)
