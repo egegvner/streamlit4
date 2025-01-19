@@ -19,7 +19,7 @@ if "current_menu" not in st.session_state:
     st.session_state.current_menu = "Dashboard"
 
 previous_layout = st.session_state.get("previous_layout", "centered")
-current_layout = "wide" if st.session_state.current_menu == "Stocks" or st.session_state.current_menu == "Investments" else "centered"
+current_layout = "wide" if st.session_state.current_menu == "Stocks" else "centered"
 
 if previous_layout != current_layout:
     st.session_state.previous_layout = current_layout
@@ -1043,15 +1043,18 @@ def withdraw_from_savings_dialog(conn, user_id):
 def item_options(conn, user_id, item_id):
     c = conn.cursor()
     owned_item_ids = [item_id[0] for item_id in c.execute("SELECT item_id FROM user_inventory WHERE user_id = ?", (user_id,)).fetchall()]
-    item_data = c.execute("SELECT name, description, rarity, price, stock, item_id FROM marketplace_items WHERE item_id = ?", (item_id,)).fetchall()[0]
+    item_data = c.execute("SELECT name, description, rarity, price, stock, image_url FROM marketplace_items WHERE item_id = ?", (item_id,)).fetchall()[0]
     wallet_balance = c.execute("SELECT wallet FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     st.header(f"{item_colors[item_data[2]]}[{item_data[0]}] :gray[  **•**   {item_data[2].upper()}]", divider = "rainbow")
     st.text("")
     st.text("")
     with st.container(border=True):
-        st.write(f"**:gray[EFFECT -> ]** {item_data[1]}.")
-        st.write(f"**:gray[PRICE -> ]** :green[${numerize(item_data[3], 2)}]")
-        st.write(f"**:gray[STOCK -> ]** :green[{item_data[4]}]")
+        c1, c2 = st.columns(2)
+        c1.image(image=item_data[5], use_container_width=True)
+
+        c2.write(f"**:gray[[EFFECT]]** {item_data[1]}.")
+        c2.write(f"**:gray[[PRICE]]** :green[${numerize(item_data[3], 2)}]")
+        c2.write(f"**:gray[[STOCK]]** :green[{item_data[4]}]")
 
     st.divider()
     st.write(f"Wallet -> :green[${numerize(wallet_balance, 2)}]   **•**   :red[INSUFFICENT]" if wallet_balance < item_data[3] else f"Wallet   **•**   :green[${numerize(wallet_balance, 2)}]")
@@ -1062,7 +1065,7 @@ def item_options(conn, user_id, item_id):
         st.rerun()
     if c2.button(f"**Pay :green[${numerize(item_data[3], 2)}] With Wallet**", type = "primary", use_container_width = True, disabled = True if wallet_balance < item_data[3] or item_id in owned_item_ids else False):
         buy_item(conn, user_id, item_id)
-    st.caption(f":gray[ID   {item_data[5]}]")
+    st.caption(f":gray[ID   {item_id}]")
 
 @st.dialog("Privacy Policy", width="large")
 def privacy_policy_dialog():
@@ -1398,15 +1401,29 @@ def buy_item(conn, user_id, item_id):
 def marketplace_view(conn, user_id):
     c = conn.cursor()
 
-    items = c.execute("SELECT item_id, name, description, rarity, price, stock FROM marketplace_items").fetchall()
-    st.header("Marketplace", divider = "rainbow")
+    items = c.execute("SELECT item_id, name, description, rarity, price, stock, image_url FROM marketplace_items").fetchall()
+    st.header("GNFTs", divider="rainbow")
+
+    if not items:
+        st.info("No items available in the marketplace.")
+        return
+
     for item in items:
-        st.write(f"#### **{item_colors[item[3]]}[{item[1]}]**")
-        st.write(f":gray[{item[3].upper()}]   •   {item[2]}")
-        st.write(f":green[${numerize(item[4], 2)}]")
-        if st.button(f"Options", key = f"buy_{item[0]}", use_container_width = True):
-            item_options(conn, user_id, item[0])
+        image_col, details_col = st.columns([1, 3])
+
+        with image_col:
+            st.image(item[6], width=100, use_container_width=True, output_format="PNG")
+
+        with details_col:
+            st.write(f"#### **{item_colors[item[3]]}[{item[1]}]**")
+            st.write(f":gray[{item[3].upper()}]   •   {item[2]}")
+            st.write(f":green[${numerize(item[4], 2)}]  •  :yellow[Stock: {item[5]}]")
+
+            if st.button(f"🔧 Options", key=f"buy_{item[0]}", use_container_width=True):
+                item_options(conn, user_id, item[0])
+
         st.divider()
+
 
 def inventory_view(conn, user_id):
     c = conn.cursor()
@@ -1607,6 +1624,7 @@ def savings_view(conn, user_id):
 def dashboard(conn, user_id):
     c = conn.cursor()
 
+    st.image("/Users/egeguvener/Desktop/Main/Python/NewProjects/BankingWebApp/Image100.png")
     st.header(f"Welcome, {st.session_state.username}!", divider="rainbow")
     st.subheader("Daily Reward")
     if st.button("🎁     Claim Reward     🎁", use_container_width = True):
@@ -2281,7 +2299,7 @@ def investments_view(conn, user_id):
     selected_company = st.session_state.s_c  # Safely use the selected company
 
     st.divider()
-    st.header(f"💼 {selected_company['name']}", divider="rainbow")
+    st.subheader(f"💼 {selected_company['name']}", divider="rainbow")
     st.subheader(f"**Risk:** :red[{numerize(selected_company['risk_level'] * 100)}%]")
 
     c1, c2, c3, c4 = st.columns(4)
@@ -2382,13 +2400,15 @@ def admin_panel(conn):
             stock = st.text_input("A", label_visibility = "collapsed", placeholder = "Stock")
             boost_type = st.text_input("A", label_visibility = "collapsed", placeholder = "Boost Type")
             boost_value = st.text_input("A", label_visibility = "collapsed", placeholder = "Boost Value")
+            img = st.text_input("A", label_visibility = "collapsed", placeholder = "Image Path (LOCAL ONLY)")
+      
             st.divider()
             
             if st.form_submit_button("Add Item", use_container_width = True):
                 existing_item_ids = c.execute("SELECT item_id FROM marketplace_items").fetchall()
                 if item_id not in existing_item_ids:
                     with st.spinner("Creating item..."):
-                        c.execute("INSERT INTO marketplace_items (item_id, name, description, rarity, price, stock, boost_type, boost_value) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (item_id, name, description, rarity, price, stock, boost_type, boost_value))
+                        c.execute("INSERT INTO marketplace_items (item_id, name, description, rarity, price, stock, boost_type, boost_value, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (item_id, name, description, rarity, price, stock, boost_type, boost_value, img))
                         conn.commit()
                     st.rerun()
                 else:
@@ -2396,13 +2416,13 @@ def admin_panel(conn):
 
     st.header("Manage Items", divider = "rainbow")
     with st.spinner("Loading marketplace items..."):
-        item_data = c.execute("SELECT item_id, name, description, rarity, price, stock, boost_type, boost_value FROM marketplace_items").fetchall()
+        item_data = c.execute("SELECT item_id, name, description, rarity, price, stock, boost_type, boost_value, image_url FROM marketplace_items").fetchall()
    
-    df = pd.DataFrame(item_data, columns = ["Item ID", "Item Name", "Description", "Rarity", "Price", "Stock", "Boost Type", "Boost Value"])
+    df = pd.DataFrame(item_data, columns = ["Item ID", "Item Name", "Description", "Rarity", "Price", "Stock", "Boost Type", "Boost Value", "Image URL"])
     edited_df = st.data_editor(df, key = "item_table", num_rows = "fixed", use_container_width = True, hide_index = True)
     if st.button("Update Items", use_container_width = True):
         for _, row in edited_df.iterrows():
-            c.execute("UPDATE OR IGNORE marketplace_items SET name = ?, description = ?, rarity = ?, price = ?, stock = ?, boost_type = ?, boost_value = ? WHERE item_id = ?", (row["Item Name"], row["Description"], row["Rarity"], row["Price"], row["Stock"], row["Boost Type"], row["Boost Value"], row["Item ID"]))
+            c.execute("UPDATE OR IGNORE marketplace_items SET name = ?, description = ?, rarity = ?, price = ?, stock = ?, boost_type = ?, boost_value = ?, image_url = ? WHERE item_id = ?", (row["Item Name"], row["Description"], row["Rarity"], row["Price"], row["Stock"], row["Boost Type"], row["Boost Value"], row["Image URL"], row["Item ID"]))
         conn.commit()
         st.rerun()
 
@@ -2767,7 +2787,7 @@ def main(conn):
                 st.session_state.current_menu = "Chat"
                 st.rerun()
             
-            if st.button("NFTs", type="secondary", use_container_width=True):
+            if st.button("GNFTs", type="secondary", use_container_width=True):
                 st.session_state.current_menu = "Marketplace"
                 st.rerun()
 
@@ -2893,26 +2913,10 @@ def main(conn):
 def add_column_if_not_exists(conn):
     c = conn.cursor()
 
-    c.execute("PRAGMA table_info(users);")
+    c.execute("PRAGMA table_info(marketplace_items);")
     columns = [column[1] for column in c.fetchall()]
-
-    if "steal_cooldown" not in columns:
-        c.execute("ALTER TABLE users ADD COLUMN steal_cooldown TIMESTAMP DEFAULT NULL;")
-        
-    if "defense_level" not in columns:
-        c.execute("ALTER TABLE users ADD COLUMN defense_level INTEGER DEFAULT 0;")
-    
-    if "attack_level" not in columns:
-        c.execute("ALTER TABLE users ADD COLUMN attack_level INTEGER DEFAULT 0;")
-
-    if "loan" not in columns:
-        c.execute("ALTER TABLE users ADD COLUMN loan REAL DEFAULT 0;")
-    
-    if "loan_due_date" not in columns:
-        c.execute("ALTER TABLE users ADD COLUMN loan_due_date TEXT;")
-    
-    if "loan_penalty" not in columns:
-        c.execute("ALTER TABLE users ADD COLUMN loan_penalty REAL DEFAULT 0;")
+    if "image_url" not in columns:
+        c.execute("ALTER TABLE marketplace_items ADD COLUMN image_url TEXT NOT NULL;")
     
     conn.commit()
 
