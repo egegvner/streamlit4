@@ -52,11 +52,10 @@ def get_db_connection():
     return sqlite3.connect("genova.db", check_same_thread = False)
 
 item_colors = {
-        "Common":":white",
+        "Common":":gray",
         "Uncommon":":green",
         "Rare":":blue",
         "Epic":":violet",
-        "Mythic":":yellow",
         "Ultimate":":orange"
     }
 
