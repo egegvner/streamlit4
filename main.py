@@ -19,7 +19,7 @@ if "current_menu" not in st.session_state:
     st.session_state.current_menu = "Dashboard"
 
 previous_layout = st.session_state.get("previous_layout", "centered")
-current_layout = "wide" if st.session_state.current_menu == "Stocks" or st.session_state.current_menu == "Investments" else "centered"
+current_layout = "wide" if st.session_state.current_menu == "Stocks" else "centered"
 
 if previous_layout != current_layout:
     st.session_state.previous_layout = current_layout
@@ -446,7 +446,6 @@ def calculate_investment_return(risk_rate, amount):
         return round(amount * random.uniform(risk_rate, risk_rate * 2), 2)  # High risk => high return
     else:
         return -amount  # Total loss on failure
-
 
 def register_user(conn, username, password, email = None, visible_name = None):
     c = conn.cursor()
@@ -2249,13 +2248,16 @@ def bank_view(conn, user_id):
             st.session_state.repay = numerize(loan)
         if st.button("Repay", use_container_width=True):
             repay_loan(conn, user_id, repay_amount)
-            
+
 def investments_view(conn, user_id):
     st.header("📈 Investments", divider="rainbow")
     c = conn.cursor()
 
     if "s_c" not in st.session_state:
         st.session_state.s_c = None
+
+    if "invest_value" not in st.session_state:
+        st.session_state.invest_value = 0
 
     balance = c.execute("SELECT wallet FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     st.subheader(f"💰 Wallet: **:green[${numerize(balance)}]**")
@@ -2266,7 +2268,7 @@ def investments_view(conn, user_id):
         st.info("No investment opportunities are currently available.")
         return
 
-    st.subheader("Available Companies")
+    st.write("Available Companies")
     columns = st.columns(len(companies))
     for idx, (company_id, company_name, risk_level) in enumerate(companies):
         if columns[idx].button(company_name, use_container_width=True):
@@ -2279,26 +2281,44 @@ def investments_view(conn, user_id):
     selected_company = st.session_state.s_c  # Safely use the selected company
 
     st.divider()
-    st.subheader(f"💼 {selected_company['name']}")
+    st.subheader(f"💼 {selected_company['name']}", divider="rainbow")
     st.subheader(f"**Risk:** :red[{numerize(selected_company['risk_level'] * 100)}%]")
 
+    c1, c2, c3, c4 = st.columns(4)
+    if c1.button("%25", use_container_width = True):
+        st.session_state.invest_value = (balance / 100) * 25
+    if c2.button("%50", use_container_width = True):
+        st.session_state.invest_value = (balance / 100) * 50
+    if c3.button("%75", use_container_width = True):
+        st.session_state.invest_value = (balance / 100) * 75
+    if c4.button("%100", use_container_width = True):
+        st.session_state.invest_value = balance 
+    
     investment_amount = st.number_input(
         "Investment Amount",
         min_value=0.0,
         max_value=balance,
         step=1.0,
-        value=balance,  # Set default value to the smaller of balance or 1.0
+        value=st.session_state.invest_value,  # Set default value to the smaller of balance or 1.0
         key=f"investment_{selected_company['id']}",
     )
 
-    if st.button("Invest Now", use_container_width=True, type="primary"):
-        if investment_amount > balance:
+    if st.button(f"**Invest :green[${numerize(investment_amount)}] Now**", use_container_width=True, type="primary"):
+        active_investments_count = c.execute("""
+        SELECT COUNT(*) FROM investments WHERE user_id = ? AND status = 'pending'
+        """, (user_id,)).fetchone()[0]
+
+        if active_investments_count >= 5:
+            st.error("❌ You already have 5 active investments. Complete or wait for them to finish before starting a new one.")
+        elif investment_amount > balance:
             st.error("Insufficient balance!")
         else:
             with st.spinner("Processing Investment"):
-                return_rate = calculate_investment_return(selected_company['risk_level'], investment_amount)
-                start_date = datetime.date.today()
-                end_date = start_date + datetime.timedelta(days=random.randint(1, 3))
+                return_rate = calculate_investment_return(st.session_state.s_c['risk_level'], investment_amount)
+            
+                duration_hours = random.randint(5, 7 * 24)  # Convert 7 days to hours
+                start_date = datetime.datetime.now()
+                end_date = start_date + datetime.timedelta(hours=duration_hours)
 
                 c.execute("UPDATE users SET wallet = wallet - ? WHERE user_id = ?", (investment_amount, user_id))
                 c.execute("""
@@ -2306,20 +2326,21 @@ def investments_view(conn, user_id):
                     VALUES (?, ?, ?, ?, ?, ?, ?)
                 """, (
                     user_id,
-                    selected_company['name'],
+                    st.session_state.s_c['name'],
                     investment_amount,
-                    selected_company['risk_level'],
+                    st.session_state.s_c['risk_level'],
                     return_rate,
-                    start_date,
-                    end_date,
+                    start_date.strftime("%Y-%m-%d %H:%M:%S"),
+                    end_date.strftime("%Y-%m-%d %H:%M:%S"),
                 ))
                 conn.commit()
-                time.sleep(3)
+                time.sleep(4)
             st.toast(f"Investment of :green[${numerize(investment_amount)}] in {selected_company['name']} is active! Ends on {end_date}.")
             time.sleep(2)
             st.rerun()
 
-    st.subheader("📊 Active Investments")
+    st.divider()
+    st.subheader("📊 Active Investments", divider="rainbow")
     active_investments = c.execute("""
         SELECT company_name, amount, risk_level, start_date, end_date
         FROM investments WHERE user_id = ? AND status = 'pending'
@@ -2327,11 +2348,13 @@ def investments_view(conn, user_id):
 
     if active_investments:
         for company, amount, risk, start, end in active_investments:
-            st.write(f"**{company}** - Invested: :green[${numerize(amount)}], Risk: :red[{risk}%], Ends: {end}")
+            with st.container(border=True):
+                st.write(f"**{company}** - :gray[[Invested]] :green[${numerize(amount)}] $|$ :gray[[Risk]] :red[{float(risk) * 100}%] $|$ :gray[[Ends]] :blue[{end}]")
     else:
         st.info("No active investments!")
 
-    st.subheader("✅ Completed Investments")
+    st.divider()
+    st.subheader("✅ Completed Investments", divider="rainbow")
     completed_investments = c.execute("""
         SELECT company_name, amount, return_rate, status
         FROM investments WHERE user_id = ? AND status != 'pending'
@@ -2343,7 +2366,6 @@ def investments_view(conn, user_id):
             st.write(f"**{company}** - {outcome}: :green[${numerize(rate)}] ({status.title()})")
     else:
         st.info("No completed investments yet.")
-
 
 def admin_panel(conn):
     c = conn.cursor()
