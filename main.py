@@ -1423,27 +1423,39 @@ def marketplace_view(conn, user_id):
 
         st.divider()
 
-
 def inventory_view(conn, user_id):
     c = conn.cursor()
-    st.header("Inventory", divider = "rainbow")
+    st.header("Your Inventory", divider="rainbow")
+    
     owned_item_ids = [owned_item[0] for owned_item in c.execute("SELECT item_id FROM user_inventory WHERE user_id = ?", (user_id,)).fetchall()]
-    acquired = c.execute("SELECT acquired_at FROM user_inventory").fetchall()
-    item_numbers = c.execute("SELECT item_number FROM user_inventory").fetchall()
-    counter = 0
-    if owned_item_ids:
-        for id in owned_item_ids:
-            name, description, rarity = c.execute("SELECT name, description, rarity FROM marketplace_items WHERE item_id = ?", (id,)).fetchall()[0]
-            st.write(f"#### {item_colors[rarity]}[{name}]   :gray[#{item_numbers[counter][0]}]")
-            st.caption(rarity.upper())
+    if not owned_item_ids:
+        st.write("No items in your inventory.")
+        return
+
+    st.subheader("Your GNFTs")
+    
+    for idx, item_id in enumerate(owned_item_ids):
+        name, description, rarity, image_url = c.execute("SELECT name, description, rarity, image_url FROM marketplace_items WHERE item_id = ?", (item_id,)).fetchone()
+        item_number = c.execute("SELECT item_number FROM user_inventory WHERE user_id = ? AND item_id = ?", (user_id, item_id)).fetchone()[0]
+        acquired_at = c.execute("SELECT acquired_at FROM user_inventory WHERE user_id = ? AND item_id = ?", (user_id, item_id)).fetchone()[0]
+        
+        image_col, details_col = st.columns([1, 3])
+
+        with image_col:
+            st.image(image_url, width=100, use_container_width=True, output_format="PNG")
+
+        with details_col:
+            st.write(f"#### **{item_colors[rarity]}[{name}]**")
+            st.write(f":gray[#{item_number}]   •   {rarity.upper()}")
             st.write(description)
-            if st.button("**OPTIONS**", use_container_width = True, key = id):
-                inventory_item_options(conn, user_id, id)
-            st.caption(f"Acquired   **•**   {acquired[counter][0]}")
-            st.divider()
-            counter += 1
-    else:
-        st.write("No items.")
+
+            if st.button(f"🔧 OPTIONS", key=f"options_{item_id}", use_container_width=True):
+                inventory_item_options(conn, user_id, item_id)
+
+            st.caption(f"Acquired: {acquired_at}")
+        
+        st.divider()
+
 
 def manage_pending_transfers(conn, receiver_id):
     c = conn.cursor()
