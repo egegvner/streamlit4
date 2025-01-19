@@ -2916,8 +2916,8 @@ def add_column_if_not_exists(conn):
     c.execute("PRAGMA table_info(marketplace_items);")
     columns = [column[1] for column in c.fetchall()]
     if "image_url" not in columns:
-        c.execute("ALTER TABLE marketplace_items ADD COLUMN image_url TEXT NOT NULL;")
-    
+        c.execute("ALTER TABLE marketplace_items ADD COLUMN image_url TEXT DEFAULT NULL;")
+
     conn.commit()
 
 if __name__ == "__main__":
