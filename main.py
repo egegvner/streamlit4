@@ -1,4 +1,3 @@
-# Simple ATM Simulator.
 # Copyright Ege Güvener, 20/12/2024
 # License: MIT
 
@@ -100,7 +99,7 @@ def check_and_reset_quota(conn, user_id):
     if user_items:
         boost = 0
         for i in user_items:
-            boost += c.execute("SELECT boost_value FROM marketplace_items WHERE item_id = ?", (i[0],)).fetchone()[0]
+            boost += c.execute("SELECT boost_value FROM _items WHERE item_id = ?", (i[0],)).fetchone()[0]
     else:
         boost = 0
     
@@ -1417,7 +1416,7 @@ def marketplace_view(conn, user_id):
         with details_col:
             st.write(f"#### **{item_colors[item[3]]}[{item[1]}]**")
             st.write(f":gray[{item[3].upper()}]   •   {item[2]}")
-            st.write(f":green[${numerize(item[4], 2)}]  •  :yellow[Stock: {item[5]}]")
+            st.write(f":green[${numerize(item[4], 2)}]  •  :orange[{item[5]} Left]")
 
             if st.button(f"🔧 Options", key=f"buy_{item[0]}", use_container_width=True):
                 item_options(conn, user_id, item[0])
