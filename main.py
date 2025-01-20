@@ -2324,9 +2324,9 @@ def investments_view(conn, user_id):
     investment_amount = st.number_input(
         "Investment Amount",
         min_value=0.0,
-        max_value=balance,
+        max_value=float(balance),
         step=1.0,
-        value=st.session_state.invest_value,  # Set default value to the smaller of balance or 1.0
+        value=float(st.session_state.invest_value),  # Set default value to the smaller of balance or 1.0
         key=f"investment_{selected_company['id']}",
     )
 
