@@ -1300,7 +1300,7 @@ def steal_dialog(conn, attacker_id, target_id):
     st.write("Target Wallet: :red[???]")
     st.info(f"Success Rate: :green[{success_rate}%]")
 
-    if st.button("💰 Initiate Attack", use_container_width=True, disabled=(time_diff < 300)):
+    if st.button("💰 Initiate Attack", use_container_width=True):
         
         success = random.randint(1, 100) <= success_rate
 
