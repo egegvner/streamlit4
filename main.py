@@ -2628,6 +2628,42 @@ def admin_panel(conn):
         conn.commit()
         st.rerun()
 
+    user = st.selectbox("Select User", [u[0] for u in c.execute("SELECT username FROM users").fetchall()], key="inv")
+    if user:
+        user_id = c.execute("SELECT user_id FROM users WHERE username = ?", (user,)).fetchone()[0]
+        user_items = c.execute("SELECT * FROM user_inventory WHERE user_id = ? ORDER BY acquired_at DESC", (user_id,)).fetchall()
+
+        if user_items:
+            df = pd.DataFrame(user_items, columns = ["Instance ID", "User ID", "Item ID", "Item Number", "Acquired At", "Expires At"])
+            edited_df = st.data_editor(df, key = "user_inventory_table", num_rows = "fixed", use_container_width = True, hide_index = False)
+            
+            if st.button("Update User Inventory", use_container_width = True):
+                for _, row in edited_df.iterrows():
+                    c.execute("""
+                        UPDATE OR IGNORE user_inventory 
+                        SET item_number = ?, acquired_at = ?, expires_at = ? 
+                        WHERE instance_id = ?
+                    """, (row["Item Number"], row["Acquired At"], row["Expires At"], row["Instance ID"]))
+                conn.commit()
+                st.success("User inventory updated successfully.")
+                st.rerun()
+            
+            st.text("")
+
+            with st.container(border=True):
+                c1, c2 = st.columns(2)
+                item_id_to_delete2 = c1.number_input("Enter item ID to Delete", min_value=0, step=1)
+                instance_id_to_delete = c2.number_input("Enter instance ID to Delete", min_value=0, step=1)
+
+            if st.button("Delete Item(s)", use_container_width = True):
+                with st.spinner("Processing..."):
+                    c.execute("DELETE FROM user_inventory WHERE item_id = ? AND instance_id = ?", (item_id_to_delete2, instance_id_to_delete))
+                conn.commit()
+                st.rerun()
+
+        else:
+            st.write(f"No transactions found for {user}.")
+
 def settings(conn, username):
     c = conn.cursor()
     st.header("⚙️ Settings", divider = "rainbow")
