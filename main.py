@@ -1281,9 +1281,12 @@ def steal_dialog(conn, attacker_id, target_id):
     if steal_cooldown:
         last_steal = datetime.datetime.strptime(steal_cooldown, "%Y-%m-%d %H:%M:%S")
         time_diff = (datetime.datetime.now() - last_steal).total_seconds()
-        if time_diff < 300:
+
+        if time_diff < 300:  # 5 minutes cooldown
             st.warning(f"Wait {int(300 - time_diff)} seconds before stealing again!")
             return
+    else:
+        time_diff = 0  # If there's no cooldown, we initialize time_diff to 0
 
     if target_wallet <= 0:
         st.warning("Target has no money to steal!")
@@ -1297,7 +1300,7 @@ def steal_dialog(conn, attacker_id, target_id):
     st.write("Target Wallet: :red[???]")
     st.info(f"Success Rate: :green[{success_rate}%]")
 
-    if st.button("💰 Initiate Attack", use_container_width=True, disabled=True if time_diff < 300 else False):
+    if st.button("💰 Initiate Attack", use_container_width=True, disabled=(time_diff < 300)):
         
         success = random.randint(1, 100) <= success_rate
 
@@ -1320,10 +1323,14 @@ def steal_dialog(conn, attacker_id, target_id):
             conn.commit()
             result = "lost"
 
+        c.execute("UPDATE users SET steal_cooldown = ? WHERE user_id = ?", 
+                  (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), attacker_id))
+        conn.commit()
+
         with st.status(f"🔍 Scanning {target_username}'s defenses...", expanded=True) as status:
             time.sleep(1)
             st.write("💠 Preparing attack tools...")
-            time.sleep(0.4)
+            time.sleep(2)
             st.write("💻 Bypassing Firewall...")
             time.sleep(3)
             st.write("🔓 Exploiting vulnerability...")
@@ -1334,12 +1341,11 @@ def steal_dialog(conn, attacker_id, target_id):
 
         if result == "win":
             st.success(f"💰 Success! You stole **${numerize(stolen_amount)}** ({numerize(stolen_percentage * 100)}%) from {target_username}!")
-            time.sleep(3)
-            st.rerun()
         else:
             st.error(f"🚨 You got caught! You lost **${numerize(lost_amount)}** ({numerize(lost_percentage * 100)}%) to {target_username}!")
-            time.sleep(3)
-            st.rerun()
+
+        time.sleep(3)
+        st.rerun()
 
 def steal_view(conn, user_id):
     c = conn.cursor()
