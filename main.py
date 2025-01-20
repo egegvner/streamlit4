@@ -1282,7 +1282,7 @@ def steal_dialog(conn, attacker_id, target_id):
         last_steal = datetime.datetime.strptime(steal_cooldown, "%Y-%m-%d %H:%M:%S")
         time_diff = (datetime.datetime.now() - last_steal).total_seconds()
         if time_diff < 300:
-            st.warning(f"Wait {int(3 - time_diff)} seconds before stealing again!")
+            st.warning(f"Wait {int(300 - time_diff)} seconds before stealing again!")
             return
 
     if target_wallet <= 0:
@@ -1297,7 +1297,7 @@ def steal_dialog(conn, attacker_id, target_id):
     st.write("Target Wallet: :red[???]")
     st.info(f"Success Rate: :green[{success_rate}%]")
 
-    if st.button("💰 Initiate Attack", use_container_width=True, disabled=True if time_diff < 3 else False):
+    if st.button("💰 Initiate Attack", use_container_width=True, disabled=True if time_diff < 300 else False):
         
         success = random.randint(1, 100) <= success_rate
 
