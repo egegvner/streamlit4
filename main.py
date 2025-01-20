@@ -1988,9 +1988,7 @@ def stocks_view(conn, user_id):
             df['Timestamp'] = pd.to_datetime(df['Timestamp'])
             df.set_index('Timestamp', inplace=True)
 
-            df_resampled = df.resample(f"{st.session_state.t}T").mean()
-
-            st.line_chart(df_resampled, color=st.session_state.graph_color)
+            st.line_chart(df, color=st.session_state.graph_color)
         else:
             st.info("Stock history will be available after 60 seconds of stock creation.")
 
