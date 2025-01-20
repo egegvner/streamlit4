@@ -1918,6 +1918,9 @@ def stocks_view(conn, user_id):
     
     if "selected_stock" not in st.session_state:
         st.session_state.selected_stock = stocks[0][0]
+
+    if "t" not in st.session_state:
+        st.session_state.t = 0
     
     if "range" not in st.session_state:
         st.session_state.range = 24
@@ -1985,7 +1988,7 @@ def stocks_view(conn, user_id):
             df['Timestamp'] = pd.to_datetime(df['Timestamp'])
             df.set_index('Timestamp', inplace=True)
 
-            df_resampled = df.resample("5T").mean()
+            df_resampled = df.resample(f"{st.session_state.t}T").mean()
 
             st.line_chart(df_resampled, color=st.session_state.graph_color)
         else:
