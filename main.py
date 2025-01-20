@@ -2766,6 +2766,8 @@ def main(conn):
         if login_option == "Login":
             username = st.text_input("A", label_visibility="hidden", placeholder="Your remarkable username")
             password = st.text_input("A", label_visibility="collapsed", placeholder="Password", type="password")
+            st.text("")
+            st.caption("Password Hashing by Argon2i")
 
             for _ in range(4):
                 st.text("")
@@ -2804,7 +2806,8 @@ def main(conn):
             new_username = st.text_input("A", label_visibility = "hidden", placeholder = "Choose a remarkable username")
             new_password = st.text_input("A", label_visibility = "collapsed", placeholder = "Create a password", type = "password")
             confirm_password = st.text_input("A", label_visibility = "collapsed", placeholder = "Re-password", type = "password")
-
+            st.text("")
+            st.caption("Password Hashing by Argon2i")
             for _ in range(4):
                 st.text("")
 
