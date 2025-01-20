@@ -312,29 +312,36 @@ def update_stock_prices(conn):
     stocks = c.execute("SELECT stock_id, price, last_updated, change_rate FROM stocks").fetchall()
 
     for stock_id, current_price, last_updated, change_rate in stocks:
-        if last_updated:
-            last_updated = datetime.datetime.strptime(last_updated, "%Y-%m-%d %H:%M:%S")
-        else:
-            last_updated = now
+        try:
+            if last_updated:
+                last_updated = datetime.datetime.strptime(last_updated, "%Y-%m-%d %H:%M:%S")
+            else:
+                last_updated = now - datetime.timedelta(seconds=300)
 
-        elapsed_time = (now - last_updated).total_seconds()
-        num_updates = int(elapsed_time // 60)
+            elapsed_time = (now - last_updated).total_seconds()
+            num_updates = int(elapsed_time // 300)
 
-        for i in range(num_updates):
-            change_percent = round(random.uniform(-change_rate, change_rate), 2)
-            new_price = max(1, round(current_price * (1 + change_percent / 100), 2))
+            if num_updates > 0:
+                for i in range(num_updates):
+                    change_percent = round(random.uniform(-change_rate, change_rate), 2)
+                    new_price = max(1, round(current_price * (1 + change_percent / 100), 2))
 
-            new_timestamp = now + datetime.timedelta(seconds=(i+1) * 60)
-            c.execute("INSERT INTO stock_history (stock_id, price, timestamp) VALUES (?, ?, ?)", 
-                      (stock_id, new_price, new_timestamp.strftime("%Y-%m-%d %H:%M:%S")))
+                    missed_update_time = last_updated + datetime.timedelta(seconds=(i + 1) * 300)
+                    if missed_update_time <= now:
+                        c.execute(
+                            "INSERT INTO stock_history (stock_id, price, timestamp) VALUES (?, ?, ?)",
+                            (stock_id, new_price, missed_update_time.strftime("%Y-%m-%d %H:%M:%S"))
+                        )
+                    current_price = new_price
 
-            current_price = new_price
-
-        c.execute("UPDATE stocks SET price = ?, last_updated = ? WHERE stock_id = ?", 
-                  (current_price, now.strftime("%Y-%m-%d %H:%M:%S"), stock_id))
+            c.execute(
+                "UPDATE stocks SET price = ?, last_updated = ? WHERE stock_id = ?",
+                (current_price, now.strftime("%Y-%m-%d %H:%M:%S"), stock_id)
+            )
+        except Exception as e:
+            continue
 
     conn.commit()
-
 
 def get_stock_metrics(conn, stock_id):
     c = conn.cursor()
@@ -1912,7 +1919,7 @@ def stocks_view(conn, user_id):
     st.header("📈 Stock Market", divider="rainbow")
     
     update_stock_prices(conn)
-    st_autorefresh(interval=60000, key="stock_autorefresh")
+    st_autorefresh(interval=300000, key="stock_autorefresh")
 
     stocks = c.execute("SELECT stock_id, name, symbol, price, stock_amount FROM stocks").fetchall()
     
