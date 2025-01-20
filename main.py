@@ -98,7 +98,7 @@ def check_and_reset_quota(conn, user_id):
     if user_items:
         boost = 0
         for i in user_items:
-            boost += c.execute("SELECT boost_value FROM _items WHERE item_id = ?", (i[0],)).fetchone()[0]
+            boost += c.execute("SELECT boost_value FROM marketplace_items WHERE item_id = ?", (i[0],)).fetchone()[0]
     else:
         boost = 0
     
