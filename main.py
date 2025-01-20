@@ -2767,10 +2767,11 @@ def main(conn):
             username = st.text_input("A", label_visibility="hidden", placeholder="Your remarkable username")
             password = st.text_input("A", label_visibility="collapsed", placeholder="Password", type="password")
             st.text("")
-            st.caption("Password Hashing by Argon2i")
+            c1, c2, c3 - st.columns([2, 1, 2])
+            c2.caption("Password Hashing by Argon2i")
 
-            for _ in range(4):
-                st.text("")
+            st.text("")
+            st.text("")
 
             if st.button("**Log In**", use_container_width = True, type="primary"):
                 user = c.execute("SELECT user_id, password FROM users WHERE username = ?", (username,)).fetchone()
