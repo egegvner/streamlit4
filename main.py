@@ -1243,16 +1243,16 @@ def inventory_item_options(conn, user_id, item_id):
             c.execute("DELETE FROM user_inventory WHERE item_id = ?", (item_id,))
             c.execute("INSERT INTO user_inventory (user_id, item_id, item_number) VALUES (?, ?, ?)", (receiver_id, item_id, item_number))
             if item_data[3] == "quota_boost":
-                c.execute("UPDATE users SET deposit_quota = deposit_quota - ? WHERE user_id = ?", (item_data[4], user_id))
+                c.execute("UPDATE users SET deposit_quota = deposit_quota - ? WHERE user_id = ?", (item_data[4], receiver_id))
                 conn.commit()
             if item_data[3] == "interest_boost":
-                c.execute("UPDATE savings SET interest_rate = interest_rate - ? WHERE user_id = ?", (item_data[4], user_id))
+                c.execute("UPDATE savings SET interest_rate = interest_rate - ? WHERE user_id = ?", (item_data[4], receiver_id))
                 conn.commit()
             if item_data[3] == "attack_boost":
-                c.execute("UPDATE users SET attack_level = attack_level - ? WHERE user_id = ?", (item_data[4], user_id))
+                c.execute("UPDATE users SET attack_level = attack_level - ? WHERE user_id = ?", (item_data[4], receiver_id))
                 conn.commit()
             if item_data[3] == "defense_boost":
-                c.execute("UPDATE users SET defense_level = defense_level - ? WHERE user_id = ?", (item_data[4], user_id))
+                c.execute("UPDATE users SET defense_level = defense_level - ? WHERE user_id = ?", (item_data[4], receiver_id))
                 conn.commit()
             time.sleep(2.5)
         st.success("Success!")
