@@ -1919,8 +1919,8 @@ def stocks_view(conn, user_id):
     if "selected_stock" not in st.session_state:
         st.session_state.selected_stock = stocks[0][0]
 
-    if "t" not in st.session_state:
-        st.session_state.t = 0
+    if "ti" not in st.session_state:
+        st.session_state.ti = 1
     
     if "range" not in st.session_state:
         st.session_state.range = 24
@@ -2070,7 +2070,7 @@ def stocks_view(conn, user_id):
     df = pd.DataFrame(history2, columns=["Timestamp", "Price"])
     df['Timestamp'] = pd.to_datetime(df['Timestamp'])
     df.set_index('Timestamp', inplace=True)
-    df_resampled = df.resample(f"{st.session_state.t}T").mean()  
+    df_resampled = df.resample(f"{st.session_state.ti}T").mean()  
     st.line_chart(df_resampled, color = st.session_state.graph_color2)
     c1, c2 = st.columns(2)
     sample_rate = c1.slider("Sample Rate (Lower = More Lag)", min_value = 1, max_value = 100, step = 1)
