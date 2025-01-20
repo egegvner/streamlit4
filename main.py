@@ -838,7 +838,7 @@ def transfer_dialog(conn, user_id):
 
                 current_balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
-                if 0 < amount <= 1000000 and amount <= current_balance:
+                if amount <= current_balance:
                     c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (amount, user_id))
                     c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, balance,  receiver_username, status) VALUES (?, ?, ?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f'Transfer to {receiver_username}', amount, current_balance, receiver_username, 'pending'))
                     conn.commit()
@@ -1237,13 +1237,10 @@ def inventory_item_options(conn, user_id, item_id):
         c1.image(item_data[4], use_container_width=True)
         c2.write(f":gray[BOUGHT FOR]   $|$   :green[${item_data[3]}]")
         c2.write(f":gray[EFFECT]   $|$   {item_data[1]}")
-    if st.button(f"Sell to Bank for **:green[${((item_data[3]) / 100) * 25}]**", use_container_width = True):
-        c.execute("DELETE FROM user_inventory WHERE item_id = ?", (item_id,))
-        c.execute("UPDATE users SET wallet = wallet + ? WHERE user_id = ?", (item_data[3], user_id))
-        c.execute("UPDATE marketplace_items SET stock = stock + 1 WHERE item_id = ?", (item_id,))
-        conn.commit()
-        st.rerun()
-
+    c1, c2 = st.columns(2)
+    new_price = c1.number_input("a", label_visibility="collapsed", min_value=0, step=200, placeholder="Price")
+    if c2.button("**Put on BlackMarket**", use_container_width=True):
+        pass
     if st.button("**Put Up For Auction (Cost: :green[$100])**", type="primary", use_container_width=True):
         pass
 
