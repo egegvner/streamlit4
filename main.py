@@ -1281,7 +1281,7 @@ def steal_dialog(conn, attacker_id, target_id):
     if steal_cooldown:
         last_steal = datetime.datetime.strptime(steal_cooldown, "%Y-%m-%d %H:%M:%S")
         time_diff = (datetime.datetime.now() - last_steal).total_seconds()
-        if time_diff < 3:
+        if time_diff < 300:
             st.warning(f"Wait {int(3 - time_diff)} seconds before stealing again!")
             return
 
