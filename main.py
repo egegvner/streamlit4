@@ -18,7 +18,7 @@ if "current_menu" not in st.session_state:
     st.session_state.current_menu = "Dashboard"
 
 previous_layout = st.session_state.get("previous_layout", "centered")
-current_layout = "wide" if st.session_state.current_menu == "Stocks" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "Investments" else "centered"
+current_layout = "wide" if st.session_state.current_menu == "Stocks" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "Investments" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "Main Account" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "Inventory" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "View Savings" else "centered"
 
 if previous_layout != current_layout:
     st.session_state.previous_layout = current_layout
@@ -92,21 +92,22 @@ def check_and_reset_quota(conn, user_id):
     c = conn.cursor()
 
     user_data = c.execute("SELECT deposit_quota, last_quota_reset FROM users WHERE user_id = ?", (user_id,)).fetchone()
-    current_quota, last_reset = user_data
-    user_items = c.execute("SELECT item_id FROM user_inventory WHERE user_id = ?", (user_id,)).fetchall()
+    current_quota, last_reset = user_data if user_data else (0, None)
     
+    user_items = c.execute("SELECT item_id FROM user_inventory WHERE user_id = ?", (user_id,)).fetchall()
     if user_items:
-        boost = 0
-        for i in user_items:
-            boost += c.execute("SELECT boost_value FROM marketplace_items WHERE item_id = ?", (i[0],)).fetchone()[0]
+        item_ids = [item[0] for item in user_items]
+        boost_values = c.execute("SELECT boost_value FROM marketplace_items WHERE item_id IN ({})".format(','.join('?' for _ in item_ids)), item_ids).fetchall()
+        boost = sum(boost[0] for boost in boost_values if boost[0] is not None)
     else:
         boost = 0
     
     last_reset_time = datetime.datetime.strptime(last_reset, "%Y-%m-%d %H:%M:%S") if last_reset else datetime.datetime(1970, 1, 1)
     
     now = datetime.datetime.now()
+    time_diff = (now - last_reset_time).total_seconds()
 
-    if (now - last_reset_time).total_seconds() >= 3600:
+    if time_diff >= 86400:
         new_quota = calculate_new_quota(user_id, boost)
 
         if current_quota != new_quota:
@@ -117,6 +118,7 @@ def check_and_reset_quota(conn, user_id):
             print(f"Quota reset for user {user_id}. New quota: {new_quota}")
 
         return new_quota
+    
     return current_quota
 
 def apply_interest_if_due(conn, user_id, check = True):
@@ -1220,12 +1222,13 @@ def leaderboard(c):
 def inventory_item_options(conn, user_id, item_id):
     c = conn.cursor()
     item_number = c.execute("SELECT item_number FROM user_inventory WHERE item_id = ?", (item_id,)).fetchone()[0]
-    item_data = c.execute("SELECT name, description, rarity, price FROM marketplace_items WHERE item_id = ?", (item_id,)).fetchone()
+    item_data = c.execute("SELECT name, description, rarity, price, image_url FROM marketplace_items WHERE item_id = ?", (item_id,)).fetchone()
     st.header(f"{item_colors[item_data[2]]}[{item_data[0]}]   **•**   :gray[{item_data[2].upper()}] **•** :gray[#{item_number}]", divider = "rainbow")
     with st.container(border = True):
-        st.write(f":gray[BOUGHT FOR]   $|$   :green[${item_data[3]}]")
-        st.write(f":gray[EFFECT]   $|$   {item_data[1]}")
-    
+        c1, c2 = st.columns([1, 2.5])
+        c1.image(item_data[4], use_container_width=True)
+        c2.write(f":gray[BOUGHT FOR]   $|$   :green[${item_data[3]}]")
+        c2.write(f":gray[EFFECT]   $|$   {item_data[1]}")
     if st.button(f"Sell to Bank for **:green[${((item_data[3]) / 100) * 25}]**", use_container_width = True):
         c.execute("DELETE FROM user_inventory WHERE item_id = ?", (item_id,))
         c.execute("UPDATE users SET wallet = wallet + ? WHERE user_id = ?", (item_data[3], user_id))
@@ -1233,10 +1236,12 @@ def inventory_item_options(conn, user_id, item_id):
         conn.commit()
         st.rerun()
 
-    st.divider()
-    st.header("Gift This NFT to")
+    if st.button("**Put Up For Auction (Cost: :green[$100])**", type="primary", use_container_width=True):
+        pass
+
+    st.header("GNFT Gifting", divider="rainbow")
     all_users = [user[0] for user in c.execute("SELECT username FROM users WHERE username != ?", (st.session_state.username,)).fetchall()]
-    user_to_gift = st.selectbox("", options=all_users)
+    user_to_gift = st.selectbox("Select User", options=all_users)
     receiver_id = c.execute("SELECT user_id FROM users WHERE username = ?", (user_to_gift,)).fetchone()[0]
     if st.button("Send Gift", use_container_width=True):
         with st.spinner("Gifting NFT..."):
@@ -1432,6 +1437,7 @@ def inventory_view(conn, user_id):
     c = conn.cursor()
     st.header("Your Inventory", divider="rainbow")
     
+    # Fetch all owned item ids
     owned_item_ids = [owned_item[0] for owned_item in c.execute("SELECT item_id FROM user_inventory WHERE user_id = ?", (user_id,)).fetchall()]
     if not owned_item_ids:
         st.write("No items in your inventory.")
@@ -1440,14 +1446,27 @@ def inventory_view(conn, user_id):
     st.subheader("Your GNFTs")
     
     for idx, item_id in enumerate(owned_item_ids):
-        name, description, rarity, image_url = c.execute("SELECT name, description, rarity, image_url FROM marketplace_items WHERE item_id = ?", (item_id,)).fetchone()
+        # Fetch item details from marketplace_items
+        item_details = c.execute("SELECT name, description, rarity, image_url FROM marketplace_items WHERE item_id = ?", (item_id,)).fetchone()
+
+        # Handle the case where no item is found in marketplace_items table
+        if item_details is None:
+            st.error(f"Item with ID {item_id} not found in the marketplace.")
+            continue
+
+        # Unpack the item details
+        name, description, rarity, image_url = item_details
+        
+        # Fetch other item details from user_inventory
         item_number = c.execute("SELECT item_number FROM user_inventory WHERE user_id = ? AND item_id = ?", (user_id, item_id)).fetchone()[0]
         acquired_at = c.execute("SELECT acquired_at FROM user_inventory WHERE user_id = ? AND item_id = ?", (user_id, item_id)).fetchone()[0]
         
+        # Layout for the item
         image_col, details_col = st.columns([1, 3])
 
         with image_col:
-            st.image(image_url, width=100, use_container_width=True, output_format="PNG")
+            if image_url:
+                st.image(image_url, width=100, use_container_width=True, output_format="PNG")
 
         with details_col:
             st.write(f"#### **{item_colors[rarity]}[{name}]**")
@@ -1831,7 +1850,6 @@ def buy_stock(conn, user_id, stock_id, quantity):
 
     price = c.execute("SELECT price FROM stocks WHERE stock_id = ?", (stock_id,)).fetchone()[0]
     wallet_balance = c.execute("SELECT wallet FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
-
     cost = price * quantity
 
     if wallet_balance < cost:
@@ -1899,6 +1917,12 @@ def stocks_view(conn, user_id):
     
     if "selected_stock" not in st.session_state:
         st.session_state.selected_stock = stocks[0][0]
+    
+    if "range" not in st.session_state:
+        st.session_state.range = 24
+
+    if "graph_color" not in st.session_state:
+        st.session_state.graph_color = (0, 255, 0)
 
     st.write("Available Stocks:")
     stock_buttons = st.columns(len(stocks))
@@ -1911,63 +1935,65 @@ def stocks_view(conn, user_id):
 
     selected_stock = next(s for s in stocks if s[0] == st.session_state.selected_stock)
     stock_id, name, symbol, price, stock_amount = selected_stock
-    history = c.execute("SELECT timestamp, price FROM stock_history WHERE stock_id = ? ORDER BY timestamp ASC", 
-                            (stock_id,)).fetchall()
+
+    now = datetime.datetime.now()
+    start_time = now - datetime.timedelta(hours=24)  # Change time period as needed
+    start_time_str = start_time.strftime("%Y-%m-%d %H:%M:%S")
+
+    history = c.execute("""
+        SELECT timestamp, price FROM stock_history 
+        WHERE stock_id = ? AND timestamp >= ?
+        ORDER BY timestamp ASC
+    """, (stock_id, start_time_str)).fetchall()
+
+    history2 = c.execute("""
+        SELECT timestamp, price FROM stock_history 
+        WHERE stock_id = ?
+        ORDER BY timestamp ASC
+    """, (stock_id,)).fetchall()
+
     if len(history) > 1:
         last_price = history[-1][1]
         previous_price = history[-2][1]
-        
         percentage_change = ((last_price - previous_price) / previous_price) * 100
         
         if last_price > previous_price:
-            change_color = ":green[+{:.2f}%".format(percentage_change)  # Green for increase
+            change_color = ":green[+{:.2f}% :gray[(24h)]".format(percentage_change)
+            st.session_state.graph_color = (0, 255, 0)
+
         elif last_price < previous_price:
-            change_color = ":red[-{:.2f}%".format(abs(percentage_change))  # Red for decrease
+            change_color = ":red[-{:.2f}% :gray[(24h)]".format(abs(percentage_change))
+            st.session_state.graph_color = (255, 0, 0)
+
         else:
-            change_color = ":orange[0.00%]"
+            change_color = ":orange[0.00% :gray[(24h)]"
+            st.session_state.graph_color = (255, 255, 0)
+
     else:
         percentage_change = 0
-        change_color = ":orange[0.00%]"
-        
+        change_color = ":orange[0.00%] :gray[(24h)]"
+
     st.subheader(f"{name} ({symbol})")
     st.header(f":green[${numerize(price, 2)}] \n ##### {change_color}]")
     st.text("")
 
-    if len(history) > 1:
-        last_price = history[-1][1]
-        previous_price = history[-2][1]
-        
-        if last_price > previous_price:
-            st.session_state.graph_color = (0, 255, 0)  # Green if the price has risen
-        elif last_price < previous_price:
-            st.session_state.graph_color = (255, 0, 0)  # Red if the price has fallen
-        else:
-            st.session_state.graph_color = (255, 255, 0)
-    
-    if "t" not in st.session_state:
-        st.session_state.t = 1
-
-    if "graph_color" not in st.session_state:
-        st.session_state.graph_color = (0, 255, 0)
-
-    if "graph_color2" not in st.session_state:
-        st.session_state.graph_color2 = (0, 255, 0)
-    
     c1, c2 = st.columns(2)
     with c1:
-        if history:
+        if len(history) > 1:
             df = pd.DataFrame(history, columns=["Timestamp", "Price"])
             df['Timestamp'] = pd.to_datetime(df['Timestamp'])
             df.set_index('Timestamp', inplace=True)
-            df_resampled = df.resample(f"{st.session_state.t}T").mean()  
-            st.line_chart(df_resampled, color = st.session_state.graph_color)
+
+            df_resampled = df.resample("5T").mean()
+
+            st.line_chart(df_resampled, color=st.session_state.graph_color)
         else:
             st.info("Stock history will be available after 60 seconds of stock creation.")
 
     with c2:
         user_stock = c.execute("SELECT quantity, avg_buy_price FROM user_stocks WHERE user_id = ? AND stock_id = ?", 
                                 (user_id, stock_id)).fetchall()
-        
+
         if user_stock:
             user_quantity = user_stock[0][0] if user_stock[0][0] else 0
             avg_price = user_stock[0][1] if user_stock[0][1] else 0
@@ -1976,8 +2002,8 @@ def stocks_view(conn, user_id):
             avg_price = 0
 
         with st.container(border=True):
-            st.write(f"[Owned] :blue[{numerize((user_quantity), 2)} {symbol}] ~ :green[${numerize((user_quantity * price), 2)}]")
-            st.write(f"[AVG. Bought At] :green[${numerize((avg_price), 2)}]")
+            st.write(f"[Owned] :blue[{numerize(user_quantity, 2)} {symbol}] ~ :green[${numerize(user_quantity * price, 2)}]")
+            st.write(f"[AVG. Bought At] :green[${numerize(avg_price, 2)}]")
 
             st.write(f"[Available] :orange[{numerize(stock_amount, 2)} {symbol}]")                                
 
@@ -1985,21 +2011,21 @@ def stocks_view(conn, user_id):
         
         with col1:
             buy_quantity = st.number_input(f"Buy {symbol}", min_value=0.0, step=0.25, key=f"buy_{stock_id}")
-            st.write(f"[Cost]  :red[${numerize((buy_quantity * price), 2)}]")
+            st.write(f"[Cost]  :red[${numerize(buy_quantity * price, 2)}]")
             if st.button(f"Buy {symbol}", key=f"buy_btn_{stock_id}", type="primary", use_container_width=True, 
-                            disabled=True if buy_quantity == 0 else False):
+                        disabled=True if buy_quantity == 0 or stock_amount < buy_quantity else False, help="Not enough stock available in the market" if stock_amount < buy_quantity else "Insufficent balance"):
                 with st.spinner("Purchasing..."):
                     time.sleep(3)
                     buy_stock(conn, user_id, stock_id, buy_quantity)
                 time.sleep(2.5)
                 st.rerun()
-                    
+                        
         with col2:
             sell_quantity = st.number_input(f"Sell {symbol}", min_value=0.0, max_value=float(user_quantity), step=0.25, key=f"sell_{stock_id}")
-            st.write(f"[Profit] :green[${numerize((sell_quantity * price), 2)}]")
+            st.write(f"[Profit] :green[${numerize(sell_quantity * price, 2)}]")
             
             if st.button(f"Sell {symbol}", key=f"sell_btn_{stock_id}", use_container_width=True, 
-                            disabled=True if sell_quantity == 0 else False):
+                        disabled=True if sell_quantity == 0 else False):
                 with st.spinner("Selling..."):
                     time.sleep(3)
                     sell_stock(conn, user_id, stock_id, sell_quantity)
@@ -2015,7 +2041,7 @@ def stocks_view(conn, user_id):
 
     stock_metrics = get_stock_metrics(conn, stock_id)
 
-    st.subheader("Metrics", divider = "rainbow")
+    st.subheader("Metrics", divider="rainbow")
     col1, col2, col3, col4, col5 = st.columns(5)
     
     col1.metric("24H High", 
@@ -2038,8 +2064,8 @@ def stocks_view(conn, user_id):
                 f"{stock_metrics['price_change']:.2f}%", 
                 delta_color="inverse")
 
-    st.header(f"Details for {name}", divider = "rainbow")
-    df = pd.DataFrame(history, columns=["Timestamp", "Price"])
+    st.header(f"Details for {name}", divider="rainbow")
+    df = pd.DataFrame(history2, columns=["Timestamp", "Price"])
     df['Timestamp'] = pd.to_datetime(df['Timestamp'])
     df.set_index('Timestamp', inplace=True)
     df_resampled = df.resample(f"{st.session_state.t}T").mean()  
