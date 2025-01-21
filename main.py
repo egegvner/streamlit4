@@ -557,20 +557,6 @@ def init_db():
                   attack_level INTEGER DEFAULT 0,
                   defense_level INTEGER DEFAULT 0
                   )''')
-
-    c.execute('''CREATE TABLE IF NOT EXISTS transactions (
-                transaction_id INTEGER PRIMARY KEY NOT NULL,
-                user_id INTEGER NOT NULL,
-                type TEXT NOT NULL,
-                amount REAL NOT NULL,
-                receiver_username TEXT DEFAULT None,
-                status TEXT DEFAULT None,
-                stock_id INTEGER DEFAULT 0,
-                quantity INTEGER DEFAULT 0,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(user_id),
-                FOREIGN KEY (receiver_username) REFERENCES users(username)
-                )''')
         
     c.execute('''CREATE TABLE IF NOT EXISTS savings (
                 user_id INTEGER NOT NULL,
@@ -3038,6 +3024,7 @@ def add_column_if_not_exists(conn):
     if "quantity" not in columns:
         c.execute("ALTER TABLE transactions ADD COLUMN quantity INTEGER DEFAULT 0;")
 
+    c.execute("DROP TABLE transactions")
     conn.commit()
 
 if __name__ == "__main__":
