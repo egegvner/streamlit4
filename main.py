@@ -2224,7 +2224,7 @@ def borrow_money(conn, user_id, amount, interest_rate):
     new_loan = round(amount * (1 + interest_rate), 2)
     due_date = (datetime.date.today() + datetime.timedelta(days=7)).strftime("%Y-%m-%d")  # Due in 7 days
 
-    c.execute("UPDATE users SET balance = balance - ? WHERE user_id = 293749", (amount,))
+    c.execute("UPDATE users SET balance = balance - ? WHERE user_id = 'Government'", (amount,))
     c.execute("UPDATE users SET loan = ?, loan_due_date = ?, balance = balance + ? WHERE user_id = ?", 
               (new_loan, due_date, amount, user_id))
     conn.commit()
@@ -2249,7 +2249,7 @@ def repay_loan(conn, user_id, amount):
     new_loan = max(0, loan - amount)
     new_balance = balance - amount
 
-    c.execute("UPDATE users SET balance = balance + ? WHERE user_id = 293749", (amount,))
+    c.execute("UPDATE users SET balance = balance + ? WHERE user_id = 'Government'", (amount,))
     c.execute("UPDATE users SET loan = ?, balance = ? WHERE user_id = ?", (new_loan, new_balance, user_id))
     conn.commit()
     
@@ -2270,7 +2270,7 @@ def bank_view(conn, user_id):
         st.session_state.repay = 0.0
     
     df = get_inflation_history(c)
-    gov_funds = c.execute("SELECT balance FROM users WHERE user_id = 293749").fetchone()[0]
+    gov_funds = c.execute("SELECT balance FROM users WHERE user_id = 'Government'").fetchone()[0]
     inflation_rate = c.execute("SELECT inflation_rate FROM inflation_history ORDER BY date DESC LIMIT 1").fetchone()
     inflation_rate = inflation_rate[0] if inflation_rate else 0.01  # Default 1% interest
 
