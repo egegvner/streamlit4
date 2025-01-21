@@ -2066,25 +2066,24 @@ def stocks_view(conn, user_id):
 
     leaderboard_data = []
     selected_stock_id = st.session_state.selected_stock  # Get the currently selected stock's ID
-
-    top_user = c.execute("""
-        SELECT user_id, SUM(quantity) AS total_quantity
-        FROM user_stocks
-        WHERE stock_id = ?
-        GROUP BY user_id
+    
+    stockholders = c.execute("""
+        SELECT u.username, SUM(us.quantity) AS total_quantity
+        FROM user_stocks us
+        JOIN users u ON us.user_id = u.user_id
+        WHERE us.stock_id = ?
+        GROUP BY us.user_id
         ORDER BY total_quantity DESC
-        LIMIT 1
-    """, (selected_stock_id,)).fetchone()
-
-    if top_user:
-        top_user_id = top_user[0]
-        top_user_quantity = top_user[1]
-        top_user_name = c.execute("SELECT username FROM users WHERE user_id = ?", (top_user_id,)).fetchone()[0]
-        leaderboard_data.append([top_user_name, top_user_quantity])
-
+    """, (selected_stock_id,)).fetchall()
+    
+    for stockholder in stockholders:
+        username = stockholder[0]
+        total_quantity = stockholder[1]
+        leaderboard_data.append([username, total_quantity])
+    
     st.subheader("🏆 Stockholder Leaderboard", divider="rainbow")
     if leaderboard_data:
-        leaderboard_df = pd.DataFrame(leaderboard_data, columns=["Top Stockholder", "Shares Held"])
+        leaderboard_df = pd.DataFrame(leaderboard_data, columns=["Stockholder", "Shares Held"])
         st.dataframe(leaderboard_df, use_container_width=True)
     else:
         st.info("No stockholder data available yet.")
