@@ -436,7 +436,7 @@ def calculate_investment_return(risk_rate, amount):
     if success:
         return round(amount * random.uniform(risk_rate, risk_rate * 2), 2)  # High risk => high return
     else:
-        return -amount  # Total loss on failure
+        return -amount
 
 def check_and_update_investments(conn, user_id):
     c = conn.cursor()
@@ -452,13 +452,15 @@ def check_and_update_investments(conn, user_id):
         end_date_obj = datetime.datetime.strptime(end_date, "%Y-%m-%d %H:%M:%S")
 
         if now >= end_date_obj:
+            risk_level = float(risk_level)  # Ensure that risk_level is treated as a float
+
             success = random.random() <= max(0.1, min(1, 1 - risk_level))  # Higher risk = lower success chance
 
             if success:
                 profit = round(amount * random.uniform(1 + risk_level, 1 + (risk_level * 2)), 2)  # Calculate profit
                 outcome = "profit"
             else:
-                profit = -amount  # Loss = full investment amount
+                profit = -amount
                 outcome = "loss"
 
             new_balance = c.execute("SELECT wallet FROM users WHERE user_id = ?", (user_id,)).fetchone()[0] + profit
@@ -478,6 +480,7 @@ def check_and_update_investments(conn, user_id):
                 st.toast(f"❌ Your investment in {company_name} failed. You lost :red[${numerize(amount)}].")
 
     conn.commit()
+
 
 
 def register_user(conn, username, password, email = None, visible_name = None):
@@ -1646,7 +1649,7 @@ def dashboard(conn, user_id):
     st.subheader("📜 Recent Transactions")
 
     transactions = c.execute("""
-        SELECT timestamp, type, amount, balance 
+        SELECT timestamp, type, amount 
         FROM transactions 
         WHERE user_id = ? 
         ORDER BY timestamp DESC 
@@ -1654,7 +1657,7 @@ def dashboard(conn, user_id):
     """, (user_id,)).fetchall()
 
     if transactions:
-        df = pd.DataFrame(transactions, columns=["Timestamp", "Type", "Amount", "New Balance"])
+        df = pd.DataFrame(transactions, columns=["Timestamp", "Type", "Amount"])
         df["Timestamp"] = pd.to_datetime(df["Timestamp"])
         st.dataframe(df.set_index("Timestamp"), use_container_width = True)
     else:
@@ -2341,14 +2344,17 @@ def investments_view(conn, user_id):
     c = conn.cursor()
 
     check_and_update_investments(conn, user_id)
-
+    balance = c.execute("SELECT wallet FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+   
     if "s_c" not in st.session_state:
         st.session_state.s_c = None
+
+    if "balance" not in st.session_state:
+        st.session_state.balance = balance
 
     if "invest_value" not in st.session_state:
         st.session_state.invest_value = 0
 
-    balance = c.execute("SELECT wallet FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     st.subheader(f"💰 Wallet: **:green[${numerize(balance)}]**")
 
     companies = c.execute("SELECT company_id, company_name, risk_level FROM investment_companies").fetchall()
@@ -2386,7 +2392,7 @@ def investments_view(conn, user_id):
     investment_amount = st.number_input(
         "Investment Amount",
         min_value=0.0,
-        max_value=float(balance),
+        max_value=st.session_state.balance,
         step=1.0,
         value=float(st.session_state.invest_value),  # Set default value to the smaller of balance or 1.0
         key=f"investment_{selected_company['id']}",
@@ -2426,6 +2432,7 @@ def investments_view(conn, user_id):
                 time.sleep(4)
             st.toast(f"Investment of :green[${numerize(investment_amount)}] in {selected_company['name']} has initiated! Ends on {end_date}.")
             time.sleep(2)
+            st.session_state.balance = balance - investment_amount
             st.rerun()
 
     st.divider()
@@ -2583,6 +2590,40 @@ def admin_panel(conn):
             c.execute("DELETE FROM investment_companies WHERE company_id = ?", (company_id_to_delete,))
         conn.commit()
         st.rerun()
+
+    st.divider()
+    st.header("Manage User Investments", divider = "rainbow")
+    st.text("")
+
+    user = st.selectbox("Select User", [u[0] for u in c.execute("SELECT username FROM users").fetchall()])
+    if user:
+        user_id = c.execute("SELECT user_id FROM users WHERE username = ?", (user,)).fetchone()[0]
+        investments = c.execute("SELECT investment_id, user_id, company_name, amount, risk_level, return_rate, start_date, end_date, status FROM investments WHERE user_id = ? ORDER BY start_date DESC", (user_id,)).fetchall()
+
+        if investments:
+            df = pd.DataFrame(investments, columns = ["Investment ID", "User ID", "Company Name", "Amount", "Risk Level", "Return Rate", "Start Date", "End Date", "Status"])
+            edited_df = st.data_editor(df, key = "investments_table", num_rows = "fixed", use_container_width = True, hide_index = False)
+            
+            if st.button("Update Investments", use_container_width = True):
+                for _, row in edited_df.iterrows():
+                    c.execute("""
+                        UPDATE OR IGNORE investments 
+                        SET company_name = ?, amount = ?, risk_level = ?,  return_rate = ?, start_date = ?, end_date = ?, status = ?
+                        WHERE investment_id = ?
+                    """, (row["Company Name"], row["Amount"], row["Risk Level"], row["Return Rate"], row["Start Date"], row["End Date"], row["Status"], row["Investment ID"]))
+                conn.commit()
+                st.rerun()
+            
+            st.text("")
+            investment_id_to_delete = st.number_input("Enter Investment ID to Delete", min_value=0, step=1)
+            if st.button("Delete Investment", use_container_width = True):
+                with st.spinner("Processing..."):
+                    c.execute("DELETE FROM investments WHERE investment_id = ?", (investment_id_to_delete,))
+                conn.commit()
+                st.rerun()
+
+        else:
+            st.write(f"No investments found for {user}.")
     
     st.header("User Removal", divider = "rainbow")
     
@@ -2613,7 +2654,7 @@ def admin_panel(conn):
     st.header("Manage User Transactions", divider = "rainbow")
     st.text("")
 
-    user = st.selectbox("Select User", [u[0] for u in c.execute("SELECT username FROM users").fetchall()])
+    user = st.selectbox("Select User", [u[0] for u in c.execute("SELECT username FROM users").fetchall()], key="inv")
     if user:
         user_id = c.execute("SELECT user_id FROM users WHERE username = ?", (user,)).fetchone()[0]
         transactions = c.execute("SELECT transaction_id, type, amount, receiver_username, status, stock_id, quantity, timestamp FROM transactions WHERE user_id = ? ORDER BY timestamp DESC", (user_id,)).fetchall()
@@ -2684,7 +2725,7 @@ def admin_panel(conn):
         conn.commit()
         st.rerun()
 
-    user = st.selectbox("Select User", [u[0] for u in c.execute("SELECT username FROM users").fetchall()], key="inv")
+    user = st.selectbox("Select User", [u[0] for u in c.execute("SELECT username FROM users").fetchall()], key="inv2")
     if user:
         user_id = c.execute("SELECT user_id FROM users WHERE username = ?", (user,)).fetchone()[0]
         user_items = c.execute("SELECT * FROM user_inventory WHERE user_id = ? ORDER BY acquired_at DESC", (user_id,)).fetchall()
