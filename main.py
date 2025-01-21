@@ -121,63 +121,46 @@ def check_and_reset_quota(conn, user_id):
     
     return current_quota
 
-def apply_interest_if_due(conn, user_id, check=True):
-    def get_savings_data(cursor, user_id):
-        cursor.execute("SELECT balance, last_interest_applied, interest_rate FROM savings WHERE user_id = ?", (user_id,))
-        result = cursor.fetchone()
-        if not result:
-            return None, None, None
-        return result
-
-    def calculate_tiered_interest(balance, interest_rate, hours_passed):
-        if balance > 1000000:
-            high_balance = balance - 1000000
-            low_balance = 1000000
-            return (low_balance * interest_rate * hours_passed +
-                    high_balance * (interest_rate * 0.5) * hours_passed)
-        elif balance > 10000:
-            return balance * (interest_rate * 0.8) * hours_passed
-        else:
-            return balance * interest_rate * hours_passed
-
-    def apply_interest(balance, interest, now, user_id):
-        new_balance = balance + interest
-        c.execute("""
-            UPDATE savings
-            SET balance = ?, last_interest_applied = ?
-            WHERE user_id = ?
-        """, (new_balance, now.strftime("%Y-%m-%d %H:%M:%S"), user_id))
-
-        c.execute("""
-            INSERT INTO interest_history (user_id, interest_amount, new_balance)
-            VALUES (?, ?, ?)
-        """, (user_id, interest, new_balance))
-        return new_balance
-
+def apply_interest_if_due(conn, user_id, check = True):
     c = conn.cursor()
-    if check and (time.time() - st.session_state.get("last_refresh", 0)) < 5:
-        st.toast(f"Please wait before refreshing again.")
-        return
+    current_time = time.time()
+    if check:
+        if current_time - st.session_state.last_refresh >= 5:
+            st.session_state.last_refresh = current_time
 
-    st.session_state.last_refresh = time.time()
+            has_savings_account = c.execute("SELECT has_savings_account FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+            if not has_savings_account:
+                return
 
-    has_savings_account = c.execute("SELECT has_savings_account FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
-    if not has_savings_account:
-        return
+            savings_data = c.execute("SELECT balance, last_interest_applied FROM savings WHERE user_id = ?", (user_id,)).fetchone()
+            balance, last_applied = savings_data if savings_data else (0, None)
 
-    balance, last_applied, interest_rate = get_savings_data(c, user_id)
-    if balance is None:
-        return
+            last_applied_time = datetime.datetime.strptime(last_applied, "%Y-%m-%d %H:%M:%S") if last_applied else now
 
-    last_applied_time = datetime.datetime.strptime(last_applied, "%Y-%m-%d %H:%M:%S") if last_applied else datetime.datetime.now()
-    hours_passed = max(0, (datetime.datetime.now() - last_applied_time).total_seconds() / 3600)
+            now = datetime.datetime.now()
 
-    interest = calculate_tiered_interest(balance, interest_rate, hours_passed)
-    interest = min(interest, 10_000)  # Cap interest at $10,000 per cycle
-    apply_interest(balance, interest, datetime.datetime.now(), user_id)
+            hours_passed = (now - last_applied_time).total_seconds() / 3600
 
-    conn.commit()
-    st.rerun()
+            hourly_interest_rate = c.execute("SELECT interest_rate FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
+
+            total_interest = balance * hourly_interest_rate * hours_passed
+            new_balance = balance + total_interest
+
+            c.execute("""
+                INSERT INTO interest_history (user_id, interest_amount, new_balance)
+                VALUES (?, ?, ?)
+            """, (user_id, total_interest, new_balance))
+
+            c.execute("""
+                UPDATE savings
+                SET balance = ?, last_interest_applied = ?
+                WHERE user_id = ?
+            """, (new_balance, now.strftime("%Y-%m-%d %H:%M:%S"), user_id))
+
+            conn.commit()
+            st.rerun()
+        else:
+            st.toast(f"Wait {int(5 - (current_time - st.session_state.last_refresh))} seconds before refreshing again.")
     
 def change_password(conn, username, current_password, new_password):
     c = conn.cursor()
