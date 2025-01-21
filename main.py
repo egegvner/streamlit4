@@ -489,7 +489,7 @@ def register_user(conn, username, password, email = None, visible_name = None):
                 
         with st.spinner("Creatning your account..."):
             c.execute('''INSERT INTO users (user_id, username, level, visible_name, password, balance, wallet, has_savings_account, suspension, deposits, withdraws, incoming_transfers, outgoing_transfers, total_transactions, last_transaction_time, email)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', 
                   (
                    user_id_to_be_registered,
                    username,
