@@ -3035,8 +3035,6 @@ def add_column_if_not_exists(conn):
     if "quantity" not in columns:
         c.execute("ALTER TABLE transactions ADD COLUMN quantity INTEGER DEFAULT 0;")
 
-    c.execute("ALTER TABLE transactions DROP COlUMN balance;")
-
     conn.commit()
 
 if __name__ == "__main__":
