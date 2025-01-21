@@ -3031,9 +3031,9 @@ def add_column_if_not_exists(conn):
     c.execute("PRAGMA table_info(blackmarket_items);")
     columns = [column[1] for column in c.fetchall()]
     if "stock_id" not in columns:
-        c.execute("ALTER TABLE transactions ADD COLUMN stock_id INTEGER;")
+        c.execute("ALTER TABLE transactions ADD COLUMN stock_id INTEGER DEFAULT 0;")
     if "quantity" not in columns:
-        c.execute("ALTER TABLE transactions ADD COLUMN quantity INTEGER;")
+        c.execute("ALTER TABLE transactions ADD COLUMN quantity INTEGER DEFAULT 0;")
 
     c.execute("ALTER TABLE transactions DROP COlUMN balance;")
 
