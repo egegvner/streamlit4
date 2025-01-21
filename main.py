@@ -1835,7 +1835,10 @@ def buy_stock(conn, user_id, stock_id, quantity):
         c.execute("INSERT INTO user_stocks (user_id, stock_id, quantity, avg_buy_price) VALUES (?, ?, ?, ?)", 
                   (user_id, stock_id, quantity, price))
 
-    c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, stock_id, quantity) VALUES (?, ?, ?, ?, ?, ?)", (random.randint(100000000, 999999999), user_id, "Buy Stock", cost, stock_id, quantity))
+    c.execute("""
+        INSERT INTO transactions (transaction_id, user_id, type, amount, stock_id, quantity, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    """, (random.randint(100000000, 999999999), user_id, "Buy Stock", cost, stock_id, quantity))
     c.execute("UPDATE stocks SET stock_amount = stock_amount - ? WHERE stock_id = ?", (quantity, stock_id))
     
     conn.commit()
