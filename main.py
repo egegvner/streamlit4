@@ -2513,7 +2513,7 @@ def admin_panel(conn):
     st.text("")
     with st.spinner("Loading Blackmarket Data"):
         blackmarket_data = c.execute("SELECT item_id, item_number, name, description, rarity, price, image_url, seller_id FROM blackmarket_items").fetchall()
-    df = pd.DataFrame(userData, columns = ["Item ID", "Item Number", "Name", "Description", "Rarity", "Price", "Image", "Seller ID"])
+    df = pd.DataFrame(blackmarket_data, columns = ["Item ID", "Item Number", "Name", "Description", "Rarity", "Price", "Image", "Seller ID"])
     edited_df = st.data_editor(df, key = "bm_items", num_rows = "fixed", use_container_width = True, hide_index = False)
 
     for _ in range(4):
