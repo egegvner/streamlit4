@@ -925,6 +925,7 @@ def deposit_from_wallet_dialog(conn, user_id):
     if st.button("Confirm Deposition to Vault", use_container_width = True, type="primary", disabled = True if st.session_state.wallet <= 0 or amount <= 0 else False):
         with st.spinner("Processing..."):
             c.execute("UPDATE users SET wallet = wallet - ? WHERE user_id = ?", (amount, user_id))
+            c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (net, user_id))
             c.execute("UPDATE users SET balance = balance + ? WHERE username = 'Government'", (tax,))
             c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Deposit To Vault From Wallet", amount))
             st.session_state.wallet = wallet - amount
