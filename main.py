@@ -927,7 +927,7 @@ def deposit_from_wallet_dialog(conn, user_id):
             c.execute("UPDATE users SET wallet = wallet - ? WHERE user_id = ?", (amount, user_id))
             c.execute("UPDATE users SET balance = balance + ? WHERE username = 'Government'", (tax,))
             c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Deposit To Vault From Wallet", amount))
-
+            st.session_state.wallet = wallet - amount
             conn.commit()
             time.sleep(2)
         st.success(f"Successfully deposited ${numerize(net)}")
