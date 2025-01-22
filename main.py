@@ -2211,7 +2211,6 @@ def borrow_money(conn, user_id, amount, interest_rate):
     conn.commit()
 
     st.toast(f"✅ Borrowed ${amount:.2f}. Due Date: {due_date}. You owe ${new_loan:.2f}.")
-    st.rerun()
 
 def repay_loan(conn, user_id, amount):
     c = conn.cursor()
@@ -2237,7 +2236,6 @@ def repay_loan(conn, user_id, amount):
     st.toast(f"✅ Loan repaid. Remaining debt: ${numerize(new_loan)}.")
     time.sleep(2)
     st.session_state.repay = 0.0
-    st.rerun()
 
 def bank_view(conn, user_id):
     st.header("🏦 The Bank", divider="rainbow")
@@ -2301,6 +2299,8 @@ def bank_view(conn, user_id):
             with st.spinner("Processing borrow"):
                 time.sleep(3)
                 borrow_money(conn, user_id, borrow_amount, interest_rate)
+                max_borrow = balance - borrow_amount
+                st.rerun()
 
         st.subheader("Repay Loan")
         c1, c2 = st.columns(2)
@@ -2314,6 +2314,7 @@ def bank_view(conn, user_id):
             with st.spinner("Processing loan..."):
                 time.sleep(3)
                 repay_loan(conn, user_id, st.session_state.repay)
+                st.rerun()
                 
 def investments_view(conn, user_id):
     st.header("📈 Investments", divider="rainbow")
