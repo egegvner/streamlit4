@@ -2247,6 +2247,9 @@ def bank_view(conn, user_id):
 
     if "repay" not in st.session_state:
         st.session_state.repay = 0.0
+
+    if "amt" not in st.session_state:
+        st.session_state.amt = 0.0
     
     df = get_inflation_history(c)
     gov_funds = c.execute("SELECT balance FROM users WHERE username = 'Government'").fetchone()[0]
@@ -2290,16 +2293,16 @@ def bank_view(conn, user_id):
                 else:
                     st.info(f"📅 [You Have an Active Loan!] **Due:** {due_date}")
         
-        max_borrow = balance
+        st.session_state.amt = balance
         st.divider()
-        st.warning(f"[Max Borrow] :green[${format_currency(max_borrow)} || {numerize(max_borrow)}]")
+        st.warning(f"[Max Borrow] :green[${format_currency(st.session_state.amt)} || {numerize(st.session_state.amt)}]")
         st.subheader("Borrow Loan")
-        borrow_amount = st.number_input("A", label_visibility="collapsed", min_value=100.0, max_value=float(max_borrow), step=100.0)
+        borrow_amount = st.number_input("A", label_visibility="collapsed", min_value=100.0, max_value=float(st.session_state.amt), step=100.0)
         if st.button("Borrow", use_container_width=True):
             with st.spinner("Processing borrow"):
                 time.sleep(3)
                 borrow_money(conn, user_id, borrow_amount, interest_rate)
-                max_borrow = balance - borrow_amount
+                st.session_state.amt = balance - borrow_amount
                 st.rerun()
 
         st.subheader("Repay Loan")
