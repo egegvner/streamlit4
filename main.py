@@ -270,7 +270,7 @@ def update_stock_prices(conn):
     c = conn.cursor()
     now = datetime.datetime.now()
 
-    stocks = c.execute("SELECT stock_id, price, last_updated, COALESCE(change_rate, 0.5) FROM stocks").fetchall()
+    stocks = c.execute("SELECT stock_id, price, last_updated, change_rate FROM stocks").fetchall()
 
     for stock_id, current_price, last_updated, change_rate in stocks:
         try:
@@ -280,32 +280,12 @@ def update_stock_prices(conn):
                 last_updated = now - datetime.timedelta(seconds=300)
 
             elapsed_time = (now - last_updated).total_seconds()
-            num_updates = int(elapsed_time // 300)  # Every 5 minutes
+            num_updates = int(elapsed_time // 300)
 
             if num_updates > 0:
-                buy_volume = c.execute("""
-                    SELECT SUM(quantity) 
-                    FROM transactions 
-                    WHERE stock_id = ? AND transaction_type = 'buy' AND timestamp > ?
-                """, (stock_id, last_updated)).fetchone()[0] or 0
-
-                sell_volume = c.execute("""
-                    SELECT SUM(quantity) 
-                    FROM transactions 
-                    WHERE stock_id = ? AND transaction_type = 'sell' AND timestamp > ?
-                """, (stock_id, last_updated)).fetchone()[0] or 0
-
-                net_demand = buy_volume - sell_volume
-                demand_factor = net_demand / max(1, current_price)  # Normalize by price
-
                 for i in range(num_updates):
-                    demand_impact = demand_factor * random.uniform(0.8, 1.2)
-                    random_impact = round(random.uniform(-change_rate, change_rate), 2)
-
-                    new_price = max(
-                        1, 
-                        round(current_price * (1 + demand_impact / 100 + random_impact / 100), 2)
-                    )
+                    change_percent = round(random.uniform(-change_rate, change_rate), 2)
+                    new_price = max(1, round(current_price * (1 + change_percent / 100), 2))
 
                     missed_update_time = last_updated + datetime.timedelta(seconds=(i + 1) * 300)
                     if missed_update_time <= now:
@@ -313,8 +293,6 @@ def update_stock_prices(conn):
                             "INSERT INTO stock_history (stock_id, price, timestamp) VALUES (?, ?, ?)",
                             (stock_id, new_price, missed_update_time.strftime("%Y-%m-%d %H:%M:%S"))
                         )
-                        print(f"Updated stock {stock_id}: Price = {new_price}, Time = {missed_update_time}")
-
                     current_price = new_price
 
             c.execute(
@@ -322,12 +300,9 @@ def update_stock_prices(conn):
                 (current_price, now.strftime("%Y-%m-%d %H:%M:%S"), stock_id)
             )
         except Exception as e:
-            print(f"Error updating stock {stock_id}: {e}")  # Debug the exception if needed
             continue
 
     conn.commit()
-    print("Stock prices updated successfully!")
-
 
 def get_stock_metrics(conn, stock_id):
     c = conn.cursor()
