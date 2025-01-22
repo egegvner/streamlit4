@@ -2205,13 +2205,14 @@ def borrow_money(conn, user_id, amount, interest_rate):
     new_loan = round(amount * (1 + interest_rate), 2)
     due_date = (datetime.date.today() + datetime.timedelta(days=7)).strftime("%Y-%m-%d")  # Due in 7 days
 
-    c.execute("UPDATE users SET balance = balance - ? WHERE user_id = 'Government'", (amount,))
+    c.execute("UPDATE users SET balance = balance - ? WHERE username = 'Government'", (amount,))
     c.execute("UPDATE users SET loan = ?, loan_due_date = ?, balance = balance + ? WHERE user_id = ?", 
               (new_loan, due_date, amount, user_id))
     conn.commit()
 
     st.toast(f"✅ Borrowed ${amount:.2f}. Due Date: {due_date}. You owe ${new_loan:.2f}.")
-
+    time.sleep(2.5)
+    
 def repay_loan(conn, user_id, amount):
     c = conn.cursor()
     
@@ -2229,12 +2230,12 @@ def repay_loan(conn, user_id, amount):
     new_loan = max(0, loan - amount)
     new_balance = balance - amount
 
-    c.execute("UPDATE users SET balance = balance + ? WHERE user_id = 'Government'", (amount,))
+    c.execute("UPDATE users SET balance = balance + ? WHERE username = 'Government'", (amount,))
     c.execute("UPDATE users SET loan = ?, balance = ? WHERE user_id = ?", (new_loan, new_balance, user_id))
     conn.commit()
     
     st.toast(f"✅ Loan repaid. Remaining debt: ${numerize(new_loan)}.")
-    time.sleep(2)
+    time.sleep(2.5)
     st.session_state.repay = 0.0
 
 def bank_view(conn, user_id):
