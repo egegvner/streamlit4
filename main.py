@@ -2525,6 +2525,13 @@ def admin_panel(conn):
         conn.commit()
         st.rerun()
 
+    bm_id_to_delete = st.number_input("Enter BM Item ID to Delete", min_value = 0, step = 1)
+    if st.button("Delete BM Item", use_container_width = True):
+        with st.spinner("Processing..."):
+            c.execute("DELETE FROM blackmarket_items WHERE item_id = ?", (bm_id_to_delete,))
+        conn.commit()
+        st.rerun()
+
     st.header("Stocks", divider = "rainbow")
 
     with st.expander("New Stock Creation"):
