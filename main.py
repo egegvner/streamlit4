@@ -325,7 +325,6 @@ def update_stock_prices(conn):
 
     conn.commit()
 
-
 def get_stock_metrics(conn, stock_id):
     c = conn.cursor()
     
@@ -729,8 +728,7 @@ def withdraw_dialog(conn, user_id):
             c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (amount, user_id))
             c.execute("UPDATE users SET wallet = wallet + ? WHERE user_id = ?", (net, user_id))
             conn.commit()
-            new_wallet = c.execute("SELECT wallet FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
-            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, balance) VALUES (?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, "Withdraw From Main Account To Wallet", net, new_wallet))
+            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, "Withdraw From Main Account To Wallet", net))
             c.execute("UPDATE users SET balance = balance + ? WHERE username = 'Government'", (tax,))
             conn.commit()
             update_last_transaction_time(conn, user_id)
@@ -747,7 +745,7 @@ def withdraw_dialog(conn, user_id):
             c.execute("UPDATE savings SET balance = balance + ? WHERE user_id = ?", (net, user_id))
             conn.commit()
             new_savings_balance = c.execute("SELECT balance FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
-            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, balance) VALUES (?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, "Withdraw From Main Account To Savings", amount, new_savings_balance))
+            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, "Withdraw From Main Account To Savings", amount))
             c.execute("UPDATE users SET balance = balance + ? WHERE username = 'Government'", (tax,))
             conn.commit()
             update_last_transaction_time(conn, user_id)
@@ -801,7 +799,7 @@ def transfer_dialog(conn, user_id):
 
                 if amount <= current_balance:
                     c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (amount, user_id))
-                    c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, balance,  receiver_username, status) VALUES (?, ?, ?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f'Transfer to {receiver_username}', amount, current_balance, receiver_username, 'pending'))
+                    c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, receiver_username, status) VALUES (?, ?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f'Transfer to {receiver_username}', amount, current_balance, receiver_username, 'pending'))
                     conn.commit()
                     with st.spinner("Processing"):
                         time.sleep(1)
@@ -881,7 +879,7 @@ def deposit_to_savings_dialog(conn, user_id):
             c.execute("UPDATE savings SET balance = balance + ? WHERE user_id = ?", (net, user_id))
 
             source = "Main Account" if "Main" in st.session_state.deposit_source else "Wallet"
-            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, balance) VALUES (?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Deposit To Savings From {source}", amount, current_savings + amount))
+            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Deposit To Savings From {source}", amount))
             c.execute("UPDATE users SET balance = balance + ? WHERE username = 'Government'", (tax,))
             conn.commit()
             update_last_transaction_time(conn, user_id)
@@ -925,7 +923,7 @@ def deposit_from_wallet_dialog(conn, user_id):
         with st.spinner("Processing..."):
             c.execute("UPDATE users SET wallet = wallet - ? WHERE user_id = ?", (amount, user_id))
             c.execute("UPDATE users SET balance = balance + ? WHERE username = 'Government'", (tax,))
-            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, balance) VALUES (?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Deposit To Vault From Wallet", amount, wallet - amount))
+            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Deposit To Vault From Wallet", amount))
 
             conn.commit()
             time.sleep(2)
@@ -975,7 +973,7 @@ def withdraw_from_savings_dialog(conn, user_id):
             c.execute("UPDATE users SET wallet = wallet + ? WHERE user_id = ?", (net, user_id))
             c.execute("UPDATE savings SET balance = balance - ? WHERE user_id = ?", (amount, user_id))
 
-            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, balance) VALUES (?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Withdraw from Savings to Wallet", amount, current_savings - amount))
+            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Withdraw from Savings to Wallet", amount))
             c.execute("UPDATE users SET balance = balance + ? WHERE username = 'Government'", (tax,))
             conn.commit()
 
@@ -992,7 +990,7 @@ def withdraw_from_savings_dialog(conn, user_id):
             c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (net, user_id))
             c.execute("UPDATE savings SET balance = balance - ? WHERE user_id = ?", (amount, user_id))
 
-            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, balance) VALUES (?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Withdraw from Savings to Vault", amount, current_savings - amount))
+            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Withdraw from Savings to Vault", amount))
             c.execute("UPDATE users SET balance = balance + ? WHERE username = 'Government'", (tax,))
             conn.commit()
 
@@ -1183,7 +1181,6 @@ def leaderboard(c):
     with tab3:
         st.subheader("🏦 Savings Balance Ranking")
         st.table(format_leaderboard(savings_balance_data) if savings_balance_data else ["No users found."])
-
 
 @st.dialog("Item Options")
 def inventory_item_options(conn, user_id, item_id):
@@ -2508,6 +2505,23 @@ def admin_panel(conn):
     if st.button("Delete Item", use_container_width = True):
         with st.spinner("Processing..."):
             c.execute("DELETE FROM marketplace_items WHERE item_id = ?", (item_id_to_delete,))
+        conn.commit()
+        st.rerun()
+
+    st.divider()
+    st.header("Blackmarket Items", divider = "rainbow")
+    st.text("")
+    with st.spinner("Loading Blackmarket Data"):
+        blackmarket_data = c.execute("SELECT item_id, item_number, name, description, rarity, price, image_url, seller_id FROM blackmarket_items").fetchall()
+    df = pd.DataFrame(userData, columns = ["Item ID", "Item Number", "Name", "Description", "Rarity", "Price", "Image", "Seller ID"])
+    edited_df = st.data_editor(df, key = "bm_items", num_rows = "fixed", use_container_width = True, hide_index = False)
+
+    for _ in range(4):
+        st.text("")
+
+    if st.button("Update Blackmarket", use_container_width = True, type = "secondary"):
+        for _, row in edited_df.iterrows():
+            c.execute("UPDATE OR IGNORE blackmarket SET username = ?, level = ?, visible_name = ?, password = ?, balance = ?, wallet = ?, has_savings_account = ?, suspension = ?, deposits = ?, withdraws = ?, incoming_transfers = ?, outgoing_transfers = ?, total_transactions = ?, last_transaction_time = ?, email = ?, last_daily_reward_claimed = ?, login_streak = ? WHERE user_id = ?", (row["Username"], row["Level"], row["Visible Name"], row["Pass"], row["Balance"], row["Wallet"], row["Has Savings Account"], row["Suspension"], row["Deposits"], row["Withdraws"], row["Transfers Received"], row["Transfers Sent"], row["Total Transactions"], row["Last Transaction Time"], row["Email"], row["Last Daily Reward Claimed"], row["Login Streak"], row["User ID"]))
         conn.commit()
         st.rerun()
 
