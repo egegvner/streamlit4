@@ -270,7 +270,7 @@ def update_stock_prices(conn):
     c = conn.cursor()
     now = datetime.datetime.now()
 
-    stocks = c.execute("SELECT stock_id, price, last_updated, change_rate FROM stocks").fetchall()
+    stocks = c.execute("SELECT stock_id, price, last_updated, COALESCE(change_rate, 0.5) FROM stocks").fetchall()
 
     for stock_id, current_price, last_updated, change_rate in stocks:
         try:
@@ -300,7 +300,6 @@ def update_stock_prices(conn):
 
                 for i in range(num_updates):
                     demand_impact = demand_factor * random.uniform(0.8, 1.2)
-
                     random_impact = round(random.uniform(-change_rate, change_rate), 2)
 
                     new_price = max(
@@ -314,16 +313,21 @@ def update_stock_prices(conn):
                             "INSERT INTO stock_history (stock_id, price, timestamp) VALUES (?, ?, ?)",
                             (stock_id, new_price, missed_update_time.strftime("%Y-%m-%d %H:%M:%S"))
                         )
+                        print(f"Updated stock {stock_id}: Price = {new_price}, Time = {missed_update_time}")
+
                     current_price = new_price
 
             c.execute(
                 "UPDATE stocks SET price = ?, last_updated = ? WHERE stock_id = ?",
                 (current_price, now.strftime("%Y-%m-%d %H:%M:%S"), stock_id)
             )
-        except Exception:
+        except Exception as e:
+            print(f"Error updating stock {stock_id}: {e}")  # Debug the exception if needed
             continue
 
     conn.commit()
+    print("Stock prices updated successfully!")
+
 
 def get_stock_metrics(conn, stock_id):
     c = conn.cursor()
