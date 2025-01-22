@@ -480,8 +480,6 @@ def check_and_update_investments(conn, user_id):
 
     conn.commit()
 
-
-
 def register_user(conn, username, password, email = None, visible_name = None):
     c = conn.cursor()
     try:
@@ -490,8 +488,8 @@ def register_user(conn, username, password, email = None, visible_name = None):
         hashed_password = hashPass(password)
                 
         with st.spinner("Creatning your account..."):
-            c.execute('''INSERT INTO users (user_id, username, level, visible_name, password, balance, wallet, has_savings_account, suspension, deposits, withdraws, incoming_transfers, outgoing_transfers, total_transactions, last_transaction_time, email)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', 
+            c.execute('''INSERT INTO users (user_id, username, level, visible_name, password, balance, wallet, has_savings_account, suspension, deposits, withdraws, incoming_transfers, outgoing_transfers, total_transactions, last_transaction_time, email, last_daily_reward_claimed)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', 
                   (
                    user_id_to_be_registered,
                    username,
@@ -508,7 +506,8 @@ def register_user(conn, username, password, email = None, visible_name = None):
                    0,    # Default outgoing transfers
                    0,    # Default total transactions
                    None, # Default last transaction time
-                   email
+                   email,
+                   datetime.datetime.today().strftime("%Y-%m-%d")
                    ))
             conn.commit()
 
