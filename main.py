@@ -1710,17 +1710,9 @@ def display_transaction_history(conn, user_id):
                 if role == "received" else "N/A"
             )
 
-            if t_type == "Top Up":
-                st.success(f"Top Up", icon="💵")
-                st.write(f"**Amount**   $|$   :green[+${numerize(amount, 2)}]")
-                st.text("")
-                st.text("")
-                st.caption(timestamp)
-
-            elif t_type == "Withdraw From Main Account To Wallet":
+            if t_type == "Withdraw From Main Account To Wallet":
                 st.warning(f"{t_type}", icon="💵")
                 st.write(f"Amount   $|$   :red[-${numerize(amount, 2)}]")
-                st.text("")
                 st.text("")
                 st.caption(timestamp)
 
@@ -1728,13 +1720,11 @@ def display_transaction_history(conn, user_id):
                 st.warning(f"{t_type}", icon="💵")
                 st.write(f"Amount   |   :red[-${numerize(amount, 2)}]")
                 st.text("")
-                st.text("")
                 st.caption(timestamp)
 
             elif role == "sent" and "transfer to" in t_type.lower():
                 st.info(f"{t_type.title()} { receiver_username} $|$ (Status: **{status.capitalize()}**)", icon="💸")
                 st.write(f"Amount   $|$   :red[-${numerize(amount, 2)}]")
-                st.text("")
                 st.text("")
                 st.caption(timestamp)
 
@@ -1742,20 +1732,17 @@ def display_transaction_history(conn, user_id):
                 st.info(f"{t_type.title()} {from_username} $|$ (Status: **{status.capitalize()}**)", icon="💸")
                 st.write(f"Amount   $|$   :green[+${numerize(amount, 2)}]")
                 st.text("")
-                st.text("")
                 st.caption(timestamp)
 
             elif t_type.lower().startswith("deposit to savings"):
                 st.info(f"{t_type.title()}", icon="🏦")
                 st.write(f"Amount   $|$   :green[+${numerize(amount, 2)}]")
                 st.text("")
-                st.text("")
                 st.caption(timestamp)
 
             elif t_type.lower().startswith("withdraw to"):
                 st.warning(f"{t_type.title()}", icon="🏧")
                 st.write(f"Amount   $|$   :red[-${numerize(amount, 2)}]")
-                st.text("")
                 st.text("")
                 st.caption(timestamp)
 
