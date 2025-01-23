@@ -1,7 +1,6 @@
 # Copyright Ege Güvener, 20/12/2024
 # License: MIT
 
-import PIL.Image
 import numerize.numerize
 import streamlit as st
 import sqlite3
@@ -13,9 +12,6 @@ import re
 import argon2
 from streamlit_autorefresh import st_autorefresh
 from numerize.numerize import numerize
-import PIL
-import base64
-import cv2
 import streamlit as st
 
 if "current_menu" not in st.session_state:
