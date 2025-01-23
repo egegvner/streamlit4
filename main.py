@@ -2291,7 +2291,7 @@ def admin_panel(conn):
     edited_df = st.data_editor(df, key = "stock_table", num_rows = "fixed", use_container_width = True, hide_index = True)
     if st.button("Update Stocks", use_container_width = True):
         for _, row in edited_df.iterrows():
-            c.execute("UPDATE OR IGNORE stocks SET name = ?, symbol = ?, price = ?, stock_amount = ?, change_rate = ?, last_updated = ? WHERE stock_id = ?", (row["Stock Name"], row["Symbol"], row["Current Price"], row["Stock Amount"], row["Change Rate"], row["Stock ID"]))
+            c.execute("UPDATE OR IGNORE stocks SET name = ?, symbol = ?, price = ?, stock_amount = ?, change_rate = ?, last_updated = ? WHERE stock_id = ?", (row["Stock Name"], row["Symbol"], row["Current Price"], row["Stock Amount"], row["Change Rate"], row["Last Updated"], row["Stock ID"]))
         conn.commit()
         st.rerun()
 
