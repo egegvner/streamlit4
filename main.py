@@ -226,7 +226,7 @@ def get_transaction_history(conn, user_id):
     username = c.execute("SELECT username FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
     sender_query = """
-        SELECT 'sent' AS role, type, amount, balance, timestamp, status,  receiver_username
+        SELECT 'sent' AS role, type, amount, timestamp, status, receiver_username
         FROM transactions
         WHERE user_id = ?
         ORDER BY timestamp DESC
@@ -234,7 +234,7 @@ def get_transaction_history(conn, user_id):
     sent_transactions = c.execute(sender_query, (user_id,)).fetchall()
 
     receiver_query = """
-        SELECT 'received' AS role, type, amount, balance, timestamp, status, user_id AS from_user_id
+        SELECT 'received' AS role, type, amount, timestamp, status, user_id AS from_user_id
         FROM transactions
         WHERE  receiver_username = ?
         ORDER BY timestamp DESC
