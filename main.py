@@ -1759,7 +1759,10 @@ def stocks_view(conn, user_id):
 
     st.header(f"Details for {name}", divider="rainbow")
     df = pd.DataFrame(history2, columns=["Timestamp", "Price"])
-    st.line_chart(df, color = st.session_state.graph_color)
+    df['Timestamp'] = pd.to_datetime(df['Timestamp'])
+    df.set_index('Timestamp', inplace=True)
+    df_resampled = df.resample(f"{st.session_state.ti}T").mean()  
+    st.line_chart(df_resampled, color = st.session_state.graph_color)
     c1, c2 = st.columns(2)
     sample_rate = c1.slider("Sample Rate (Lower = More Lag)", min_value = 1, max_value = 100, step = 1)
     if c1.button("Set Resampling", use_container_width=True):
