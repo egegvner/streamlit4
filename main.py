@@ -27,7 +27,7 @@ if previous_layout != current_layout:
 st.set_page_config(
     page_title="Bank Genova",
     page_icon="🏦",
-    layout="wide",
+    layout=current_layout,
     initial_sidebar_state="expanded"
 )
 
