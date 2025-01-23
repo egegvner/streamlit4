@@ -1,6 +1,7 @@
 # Copyright Ege Güvener, 20/12/2024
 # License: MIT
 
+import PIL.Image
 import numerize.numerize
 import streamlit as st
 import sqlite3
@@ -12,13 +13,16 @@ import re
 import argon2
 from streamlit_autorefresh import st_autorefresh
 from numerize.numerize import numerize
+import PIL
+import base64
+import cv2
 import streamlit as st
 
 if "current_menu" not in st.session_state:
     st.session_state.current_menu = "Dashboard"
 
 previous_layout = st.session_state.get("previous_layout", "centered")
-current_layout = "wide" if st.session_state.current_menu == "Stocks" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "Investments" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "Main Account" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "Inventory" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "View Savings" else "centered"
+current_layout = "wide" if st.session_state.current_menu == "Blackmarket" or st.session_state.current_menu == "Investments" or st.session_state.current_menu == "Bank" or st.session_state.current_menu == "Stocks" or st.session_state.current_menu == "Char" or st.session_state.current_menu == "View Savings" or st.session_state.current_menu == "Transaction History" or st.session_state.current_menu == "Main Account" or st.session_state.current_menu == "Inventory" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "Dashboard" else "centered"
 
 if previous_layout != current_layout:
     st.session_state.previous_layout = current_layout
@@ -2838,9 +2842,6 @@ def main(conn):
 
         elif st.session_state.current_menu == "Chat":
             chat_view(conn)
-
-        elif st.session_state.current_menu == "Manage Pending Transfers":
-            manage_pending_transfers(conn, st.session_state.user_id)
         
         elif st.session_state.current_menu == "Stocks":
             stocks_view(conn, st.session_state.user_id)
