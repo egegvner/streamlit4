@@ -1483,19 +1483,8 @@ def transaction_history_view(conn, user_id):
     st.header("📜 Transaction History", divider="rainbow")
 
     personal_transactions = get_transaction_history(conn, user_id)
-
-    st.subheader("Personal Transactions")
-    if personal_transactions:
-        sent_df = pd.DataFrame(personal_transactions, columns=["Role", "Type", "Amount", "Timestamp", "Status", "Receiver"])
-        sent_df["Timestamp"] = pd.to_datetime(sent_df["Timestamp"])
-        sent_df.set_index("Timestamp", inplace=True)
-        st.dataframe(sent_df, use_container_width=True)
-    else:
-        st.info("No sent transactions.")
-
-    st.divider()
-
-    st.subheader("Investments")
+    
+    st.subheader("Investments", divider="rainbow")
     investments = c.execute("""
         SELECT investment_id, company_name, amount, risk_level, return_rate, start_date, end_date, status 
         FROM investments 
@@ -1503,9 +1492,7 @@ def transaction_history_view(conn, user_id):
     """, (user_id,)).fetchall()
 
     if investments:
-        investment_df = pd.DataFrame(investments, columns=["Investment ID", "Company", "Amount", "Risk Level", "Return Rate", "Start Date", "End Date", "Status"])
-        investment_df["Start Date"] = pd.to_datetime(investment_df["Start Date"])
-        investment_df["End Date"] = pd.to_datetime(investment_df["End Date"])
+        investment_df = pd.DataFrame(investments, columns=["Investment ID", "Company", "Amount ($)", "Risk Level", "Return Rate", "Start Date", "End Date", "Status"])
         st.dataframe(investment_df, use_container_width=True)
     else:
         st.info("No investments found.")
