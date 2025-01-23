@@ -1766,7 +1766,7 @@ def stocks_view(conn, user_id):
     c1, c2 = st.columns(2)
     sample_rate = c1.slider("Sample Rate (Lower = More Lag)", min_value = 1, max_value = 100, step = 1)
     if c1.button("Set Resampling", use_container_width=True):
-        st.session_state.t = sample_rate
+        st.session_state.ti = sample_rate
         st.rerun() 
 
     with c2.popover("Graph Color", use_container_width = True):
