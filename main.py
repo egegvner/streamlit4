@@ -1512,54 +1512,6 @@ def transaction_history_view(conn, user_id):
 
     st.divider()
 
-    st.subheader("Loans")
-    loans = c.execute("""
-        SELECT loan_id, amount, loan_due_date, penalty, status 
-        FROM loans 
-        WHERE user_id = ?
-    """, (user_id,)).fetchall()
-
-    if loans:
-        loan_df = pd.DataFrame(loans, columns=["Loan ID", "Amount", "Due Date", "Penalty", "Status"])
-        loan_df["Due Date"] = pd.to_datetime(loan_df["Due Date"])
-        st.dataframe(loan_df, use_container_width=True)
-    else:
-        st.info("No loan transactions found.")
-
-    st.divider()
-
-    st.subheader("Stock Market Transactions")
-    stock_transactions = c.execute("""
-        SELECT stock_id, transaction_type, quantity, price, timestamp
-        FROM stock_transactions 
-        WHERE user_id = ?
-    """, (user_id,)).fetchall()
-
-    if stock_transactions:
-        stock_df = pd.DataFrame(stock_transactions, columns=["Stock ID", "Transaction Type", "Quantity", "Price", "Timestamp"])
-        stock_df["Timestamp"] = pd.to_datetime(stock_df["Timestamp"])
-        stock_df.set_index("Timestamp", inplace=True)
-        st.dataframe(stock_df, use_container_width=True)
-    else:
-        st.info("No stock market transactions found.")
-
-    st.divider()
-
-    st.subheader("Marketplace Transactions")
-    marketplace_transactions = c.execute("""
-        SELECT item_id, transaction_type, amount, timestamp 
-        FROM marketplace_transactions 
-        WHERE user_id = ?
-    """, (user_id,)).fetchall()
-
-    if marketplace_transactions:
-        marketplace_df = pd.DataFrame(marketplace_transactions, columns=["Item ID", "Transaction Type", "Amount", "Timestamp"])
-        marketplace_df["Timestamp"] = pd.to_datetime(marketplace_df["Timestamp"])
-        marketplace_df.set_index("Timestamp", inplace=True)
-        st.dataframe(marketplace_df, use_container_width=True)
-    else:
-        st.info("No marketplace transactions found.")
-
 def buy_blackmarket_item(conn, buyer_id, item_id, item_number, seller_id, price):
     c = conn.cursor()
     c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (price, buyer_id))
