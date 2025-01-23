@@ -2284,7 +2284,7 @@ def bank_view(conn, user_id):
             with st.spinner("Processing borrow"):
                 time.sleep(3)
                 borrow_money(conn, user_id, borrow_amount, interest_rate)
-                st.session_state.amt = balance - borrow_amount
+                st.session_state.amt = 0.0
                 st.rerun()
 
         st.subheader("Repay Loan")
