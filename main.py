@@ -1481,9 +1481,7 @@ def transaction_history_view(conn, user_id):
     c = conn.cursor()
 
     st.header("📜 Transaction History", divider="rainbow")
-
-    personal_transactions = get_transaction_history(conn, user_id)
-    
+    get_transaction_history(conn, user_id)
     st.subheader("Investments", divider="rainbow")
     investments = c.execute("""
         SELECT investment_id, company_name, amount, risk_level, return_rate, start_date, end_date, status 
@@ -1572,7 +1570,7 @@ def sell_stock(conn, user_id, stock_id, quantity):
 
     c = conn.cursor()
 
-    price = c.execute("SELECT price FROM stocks WHERE stock_id = ?", (stock_id,)).fetchone()[0]
+    price, symbol = c.execute("SELECT price, symbol FROM stocks WHERE stock_id = ?", (stock_id,)).fetchone()
 
     user_stock = c.execute("SELECT quantity, avg_buy_price FROM user_stocks WHERE user_id = ? AND stock_id = ?", 
                            (user_id, stock_id)).fetchone()
@@ -1591,7 +1589,7 @@ def sell_stock(conn, user_id, stock_id, quantity):
                   (new_quantity, user_id, stock_id))
         c.execute("UPDATE stocks SET stock_amount = stock_amount + ? WHERE stock_id = ?", (quantity, stock_id))
 
-    c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, stock_id, quantity) VALUES (?, ?, ?, ?, ?, ?)", (random.randint(100000000, 999999999), user_id, "Sell Stock", net_profit, stock_id, quantity))
+    c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, stock_id, quantity) VALUES (?, ?, ?, ?, ?, ?)", (random.randint(100000000, 999999999), user_id, f"Sell Stock ({symbol})", net_profit, stock_id, quantity))
     c.execute("UPDATE users SET balance = balance - ? WHERE username = 'Government'", (profit,))
     c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (net_profit, user_id))
 
@@ -1761,10 +1759,7 @@ def stocks_view(conn, user_id):
 
     st.header(f"Details for {name}", divider="rainbow")
     df = pd.DataFrame(history2, columns=["Timestamp", "Price"])
-    df['Timestamp'] = pd.to_datetime(df['Timestamp'])
-    df.set_index('Timestamp', inplace=True)
-    df_resampled = df.resample(f"{st.session_state.ti}T").mean()  
-    st.line_chart(df_resampled, color = st.session_state.graph_color)
+    st.line_chart(df, color = st.session_state.graph_color)
     c1, c2 = st.columns(2)
     sample_rate = c1.slider("Sample Rate (Lower = More Lag)", min_value = 1, max_value = 100, step = 1)
     if c1.button("Set Resampling", use_container_width=True):
