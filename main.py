@@ -1702,19 +1702,17 @@ def display_transaction_history(conn, user_id):
             role = t[0]
             t_type = t[1]
             amount = t[2]
-            balance = t[3]
-            timestamp = t[4]
-            status = t[5]
-            receiver_username = t[6] if role == "sent" else "N/A"
+            timestamp = t[3]
+            status = t[4]
+            receiver_username = t[5] if role == "sent" else "N/A"
             from_username = (
-                c.execute("SELECT username FROM users WHERE user_id = ?", (t[6],)).fetchone()[0]
+                c.execute("SELECT username FROM users WHERE user_id = ?", (t[5],)).fetchone()[0]
                 if role == "received" else "N/A"
             )
 
             if t_type == "Top Up":
                 st.success(f"Top Up", icon="💵")
                 st.write(f"**Amount**   $|$   :green[+${numerize(amount, 2)}]")
-                st.write(f"New Main Balance   $|$   :green[+${numerize(balance, 2)}]")
                 st.text("")
                 st.text("")
                 st.caption(timestamp)
@@ -1722,7 +1720,6 @@ def display_transaction_history(conn, user_id):
             elif t_type == "Withdraw From Main Account To Wallet":
                 st.warning(f"{t_type}", icon="💵")
                 st.write(f"Amount   $|$   :red[-${numerize(amount, 2)}]")
-                st.write(f"New Balance   $|$   :red[${numerize(balance, 2)}]")
                 st.text("")
                 st.text("")
                 st.caption(timestamp)
@@ -1730,7 +1727,6 @@ def display_transaction_history(conn, user_id):
             elif t_type == "Withdraw From Main Account To Savings":
                 st.warning(f"{t_type}", icon="💵")
                 st.write(f"Amount   |   :red[-${numerize(amount, 2)}]")
-                st.write(f"New Balance   $|$   :red[${numerize(balance, 2)}]")
                 st.text("")
                 st.text("")
                 st.caption(timestamp)
@@ -1738,7 +1734,6 @@ def display_transaction_history(conn, user_id):
             elif role == "sent" and "transfer to" in t_type.lower():
                 st.info(f"{t_type.title()} { receiver_username} $|$ (Status: **{status.capitalize()}**)", icon="💸")
                 st.write(f"Amount   $|$   :red[-${numerize(amount, 2)}]")
-                st.write(f"New Balance   $|$   :red[${numerize(balance, 2)}]")
                 st.text("")
                 st.text("")
                 st.caption(timestamp)
@@ -1746,7 +1741,6 @@ def display_transaction_history(conn, user_id):
             elif role == "received" and "transfer from" in t_type.lower():
                 st.info(f"{t_type.title()} {from_username} $|$ (Status: **{status.capitalize()}**)", icon="💸")
                 st.write(f"Amount   $|$   :green[+${numerize(amount, 2)}]")
-                st.write(f"New Balance   $|$   :green[${numerize(balance, 2)}]")
                 st.text("")
                 st.text("")
                 st.caption(timestamp)
@@ -1754,7 +1748,6 @@ def display_transaction_history(conn, user_id):
             elif t_type.lower().startswith("deposit to savings"):
                 st.info(f"{t_type.title()}", icon="🏦")
                 st.write(f"Amount   $|$   :green[+${numerize(amount, 2)}]")
-                st.write(f"New Savings Balance   $|$   :green[${balance}]")
                 st.text("")
                 st.text("")
                 st.caption(timestamp)
@@ -1762,7 +1755,6 @@ def display_transaction_history(conn, user_id):
             elif t_type.lower().startswith("withdraw to"):
                 st.warning(f"{t_type.title()}", icon="🏧")
                 st.write(f"Amount   $|$   :red[-${numerize(amount, 2)}]")
-                st.write(f"Remaining Balance   $|$   :green[${numerize(balance, 2)}]")
                 st.text("")
                 st.text("")
                 st.caption(timestamp)
