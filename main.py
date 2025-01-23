@@ -18,7 +18,7 @@ if "current_menu" not in st.session_state:
     st.session_state.current_menu = "Dashboard"
 
 previous_layout = st.session_state.get("previous_layout", "centered")
-current_layout = "wide" if st.session_state.current_menu == "Blackmarket" or st.session_state.current_menu == "Investments" or st.session_state.current_menu == "Bank" or st.session_state.current_menu == "Stocks" or st.session_state.current_menu == "Char" or st.session_state.current_menu == "View Savings" or st.session_state.current_menu == "Transaction History" or st.session_state.current_menu == "Main Account" or st.session_state.current_menu == "Inventory" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "Dashboard" else "centered"
+current_layout = "wide" if st.session_state.current_menu == "Blackmarket" or st.session_state.current_menu == "Investments" or st.session_state.current_menu == "Bank" or st.session_state.current_menu == "Stocks" or st.session_state.current_menu == "Char" or st.session_state.current_menu == "View Savings" or st.session_state.current_menu == "Transaction History" or st.session_state.current_menu == "Main Account" or st.session_state.current_menu == "Inventory" or st.session_state.current_menu == "Marketplace" else "centered"
 
 if previous_layout != current_layout:
     st.session_state.previous_layout = current_layout
