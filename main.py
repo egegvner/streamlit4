@@ -2878,10 +2878,6 @@ def add_column_if_not_exists(conn):
     c.execute("PRAGMA table_info(users);")
     columns = [column[1] for column in c.fetchall()]
 
-    c.execute("ALTER TABLE users DROP COLUMN attack_level")
-    c.execute("ALTER TABLE users DROP COLUMN defense_level")
-    c.execute("ALTER TABLE users DROP COLUMN steal_cooldown")
-
     conn.commit()
 
 if __name__ == "__main__":
