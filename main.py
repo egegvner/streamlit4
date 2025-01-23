@@ -1776,7 +1776,7 @@ def buy_blackmarket_item(conn, buyer_id, item_id, item_number, seller_id, price)
     c.execute("UPDATE users SET wallet = wallet - ? WHERE user_id = ?", (price, buyer_id))
 
     c.execute("UPDATE users SET wallet = wallet + ? WHERE user_id = ?", (price, seller_id))
-    item = c.execute("SELECT boost_type, boost_value FROM marketplace_items WHERE item_id = ?", (item_id,).fetchone()
+    item = c.execute("SELECT boost_type, boost_value FROM marketplace_items WHERE item_id = ?", (item_id,)).fetchone()
     boost_type, boost_value = item
 
     if boost_type == "interest_boost":
