@@ -269,17 +269,17 @@ def update_stock_prices(conn):
             if last_updated:
                 last_updated = datetime.datetime.strptime(last_updated, "%Y-%m-%d %H:%M:%S")
             else:
-                last_updated = now - datetime.timedelta(seconds=300)
+                last_updated = now - datetime.timedelta(seconds=60)
 
             elapsed_time = (now - last_updated).total_seconds()
-            num_updates = int(elapsed_time // 300)
+            num_updates = int(elapsed_time // 60)
 
             if num_updates > 0:
                 for i in range(num_updates):
                     change_percent = round(random.uniform(-change_rate, change_rate), 2)
                     new_price = max(1, round(current_price * (1 + change_percent / 100), 2))
 
-                    missed_update_time = last_updated + datetime.timedelta(seconds=(i + 1) * 300)
+                    missed_update_time = last_updated + datetime.timedelta(seconds=(i + 1) * 60)
                     if missed_update_time <= now:
                         c.execute(
                             "INSERT INTO stock_history (stock_id, price, timestamp) VALUES (?, ?, ?)",
@@ -1651,15 +1651,15 @@ def stocks_view(conn, user_id):
         percentage_change = ((last_price - previous_price) / previous_price) * 100
         
         if last_price > previous_price:
-            change_color = ":green[+{:.2f}% :gray[(24h)]".format(percentage_change)
+            change_color = ":green[+{:.2f}%] :gray[(24h)]".format(percentage_change)
             st.session_state.graph_color = (0, 255, 0)
 
         elif last_price < previous_price:
-            change_color = ":red[-{:.2f}% :gray[(24h)]".format(abs(percentage_change))
+            change_color = ":red[-{:.2f}%] :gray[(24h)]".format(abs(percentage_change))
             st.session_state.graph_color = (255, 0, 0)
 
         else:
-            change_color = ":orange[0.00% :gray[(24h)]"
+            change_color = ":orange[0.00%] :gray[(24h)]"
             st.session_state.graph_color = (255, 255, 0)
 
     else:
@@ -1794,7 +1794,7 @@ def stocks_view(conn, user_id):
         JOIN users u ON us.user_id = u.user_id
         WHERE us.stock_id = ?
         GROUP BY us.user_id
-        ORDER BY total_quantity DESC
+        ORDER BY total_quantity ASC
     """, (selected_stock_id,)).fetchall()
     
     for stockholder in stockholders:
@@ -2285,13 +2285,13 @@ def admin_panel(conn):
 
     st.header("Manage Stocks", divider = "rainbow")
     with st.spinner("Loading QubitTrades™..."):
-        stock_data = c.execute("SELECT stock_id, name, symbol, starting_price, price, stock_amount, change_rate FROM stocks").fetchall()
+        stock_data = c.execute("SELECT stock_id, name, symbol, starting_price, price, stock_amount, change_rate, last_updated FROM stocks").fetchall()
    
-    df = pd.DataFrame(stock_data, columns = ["Stock ID", "Stock Name", "Symbol", "Starting Price", "Current Price", "Stock Amount", "Change Rate"])
+    df = pd.DataFrame(stock_data, columns = ["Stock ID", "Stock Name", "Symbol", "Starting Price", "Current Price", "Stock Amount", "Change Rate", "Last Updated"])
     edited_df = st.data_editor(df, key = "stock_table", num_rows = "fixed", use_container_width = True, hide_index = True)
     if st.button("Update Stocks", use_container_width = True):
         for _, row in edited_df.iterrows():
-            c.execute("UPDATE OR IGNORE stocks SET name = ?, symbol = ?, price = ?, stock_amount = ?, change_rate = ? WHERE stock_id = ?", (row["Stock Name"], row["Symbol"], row["Current Price"], row["Stock Amount"], row["Change Rate"], row["Stock ID"]))
+            c.execute("UPDATE OR IGNORE stocks SET name = ?, symbol = ?, price = ?, stock_amount = ?, change_rate = ?, last_updated = ? WHERE stock_id = ?", (row["Stock Name"], row["Symbol"], row["Current Price"], row["Stock Amount"], row["Change Rate"], row["Stock ID"]))
         conn.commit()
         st.rerun()
 
