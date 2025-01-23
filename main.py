@@ -1513,16 +1513,6 @@ def main_account_view(conn, user_id):
     c4.metric("Outgoing Transfers", outgoing)
     st.write(f"Total Transactions   |   :green[{total_transactions}]")
 
-    st.divider()
-    st.subheader("Balance Trend")
-    transactions = c.execute("SELECT timestamp, balance FROM transactions WHERE user_id = ? ORDER BY timestamp ASC", (user_id,)).fetchall()
-    if transactions:
-        df = pd.DataFrame(transactions, columns = ["Timestamp", "Balance"])
-        df["Timestamp"] = pd.to_datetime(df["Timestamp"])
-        st.line_chart(df.set_index("Timestamp")["Balance"])
-    else:
-        st.info("No transaction data available for trends.")
-
 def savings_view(conn, user_id):
     c = conn.cursor()
     if "last_refresh" not in st.session_state:
