@@ -2284,6 +2284,13 @@ def real_estate_marketplace_view(conn, user_id):
         "Property ID", "Region", "Type", "Price", "Rent Income", "Demand Factor", "LAT", "LON", "Image URL", "Sold", "Is Owned", "Username"
     ])
 
+    # Convert LAT and LON to numeric, coerce errors to NaN
+    df["LAT"] = pd.to_numeric(df["LAT"], errors="coerce")
+    df["LON"] = pd.to_numeric(df["LON"], errors="coerce")
+
+    # Drop rows with NaN LAT or LON values
+    df = df.dropna(subset=["LAT", "LON"])
+
     df["Formatted Price"] = df["Price"].apply(numerize)
     df["Formatted Rent Income"] = df["Rent Income"].apply(numerize)
 
@@ -2352,6 +2359,7 @@ def real_estate_marketplace_view(conn, user_id):
                 st.warning("This property has already been sold.")
 
         st.divider()
+
 
 @st.dialog("Property Details", width="large")
 def prop_details_dialog(conn, user_id, prop_id):
