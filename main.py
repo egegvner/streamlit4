@@ -3154,14 +3154,13 @@ def column_exists(conn, table_name, column_name):
 
 def add_column_if_not_exists(conn, table_name, column_name, column_type):
     c = conn.cursor()
-    if not column_exists(c, table_name, column_name):
+    if not column_exists(conn, table_name, column_name):
         # If the column doesn't exist, add it
         alter_table_query = f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type};"
-        print(f"Adding column: {alter_table_query}")
         c.execute(alter_table_query)
+        conn.commit()
     else:
-        print(f"Column '{column_name}' already exists, skipping.")
-
+        pass
 
 if __name__ == "__main__":
     conn = get_db_connection()
