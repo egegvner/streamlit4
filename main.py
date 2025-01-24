@@ -2381,6 +2381,7 @@ def prop_details_dialog(conn, user_id, prop_id):
 
     with c1:
         st.pydeck_chart(pdk.Deck(
+            height = 100,
             layers=[
                 pdk.Layer(
                     "ScatterplotLayer",
