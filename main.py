@@ -271,17 +271,17 @@ def update_stock_prices(conn):
             if last_updated:
                 last_updated = datetime.datetime.strptime(last_updated, "%Y-%m-%d %H:%M:%S")
             else:
-                last_updated = now - datetime.timedelta(seconds=60)
+                last_updated = now - datetime.timedelta(seconds=300)
 
             elapsed_time = (now - last_updated).total_seconds()
-            num_updates = int(elapsed_time // 60)
+            num_updates = int(elapsed_time // 300)
 
             if num_updates > 0:
                 for i in range(num_updates):
                     change_percent = round(random.uniform(-change_rate, change_rate), 2)
                     new_price = max(1, round(current_price * (1 + change_percent / 100), 2))
 
-                    missed_update_time = last_updated + datetime.timedelta(seconds=(i + 1) * 60)
+                    missed_update_time = last_updated + datetime.timedelta(seconds=(i + 1) * 300)
                     if missed_update_time <= now:
                         c.execute(
                             "INSERT INTO stock_history (stock_id, price, timestamp) VALUES (?, ?, ?)",
