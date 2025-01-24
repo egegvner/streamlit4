@@ -253,10 +253,12 @@ def claim_daily_reward(conn, user_id):
             conn.commit()
             
             st.toast(f"🎉 You received ${reward} for logging in! (Streak: {new_streak})")
+            time.sleep(3)
     else:
         last_claimed = datetime.datetime(1970, 1, 1)
         c.execute("UPDATE users SET last_daily_reward_claimed = ? WHERE user_id = ?", (last_claimed, user_id))
         conn.commit()
+        time.sleep(3)
 
 def update_stock_prices(conn):
     c = conn.cursor()
