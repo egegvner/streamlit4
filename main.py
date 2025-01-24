@@ -1053,7 +1053,7 @@ def leaderboard(c):
         st.subheader("💰 Vault Ranking")
         st.table(format_leaderboard(balance_data) if balance_data else ["No users found."])
 
-    with tab3:
+    with tab2:
         st.subheader("🏦 Savings Balance Ranking")
         st.table(format_leaderboard(savings_balance_data) if savings_balance_data else ["No users found."])
 
