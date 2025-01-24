@@ -2670,7 +2670,7 @@ def admin_panel(conn):
     edited_df = st.data_editor(df, key = "estate_table", num_rows = "fixed", use_container_width = True, hide_index = True)
     if st.button("Update Estates", use_container_width = True):
         for _, row in edited_df.iterrows():
-            c.execute("UPDATE OR IGNORE real_estate SET region = ?, type = ?, price = ?, rent_income = ?, demand_factor = ?, stock = ?, image_url = ?, latitude = ?, longitude = ?, sold = ?, username = ? WHERE property_id = ?", (row["Estate ID"], row["Region"], row["Type"], row["Price"], row["Rent Income"], row["Demand Factor"], row["Stock"], row["Image Path"], row["Latitude"], row["Longitude"], row["Property ID"]))
+            c.execute("UPDATE OR IGNORE real_estate SET region = ?, type = ?, price = ?, rent_income = ?, demand_factor = ?, image_url = ?, latitude = ?, longitude = ?, sold = ?, username = ? WHERE property_id = ?", (row["Region"], row["Type"], row["Price"], row["Rent Income"], row["Demand Factor"], row["Image Path"], row["Latitude"], row["Longitude"], row["Sold"], row["Username"], row["Property ID"]))
         conn.commit()
         st.rerun()
 
