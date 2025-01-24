@@ -3143,7 +3143,8 @@ def main(conn):
         elif st.session_state.current_menu == "Admin Panel":
                 admin_panel(conn)
             
-def column_exists(c, table_name, column_name):
+def column_exists(conn, table_name, column_name):
+    c = conn.cursor()
     # Execute PRAGMA to get column information
     c.execute(f"PRAGMA table_info({table_name});")
     columns = c.fetchall()
@@ -3151,7 +3152,8 @@ def column_exists(c, table_name, column_name):
     # Check if the column exists in the table
     return any(column[1] == column_name for column in columns)
 
-def add_column_if_not_exists(c, table_name, column_name, column_type):
+def add_column_if_not_exists(conn, table_name, column_name, column_type):
+    c = conn.cursor()
     if not column_exists(c, table_name, column_name):
         # If the column doesn't exist, add it
         alter_table_query = f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type};"
