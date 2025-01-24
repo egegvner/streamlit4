@@ -1028,7 +1028,7 @@ def privacy_policy_dialog():
 def leaderboard(c):
     st.header("🏆 Leaderboard", divider="rainbow")
 
-    tab1, tab2, tab3 = st.tabs(["💰 Vault", "🏦 Savings"])
+    tab1, tab2= st.tabs(["💰 Vault", "🏦 Savings"])
 
     balance_data = c.execute("""
         SELECT username, visible_name, balance FROM users 
