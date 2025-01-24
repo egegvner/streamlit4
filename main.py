@@ -688,21 +688,6 @@ def init_db():
               seller_id INTEGER NOT NULL
               );''')
 
-    c.execute('''CREATE TABLE IF NOT EXISTS real_estate (
-            property_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER DEFAULT NONE,
-            region TEXT NOT NULL,
-            type TEXT NOT NULL,
-            price REAL NOT NULL,
-            rent_income REAL NOT NULL,
-            demand_factor REAL NOT NULL,
-            stock INTEGER NOT NULL,
-            image_url TEXT,
-            sold INTEGER DEFAULT 0,
-            is_owned INTEGER DEFAULT 0,
-            username TEXT DEFAULT NULL
-            );''')
-
     c.execute('''CREATE TABLE IF NOT EXISTS user_properties (
             user_id INTEGER,
             property_id INTEGER,
@@ -3166,5 +3151,7 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
 
 if __name__ == "__main__":
     conn = get_db_connection()
+    conn.cursor().execute("DROP TABLE real_estate;")
+    conn.commit()
     init_db()
     main(conn)
