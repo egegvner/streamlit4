@@ -2654,7 +2654,7 @@ def admin_panel(conn):
 
     st.header("Manage Real Estates", divider = "rainbow")
     with st.spinner("Loading PrimeEstates™..."):
-        estate_data = c.execute("SELECT property_id, region, type, price, rent_income, demand_factor, stock, image_url, latitude, longitude FROM real_estate").fetchall()
+        estate_data = c.execute("SELECT property_id, region, type, price, rent_income, demand_factor, image_url, latitude, longitude FROM real_estate").fetchall()
     df = pd.DataFrame(estate_data, columns = ["Estate ID", "Region", "Title", "Price", "Rent Income", "Demand Factor", "Stock", "Image Path", "Latitude", "Longitude"])
     edited_df = st.data_editor(df, key = "estate_table", num_rows = "fixed", use_container_width = True, hide_index = True)
     if st.button("Update Estates", use_container_width = True):
