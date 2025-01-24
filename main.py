@@ -3183,5 +3183,4 @@ if __name__ == "__main__":
     for column_name, column_type in columns_to_add:
         add_column_if_not_exists(conn, 'real_estate', column_name, column_type)
     init_db()
-    add_column_if_not_exists(conn)
     main(conn)
