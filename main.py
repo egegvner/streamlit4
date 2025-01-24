@@ -2393,8 +2393,8 @@ def prop_details_dialog(conn, user_id, prop_id):
                 ),
             ],
             initial_view_state=pdk.ViewState(
-                latitude=df["LAT"].mean(),
-                longitude=df["LON"].mean(),
+                latitude=float(df["LAT"]).mean(),
+                longitude=float(df["LON"]).mean(),
                 zoom=11,
                 pitch=45,
             ),
