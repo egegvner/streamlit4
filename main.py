@@ -2584,7 +2584,7 @@ def main(conn):
         if login_option == "Login":
             username = st.text_input("A", label_visibility="hidden", placeholder="Your remarkable username")
             password = st.text_input("A", label_visibility="collapsed", placeholder="Password", type="password")
-            st.caption("Password Hashing by Argon2i")
+            st.caption(":gray[Password Hashing by Argon2i]")
 
             st.text("")
             st.text("")
