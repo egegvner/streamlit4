@@ -1653,24 +1653,23 @@ def stocks_view(conn, user_id):
         percentage_change = ((last_price - previous_price) / previous_price) * 100
         
         if last_price > previous_price:
-            change_color = ":green[+{:.2f}%] :gray[(24h)]".format(percentage_change)
+            change_color = ":green[+{:.2f}%] :gray[(24h)".format(percentage_change)
             st.session_state.graph_color = (0, 255, 0)
 
         elif last_price < previous_price:
-            change_color = ":red[-{:.2f}%] :gray[(24h)]".format(abs(percentage_change))
+            change_color = ":red[-{:.2f}%] :gray[(24h)".format(abs(percentage_change))
             st.session_state.graph_color = (255, 0, 0)
 
         else:
-            change_color = ":orange[0.00%] :gray[(24h)]"
+            change_color = ":orange[0.00%] :gray[(24h)"
             st.session_state.graph_color = (255, 255, 0)
 
     else:
         percentage_change = 0
-        change_color = ":orange[0.00%] :gray[(24h)]"
+        change_color = ":orange[0.00%] :gray[(24h)"
 
     st.subheader(f"{name} ({symbol})")
     st.header(f":green[${numerize(price, 2)}] \n ##### {change_color}]")
-    st.text("")
 
     c1, c2 = st.columns(2)
     with c1:
@@ -1719,8 +1718,7 @@ def stocks_view(conn, user_id):
             net_profit = (sell_quantity * price) - tax
             st.write(f"[Profit] :green[${numerize(net_profit)}] | :red[${numerize(tax)}] [Capital Tax]")
 
-            c1, c2 = st.columns(2)
-            if c1.button(f"Sell {symbol}", key=f"sell_btn_{stock_id}", use_container_width=True, 
+            if st.button(f"Sell {symbol}", key=f"sell_btn_{stock_id}", use_container_width=True, 
                         disabled=True if sell_quantity == 0 else False):
                 with st.spinner("Selling..."):
                     time.sleep(3)
@@ -1728,7 +1726,7 @@ def stocks_view(conn, user_id):
                 time.sleep(2.5)
                 st.rerun()
 
-            if c2.button(f"Sell MAX", key=f"sell_max_btn_{stock_id}", use_container_width=True, disabled=True if not user_quantity else False):
+            if st.button(f"Sell MAX", key=f"sell_max_btn_{stock_id}", use_container_width=True, disabled=True if not user_quantity else False):
                 with st.spinner("Selling..."):
                     time.sleep(3)
                     sell_stock(conn, user_id, stock_id, user_quantity)
