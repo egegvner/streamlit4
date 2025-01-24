@@ -2657,7 +2657,7 @@ def admin_panel(conn):
             if st.form_submit_button("Add to PrimeEstates™", use_container_width = True):
                 existing_estate_ids = c.execute("SELECT property_id FROM real_estate").fetchall()
                 if property_id not in existing_estate_ids:
-                    c.execute("INSERT INTO real_estate (property_id, region, type, price, rent_income, demand_factor, image_url, latitude, longitude, sold, is_owned, username) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (property_id, region, title, rent_income, price, demand_factor, image_url, float(latitude), float(longitude), 0, False, None))
+                    c.execute("INSERT INTO real_estate (property_id, region, type, price, rent_income, demand_factor, image_url, latitude, longitude, sold, is_owned, username) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (property_id, region, title, price, rent_income, demand_factor, image_url, float(latitude), float(longitude), 0, False, None))
                     conn.commit()
                     st.rerun()
                 else:
