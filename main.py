@@ -2856,7 +2856,7 @@ def settings(conn, username):
     time_since_change = (datetime.datetime.now() - last_change).total_seconds() if last_change else None
     disable_button = (time_since_change is not None and time_since_change < 7 * 24 * 3600) or balance < 10000
     st.write(f"Current Username: `{current_username}`")
-    st.write(f"Next change available at :orange[{(last_change + datetime.timedelta(days=7)).strftime("Next %A, %d %B")}]")
+    st.write(f"Next change available at :orange[{(last_change + datetime.timedelta(days=7)).strftime('Next %A, %d %B')}]")
     new_username = st.text_input("s", label_visibility="collapsed", placeholder="New username")
     if st.button("Update Username for :green[$10K]", use_container_width=True, disabled=True if disable_button or new_username == "" else False):
         with st.spinner("Updating..."):
