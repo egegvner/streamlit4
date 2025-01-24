@@ -2646,7 +2646,7 @@ def admin_panel(conn):
             if st.form_submit_button("Add to PrimeEstates™", use_container_width = True):
                 existing_estate_ids = c.execute("SELECT property_id FROM real_estate").fetchall()
                 if property_id not in existing_estate_ids:
-                    c.execute("INSERT INTO real_estate (property_id, region, type, price, rent_income, demand_factor, image_url, latitude, longitude, sold, isowned, username) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (property_id, region, title, rent_income, price, demand_factor, image_url, float(latitude), float(longitude), 0, False, None))
+                    c.execute("INSERT INTO real_estate (property_id, region, type, price, rent_income, demand_factor, image_url, latitude, longitude, sold, is_owned, username) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (property_id, region, title, rent_income, price, demand_factor, image_url, float(latitude), float(longitude), 0, False, None))
                     conn.commit()
                     st.rerun()
                 else:
@@ -2654,12 +2654,12 @@ def admin_panel(conn):
 
     st.header("Manage Real Estates", divider = "rainbow")
     with st.spinner("Loading PrimeEstates™..."):
-        estate_data = c.execute("SELECT property_id, region, type, price, rent_income, demand_factor, image_url, latitude, longitude FROM real_estate").fetchall()
-    df = pd.DataFrame(estate_data, columns = ["Estate ID", "Region", "Title", "Price", "Rent Income", "Demand Factor", "Stock", "Image Path", "Latitude", "Longitude"])
+        estate_data = c.execute("SELECT property_id, region, type, price, rent_income, demand_factor, image_url, latitude, longitude, sold, username FROM real_estate").fetchall()
+    df = pd.DataFrame(estate_data, columns = ["Estate ID", "Region", "Title", "Price", "Rent Income", "Demand Factor", "Image Path", "Latitude", "Longitude", "Sold", "Username"])
     edited_df = st.data_editor(df, key = "estate_table", num_rows = "fixed", use_container_width = True, hide_index = True)
     if st.button("Update Estates", use_container_width = True):
         for _, row in edited_df.iterrows():
-            c.execute("UPDATE OR IGNORE real_estate SET region = ?, type = ?, price = ?, rent_income = ?, demand_factor = ?, stock = ?, image_url = ?, latitude = ?, longitude = ? WHERE property_id = ?", (row["Estate ID"], row["Region"], row["Type"], row["Price"], row["Rent Income"], row["Demand Factor"], row["Stock"], row["Image Path"], row["Latitude"], row["Longitude"], row["Property ID"]))
+            c.execute("UPDATE OR IGNORE real_estate SET region = ?, type = ?, price = ?, rent_income = ?, demand_factor = ?, stock = ?, image_url = ?, latitude = ?, longitude = ?, sold = ?, username = ? WHERE property_id = ?", (row["Estate ID"], row["Region"], row["Type"], row["Price"], row["Rent Income"], row["Demand Factor"], row["Stock"], row["Image Path"], row["Latitude"], row["Longitude"], row["Property ID"]))
         conn.commit()
         st.rerun()
 
