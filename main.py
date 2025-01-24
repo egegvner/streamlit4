@@ -1718,8 +1718,9 @@ def stocks_view(conn, user_id):
             tax = ((sell_quantity * price) / 100) * 0.05
             net_profit = (sell_quantity * price) - tax
             st.write(f"[Profit] :green[${numerize(net_profit)}] | :red[${numerize(tax)}] [Capital Tax]")
-            
-            if st.button(f"Sell {symbol}", key=f"sell_btn_{stock_id}", use_container_width=True, 
+
+            c1, c2 = st.columns(2)
+            if c1.button(f"Sell {symbol}", key=f"sell_btn_{stock_id}", use_container_width=True, 
                         disabled=True if sell_quantity == 0 else False):
                 with st.spinner("Selling..."):
                     time.sleep(3)
@@ -1727,7 +1728,7 @@ def stocks_view(conn, user_id):
                 time.sleep(2.5)
                 st.rerun()
 
-            if st.button(f"Sell MAX", key=f"sell_max_btn_{stock_id}", use_container_width=True, disabled=True if not user_quantity else False):
+            if c2.button(f"Sell MAX", key=f"sell_max_btn_{stock_id}", use_container_width=True, disabled=True if not user_quantity else False):
                 with st.spinner("Selling..."):
                     time.sleep(3)
                     sell_stock(conn, user_id, stock_id, user_quantity)
