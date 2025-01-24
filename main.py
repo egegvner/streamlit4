@@ -12,13 +12,14 @@ import re
 import argon2
 from streamlit_autorefresh import st_autorefresh
 from numerize.numerize import numerize
+import pydeck as pdk
 import streamlit as st
 
 if "current_menu" not in st.session_state:
     st.session_state.current_menu = "Dashboard"
 
 previous_layout = st.session_state.get("previous_layout", "centered")
-current_layout = "wide" if st.session_state.current_menu == "Blackmarket" or st.session_state.current_menu == "Investments" or st.session_state.current_menu == "Bank" or st.session_state.current_menu == "Stocks" or st.session_state.current_menu == "Char" or st.session_state.current_menu == "View Savings" or st.session_state.current_menu == "Transaction History" or st.session_state.current_menu == "Main Account" or st.session_state.current_menu == "Inventory" or st.session_state.current_menu == "Marketplace" else "centered"
+current_layout = "wide" if st.session_state.current_menu == "Blackmarket" or st.session_state.current_menu == "Investments" or st.session_state.current_menu == "Bank" or st.session_state.current_menu == "Stocks" or st.session_state.current_menu == "Char" or st.session_state.current_menu == "View Savings" or st.session_state.current_menu == "Transaction History" or st.session_state.current_menu == "Main Account" or st.session_state.current_menu == "Inventory" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "Real Estate" else "centered"
 
 if previous_layout != current_layout:
     st.session_state.previous_layout = current_layout
@@ -452,6 +453,32 @@ def check_and_update_investments(conn, user_id):
 
     conn.commit()
 
+def collect_rent(conn, user_id):
+    c = conn.cursor()
+    total_rent = c.execute("""
+        SELECT SUM(rent_income)
+        FROM user_properties
+        WHERE user_id = ?
+    """, (user_id,)).fetchone()[0] or 0
+
+    if total_rent > 0:
+        c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (total_rent, user_id))
+        conn.commit()
+        st.toast(f"💰 Collected :green[${numerize(total_rent)}] in rent income!")
+
+def update_property_prices(conn):
+    c = conn.cursor()
+    properties = c.execute("SELECT property_id, price, rent_income, demand_factor FROM real_estate").fetchall()
+
+    for property_id, price, rent_income, demand_factor in properties:
+        new_price = round(price * (1 + demand_factor * random.uniform(-0.05, 0.1)), 2)
+        new_rent = round(rent_income * (1 + demand_factor * random.uniform(-0.03, 0.05)), 2)
+
+        c.execute("UPDATE real_estate SET price = ?, rent_income = ? WHERE property_id = ?", 
+                  (new_price, new_rent, property_id))
+    
+    conn.commit()
+
 def register_user(conn, username, password, email = None, visible_name = None):
     c = conn.cursor()
     try:
@@ -523,10 +550,8 @@ def init_db():
                   show_main_balance_on_leaderboard INTEGER DEFAULT 1,
                   show_savings_balance_on_leaderboard INTEGER DEFAULT 1,
                   last_savings_refresh DATETIME NOT NULL,
-                  steal_cooldown DATETIME DEFAULT CURRENT_TIMESTAMP,
-                  attack_level INTEGER DEFAULT 0,
-                  defense_level INTEGER DEFAULT 0
-                  )''')
+                  last_quota_reset DATETIME DEFAULT CURRENT_TIMESTAMP
+                  );''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS transactions (
                 transaction_id INTEGER PRIMARY KEY NOT NULL,
@@ -540,7 +565,7 @@ def init_db():
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(user_id),
                 FOREIGN KEY (receiver_username) REFERENCES users(username)
-                )''')
+                );''')
         
     c.execute('''CREATE TABLE IF NOT EXISTS savings (
                 user_id INTEGER NOT NULL,
@@ -548,7 +573,7 @@ def init_db():
                 interest_rate REAL DEFAULT 0.05,
                 last_interest_applied DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id ) REFERENCES users(user_id)
-                )''')
+                );''')
     
     c.execute('''CREATE TABLE IF NOT EXISTS marketplace_items (
                 item_id INTEGER PRIMARY KEY NOT NULL,
@@ -560,7 +585,7 @@ def init_db():
                 boost_type TEXT NOT NULL,
                 boost_value REAL NOT NULL,
                 duration INTEGER DEFAULT NULL
-                )''')
+                );''')
     
     c.execute('''CREATE TABLE IF NOT EXISTS user_inventory (
                 instance_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -571,7 +596,7 @@ def init_db():
                 expires_at TIMESTAMP DEFAULT NULL,
                 FOREIGN KEY (user_id) REFERENCES users(user_id),
                 FOREIGN KEY (item_id) REFERENCES marketplace_items(item_id)
-                )''')
+                );''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS interest_history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -580,7 +605,7 @@ def init_db():
                 new_balance REAL NOT NULL,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(user_id)
-                )''')
+                );''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS chats (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -588,7 +613,7 @@ def init_db():
                 message TEXT NOT NULL,
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(user_id)
-                )''')
+                );''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS stocks (
                 stock_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -650,8 +675,7 @@ def init_db():
               price REAL NOT NULL,
               image_url TEXT NOT NULL,
               seller_id INTEGER NOT NULL
-              )
-''')
+              );''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS stock_market_transactions (
               item_id INTEGER NOT NULL,
@@ -662,8 +686,29 @@ def init_db():
               price REAL NOT NULL,
               image_url TEXT NOT NULL,
               seller_id INTEGER NOT NULL
-              )
-''')
+              );''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS real_estate (
+            property_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER DEFAULT NONE,
+            region TEXT NOT NULL,
+            type TEXT NOT NULL,
+            price REAL NOT NULL,
+            rent_income REAL NOT NULL,
+            demand_factor REAL NOT NULL,
+            stock INTEGER NOT NULL,
+            image_url TEXT,
+            sold INTEGER DEFAULT 0
+            );''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS user_properties (
+            user_id INTEGER,
+            property_id INTEGER,
+            purchase_date TEXT NOT NULL,
+            rent_income REAL NOT NULL,
+            FOREIGN KEY(user_id) REFERENCES users(user_id),
+            FOREIGN KEY(property_id) REFERENCES real_estate(property_id)
+            );''')
 
     conn.commit()
     return conn, c
@@ -1163,43 +1208,67 @@ def marketplace_view(conn, user_id):
 def inventory_view(conn, user_id):
     c = conn.cursor()
     st.header("Your Inventory", divider="rainbow")
+
+    t1, t2 = st.tabs(["💠 GNFTs", "🏠 Properties"])
     
-    owned_item_ids = [owned_item[0] for owned_item in c.execute("SELECT item_id FROM user_inventory WHERE user_id = ?", (user_id,)).fetchall()]
-    if not owned_item_ids:
-        st.write("No items in your inventory.")
-        return
+    with t1:
+        owned_item_ids = [owned_item[0] for owned_item in c.execute("SELECT item_id FROM user_inventory WHERE user_id = ?", (user_id,)).fetchall()]
+        if not owned_item_ids:
+            st.write("No items in your inventory.")
+            return
 
-    st.subheader("Your GNFTs")
-    
-    for idx, item_id in enumerate(owned_item_ids):
-        item_details = c.execute("SELECT name, description, rarity, image_url FROM marketplace_items WHERE item_id = ?", (item_id,)).fetchone()
-
-        if item_details is None:
-            st.error(f"Item with ID {item_id} not found in the marketplace.")
-            continue
-
-        name, description, rarity, image_url = item_details
+        st.subheader("Your GNFTs")
         
-        item_number = c.execute("SELECT item_number FROM user_inventory WHERE user_id = ? AND item_id = ?", (user_id, item_id)).fetchone()[0]
-        acquired_at = c.execute("SELECT acquired_at FROM user_inventory WHERE user_id = ? AND item_id = ?", (user_id, item_id)).fetchone()[0]
-        
-        image_col, details_col = st.columns([1, 3])
+        for idx, item_id in enumerate(owned_item_ids):
+            item_details = c.execute("SELECT name, description, rarity, image_url FROM marketplace_items WHERE item_id = ?", (item_id,)).fetchone()
 
-        with image_col:
-            if image_url:
-                st.image(image_url, width=100, use_container_width=True, output_format="PNG")
+            if item_details is None:
+                st.error(f"Item with ID {item_id} not found in the marketplace.")
+                continue
 
-        with details_col:
-            st.write(f"#### **{item_colors[rarity]}[{name}]**")
-            st.write(f":gray[#{item_number}]   •   {rarity.upper()}")
-            st.write(description)
+            name, description, rarity, image_url = item_details
+            
+            item_number = c.execute("SELECT item_number FROM user_inventory WHERE user_id = ? AND item_id = ?", (user_id, item_id)).fetchone()[0]
+            acquired_at = c.execute("SELECT acquired_at FROM user_inventory WHERE user_id = ? AND item_id = ?", (user_id, item_id)).fetchone()[0]
+            
+            image_col, details_col = st.columns([1, 3])
 
-            if st.button(f"🔧 OPTIONS", key=f"options_{item_id}", use_container_width=True):
-                inventory_item_options(conn, user_id, item_id)
+            with image_col:
+                if image_url:
+                    st.image(image_url, width=100, use_container_width=True, output_format="PNG")
 
-            st.caption(f"Acquired: {acquired_at}")
-        
-        st.divider()
+            with details_col:
+                st.write(f"#### **{item_colors[rarity]}[{name}]**")
+                st.write(f":gray[#{item_number}]   •   {rarity.upper()}")
+                st.write(description)
+
+                if st.button(f"🔧 OPTIONS", key=f"options_{item_id}", use_container_width=True):
+                    inventory_item_options(conn, user_id, item_id)
+
+                st.caption(f"Acquired: {acquired_at}")
+            
+            st.divider()
+
+    with t2:
+        st.header("🏡 My Properties", divider="rainbow")
+        c = conn.cursor()
+
+        properties = c.execute("""
+            SELECT r.region, r.type, p.purchase_date, p.rent_income 
+            FROM user_properties p 
+            JOIN real_estate r ON p.property_id = r.property_id 
+            WHERE p.user_id = ?
+        """, (user_id,)).fetchall()
+
+        if not properties:
+            st.info("You don't own any properties yet.")
+            return
+
+        for region, prop_type, purchase_date, rent_income in properties:
+            st.subheader(f"{region} - {prop_type}")
+            st.write(f"📅 Purchased: {purchase_date}")
+            st.write(f"💵 Rent Income: :blue[${numerize(rent_income)}]")
+            st.divider()
 
 def manage_pending_transfers(conn, receiver_id):
     c = conn.cursor()
@@ -2189,6 +2258,189 @@ def investments_view(conn, user_id):
     else:
         st.info("No completed investments yet.")
 
+def real_estate_marketplace_view(conn, user_id):
+    c = conn.cursor()
+    st.toast("🏠 Scroll down to see available properties!")
+    st.header("🏠 Real Estate Marketplace", divider="rainbow")
+    
+    properties = c.execute("""
+        SELECT 
+            re.property_id, re.region, re.type, re.price, re.rent_income, re.demand_factor, 
+            re.latitude, re.longitude, re.image_url, re.sold,
+            CASE WHEN re.user_id = ? THEN 1 ELSE 0 END AS is_owned,
+            u.username
+        FROM real_estate re
+        LEFT JOIN users u ON re.user_id = u.user_id
+    """, (user_id,)).fetchall()
+
+    if not properties:
+        st.info("No properties available in the marketplace.")
+        return
+
+    df = pd.DataFrame(properties, columns=[
+        "Property ID", "Region", "Type", "Price", "Rent Income", "Demand Factor", "LAT", "LON", "Image URL", "Sold", "Is Owned", "Username"
+    ])
+
+    df["Formatted Price"] = df["Price"].apply(numerize)
+    df["Formatted Rent Income"] = df["Rent Income"].apply(numerize)
+
+    st.subheader("Available Properties")
+
+    df["Color"] = df.apply(
+        lambda row: [0, 255, 0] if row["Is Owned"] else ([0, 255, 255] if row["Sold"] == 0 else [255, 0, 0]), 
+        axis=1
+    )
+
+    layer = pdk.Layer(
+        "PointCloudLayer",
+        data=df,
+        get_position="[LON, LAT]",
+        get_color="Color",
+        get_radius=500,
+        pickable=True,
+    )
+
+    st.pydeck_chart(pdk.Deck(
+        layers=[layer],
+        initial_view_state=pdk.ViewState(
+            latitude=df["LAT"].mean(),
+            longitude=df["LON"].mean(),
+            zoom=11,
+            pitch=45,
+        ),
+        tooltip={
+            "html": """
+                <b>{Type}</b><br>[Region] {Region}<br>[Cost] ${Formatted Price}<br>[Rent Income] ${Formatted Rent Income}<br>
+                [Owner] {Username}
+            """,
+            "style": {"color": "white"},
+        },
+    ))
+
+    st.header("Property List", divider="rainbow")
+    for idx, row in df.iterrows():
+        image_col, details_col = st.columns([1, 3])
+        with image_col:
+            if row["Image URL"]:
+                st.image(row["Image URL"], width=150)
+
+        with details_col:
+            if row["Is Owned"]:
+                st.subheader(f"{row['Type']} :green[ - Owned]", divider="rainbow")
+            elif row["Sold"]:
+                st.subheader(f"{row['Type']} :red[ - Sold]", divider="rainbow")
+            else:
+                st.subheader(f"{row['Type']}", divider="rainbow")
+
+            st.text("")
+            c1, c2 = st.columns(2)
+            c1.write(f":blue[COST] :red[${numerize(row['Price'], 2)}]")
+            c2.write(f":blue[RENT] :green[${numerize(row['Rent Income'])} / day]")
+            c1.write(f":blue[Region] :orange[{row['Region']}]")
+            c2.write(f":blue[Demand Factor] :orange[{row['Demand Factor']} ({row['Demand Factor'] * 100}%)]")
+
+            st.text("")
+            if row["Is Owned"]:
+                st.success("You own this property.")
+            elif row["Sold"] == 0:
+                if st.button(f"Property Options", key=f"buy_{row['Property ID']}", use_container_width=True):
+                    prop_details_dialog(conn, user_id, row["Property ID"])
+            else:
+                st.warning("This property has already been sold.")
+
+        st.divider()
+
+@st.dialog("Property Details", width="large")
+def prop_details_dialog(conn, user_id, prop_id):
+    c = conn.cursor()
+
+    data = c.execute("""
+        SELECT price, rent_income, type, region, demand_factor, latitude, longitude 
+        FROM real_estate 
+        WHERE property_id = ?
+    """, (prop_id,)).fetchone()
+
+    balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+
+    df = pd.DataFrame([data], columns=[
+        "Price", "Rent Income", "Type", "Region", "Demand Factor", "LAT", "LON"
+    ])
+
+    c1, c2 = st.columns(2)
+
+    with c1:
+        st.pydeck_chart(pdk.Deck(
+            layers=[
+                pdk.Layer(
+                    "ScatterplotLayer",
+                    data=df,
+                    get_position="[LON, LAT]",
+                    get_color="[0, 255, 255]",
+                    get_radius=250,
+                    pickable=True,
+                ),
+            ],
+            initial_view_state=pdk.ViewState(
+                latitude=df["LAT"].iloc[0],
+                longitude=df["LON"].iloc[0],
+                zoom=11,
+                pitch=45,
+            ),
+            tooltip={"text": "Property Location\nRegion: {Region}\nType: {Type}"},
+        ))
+
+    with c2:
+        with st.container(border=True):
+            st.subheader(f"{data[2]} {data[3]}", divider="rainbow")
+            st.text("")
+            c1, c2 = st.columns(2)
+            c1.write(f":blue[[Property Price]]")
+            c1.write(f":red[${numerize(data[0])}]")
+            c2.write(f":blue[[Rent Income]]")
+            c2.write(f":green[${numerize(data[1])} / Day]")
+            c1.text("")
+            c1.text("")
+            c1.write(f":blue[[Region]]")
+            c1.write(f":orange[{data[3]}]")
+            c2.text("")
+            c2.text("")
+            c2.write(f":blue[[Demand Factor]]")
+            c2.write(f":orange[{numerize(data[4] * 100)}%]")
+
+        for i in range(5):
+            st.text("")
+        if st.button("Confirm Buy Property", type="primary", use_container_width=True, disabled=balance < data[0]):
+            with st.spinner("Purchasing property..."):
+                buy_property(conn, user_id, prop_id)
+                time.sleep(4)
+            st.success("Congrats! You have bought a property!")
+            time.sleep(2)
+            st.rerun()
+
+        c1, c2, c3 = st.columns([1, 1, 1])
+        c1.caption(f":gray[LATITUDE: {data[5]}]")
+        c3.caption(f":gray[LONGITUDE: {data[6]}]")
+
+def buy_property(conn, user_id, property_id):
+    c = conn.cursor()
+
+    user_balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+    prop_price = c.execute("SELECT price FROM real_estate WHERE property_id = ?", (property_id,)).fetchone()[0]
+    if user_balance < prop_price:
+        st.warning("❌ Insufficient balance to buy this property.")
+        return
+
+    c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (prop_price, user_id))
+    c.execute("UPDATE real_estate SET user_id = ? WHERE property_id = ?", (user_id, property_id))
+
+    c.execute("""
+        INSERT INTO user_properties (user_id, property_id, purchase_date, rent_income)
+        SELECT ?, property_id, ?, rent_income FROM real_estate WHERE property_id = ?
+    """, (user_id, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), property_id))
+    c.execute("UPDATE real_estate SET sold = 1 WHERE property_id = ?", (property_id,))
+
+    conn.commit()
+
 def admin_panel(conn):
     c = conn.cursor()
     st.header("Marketplace Items", divider = "rainbow")
@@ -2201,7 +2453,6 @@ def admin_panel(conn):
             description = st.text_input("A", label_visibility = "collapsed", placeholder = "Description")
             rarity = st.selectbox("A", label_visibility = "collapsed", placeholder = "Description", options = ["Common", "Uncommon", "Rare", "Epic", "Ultimate"])         
             price = st.text_input("A", label_visibility = "collapsed", placeholder = "Price")
-            stock = st.text_input("A", label_visibility = "collapsed", placeholder = "Stock")
             boost_type = st.text_input("A", label_visibility = "collapsed", placeholder = "Boost Type")
             boost_value = st.text_input("A", label_visibility = "collapsed", placeholder = "Boost Value")
             img = st.text_input("A", label_visibility = "collapsed", placeholder = "Image Path (LOCAL ONLY)")
@@ -2212,7 +2463,7 @@ def admin_panel(conn):
                 existing_item_ids = c.execute("SELECT item_id FROM marketplace_items").fetchall()
                 if item_id not in existing_item_ids:
                     with st.spinner("Creating item..."):
-                        c.execute("INSERT INTO marketplace_items (item_id, name, description, rarity, price, stock, boost_type, boost_value, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (item_id, name, description, rarity, price, stock, boost_type, boost_value, img))
+                        c.execute("INSERT INTO marketplace_items (item_id, name, description, rarity, price, stock, boost_type, boost_value, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (item_id, name, description, rarity, price, boost_type, boost_value, img))
                         conn.commit()
                     st.rerun()
                 else:
@@ -2375,6 +2626,50 @@ def admin_panel(conn):
         else:
             st.write(f"No investments found for {user}.")
     
+    st.header("Real Estates", divider = "rainbow")
+
+    with st.expander("New Real Estate"):
+        with st.form(key =  "Estate"):
+            st.subheader("New Real Estate Creation")
+            property_id = st.text_input("Company ID", value = f"{random.randint(100000000, 999999999)}", disabled = True, help = "Item ID must be unique")
+            region = st.text_input("Ab", label_visibility = "collapsed", placeholder = "Region")
+            title = st.text_input("Ab", label_visibility = "collapsed", placeholder = "Prop Title")   
+            rent_income = st.number_input("Ab", label_visibility = "collapsed", placeholder = "Initial Rent Income", value=None)   
+            price = st.number_input("Ab", label_visibility = "collapsed", placeholder = "Price", min_value=0.0, value=None)
+            demand_factor = st.number_input("Ab", label_visibility = "collapsed", placeholder = "Demand Factor (Between 0 and 1)", min_value=0.0, max_value=1.0, value=None)
+            image_url = st.text_input("Ab", label_visibility = "collapsed", placeholder = "Image Path (LOCAL ONLY)")
+            latitude = st.text_input("Ab", label_visibility = "collapsed", placeholder = "Latitude")   
+            longitude = st.text_input("Ab", label_visibility = "collapsed", placeholder = "Longitude")   
+
+            st.divider()
+            
+            if st.form_submit_button("Add to PrimeEstates™", use_container_width = True):
+                existing_estate_ids = c.execute("SELECT property_id FROM real_estate").fetchall()
+                if property_id not in existing_estate_ids:
+                    c.execute("INSERT INTO real_estate (property_id, region, type, price, rent_income, demand_factor, image_url, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (property_id, region, title, rent_income, price, demand_factor, image_url, float(latitude), float(longitude)))
+                    conn.commit()
+                    st.rerun()
+                else:
+                    st.error("Duplicate item_id")
+
+    st.header("Manage Real Estates", divider = "rainbow")
+    with st.spinner("Loading PrimeEstates™..."):
+        estate_data = c.execute("SELECT property_id, region, type, price, rent_income, demand_factor, stock, image_url, latitude, longitude FROM real_estate").fetchall()
+    df = pd.DataFrame(estate_data, columns = ["Estate ID", "Region", "Title", "Price", "Rent Income", "Demand Factor", "Stock", "Image Path", "Latitude", "Longitude"])
+    edited_df = st.data_editor(df, key = "estate_table", num_rows = "fixed", use_container_width = True, hide_index = True)
+    if st.button("Update Estates", use_container_width = True):
+        for _, row in edited_df.iterrows():
+            c.execute("UPDATE OR IGNORE real_estate SET region = ?, type = ?, price = ?, rent_income = ?, demand_factor = ?, stock = ?, image_url = ?, latitude = ?, longitude = ? WHERE property_id = ?", (row["Estate ID"], row["Region"], row["Type"], row["Price"], row["Rent Income"], row["Demand Factor"], row["Stock"], row["Image Path"], row["Latitude"], row["Longitude"], row["Property ID"]))
+        conn.commit()
+        st.rerun()
+
+    estate_id_to_delete = st.number_input("Enter Property ID to Delete", min_value = 0, step = 1)
+    if st.button("Delete Estate", use_container_width = True):
+        with st.spinner("Processing..."):
+            c.execute("DELETE FROM real_estate WHERE property_id = ?", (estate_id_to_delete,))
+        conn.commit()
+        st.rerun()
+
     st.header("User Removal", divider = "rainbow")
     
     users = c.execute("SELECT username FROM users").fetchall()
@@ -2515,6 +2810,9 @@ def settings(conn, username):
     c = conn.cursor()
     st.header("⚙️ Settings", divider = "rainbow")
 
+    user_id = c.execute("SELECT user_id FROM users WHERE username = ?", (username,)).fetchone()[0]
+    balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+    
     st.subheader("🔑 Change Password")
     current_password = st.text_input("Current Password", type = "password")
     new_password = st.text_input("New Password", type = "password")
@@ -2535,10 +2833,41 @@ def settings(conn, username):
     st.subheader("🖊️ Change Visible Name")
     current_visible_name = c.execute("SELECT visible_name FROM users WHERE username = ?", (username,)).fetchone()[0]
     st.write(f"Current visible name `{current_visible_name}`")
-    new_name = st.text_input("New Visible Name")
+    new_name = st.text_input("A", label_visibility="collapsed", placeholder="New visible name")
     if st.button("Update Visible Name", use_container_width = True):
         change_visible_name(c, conn, username, new_name)
-    
+
+    st.divider()
+
+    st.subheader("💬 Change Username")
+
+    current_username = c.execute("SELECT username FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+    last_change = c.execute("SELECT last_username_change FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+
+    if last_change:
+        try:
+            last_change = datetime.datetime.strptime(last_change.split('.')[0], '%Y-%m-%d %H:%M:%S')  # Remove microseconds if present
+        except ValueError as e:
+            st.error(f"Error parsing last_change: {e}")
+            last_change = None
+    else:
+        last_change = None
+
+    time_since_change = (datetime.datetime.now() - last_change).total_seconds() if last_change else None
+    disable_button = (time_since_change is not None and time_since_change < 7 * 24 * 3600) or balance < 10000
+    st.write(f"Current Username: `{current_username}`")
+    st.write(f"Next change available at :orange[{(last_change + datetime.timedelta(days=7)).strftime("Next %A, %d %B")}]")
+    new_username = st.text_input("s", label_visibility="collapsed", placeholder="New username")
+    if st.button("Update Username for :green[$10K]", use_container_width=True, disabled=True if disable_button or new_username == "" else False):
+        with st.spinner("Updating..."):
+            c.execute(
+                "UPDATE users SET balance = balance - 10000, username = ?, last_username_change = ? WHERE user_id = ?",
+                (new_username, datetime.datetime.now(), user_id)
+            )
+            conn.commit()
+            time.sleep(3)
+        st.toast("✅ Username updated successfully!")
+
     visibility_settings = c.execute("""
         SELECT show_main_balance_on_leaderboard, show_savings_balance_on_leaderboard 
         FROM users WHERE user_id = ?
@@ -2685,6 +3014,10 @@ def main(conn):
             if st.button("QubitTrades™", type="primary", use_container_width=True):
                 st.session_state.current_menu = "Stocks"
                 st.rerun()
+
+            if st.button("PrimeEstates™", type="primary", use_container_width=True):
+                st.session_state.current_menu = "Real Estate"
+                st.rerun()
             
             if st.button("#Global Chat", type="secondary", use_container_width=True):
                 st.session_state.current_menu = "Chat"
@@ -2792,6 +3125,9 @@ def main(conn):
         elif st.session_state.current_menu == "Blackmarket":
             blackmarket_view(conn, st.session_state.user_id)
 
+        elif st.session_state.current_menu == "Real Estate":
+            real_estate_marketplace_view(conn, st.session_state.user_id)
+
         elif st.session_state.current_menu == "Logout":
             st.sidebar.info("Logging you out...")
             time.sleep(2.5)
@@ -2810,9 +3146,8 @@ def main(conn):
 def add_column_if_not_exists(conn):
     c = conn.cursor()
 
-    c.execute("PRAGMA table_info(users);")
+    c.execute("PRAGMA table_info(real_estate);")
     columns = [column[1] for column in c.fetchall()]
-
     conn.commit()
 
 if __name__ == "__main__":
