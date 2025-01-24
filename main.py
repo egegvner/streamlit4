@@ -2360,28 +2360,41 @@ def real_estate_marketplace_view(conn, user_id):
 
         st.divider()
 
-
 @st.dialog("Property Details", width="large")
 def prop_details_dialog(conn, user_id, prop_id):
     c = conn.cursor()
 
+    # Fetch property data from the database
     data = c.execute("""
         SELECT price, rent_income, type, region, demand_factor, latitude, longitude 
         FROM real_estate 
         WHERE property_id = ?
     """, (prop_id,)).fetchone()
 
+    # Fetch user balance
     balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
+    # Create DataFrame from fetched data
     df = pd.DataFrame([data], columns=[
         "Price", "Rent Income", "Type", "Region", "Demand Factor", "LAT", "LON"
     ])
 
+    # Convert LAT and LON to numeric
+    df["LAT"] = pd.to_numeric(df["LAT"], errors="coerce")
+    df["LON"] = pd.to_numeric(df["LON"], errors="coerce")
+
+    # Check for invalid or missing data
+    if df["LAT"].isnull().any() or df["LON"].isnull().any():
+        st.error("Invalid or missing latitude/longitude data for the property.")
+        return
+
+    # Display columns for layout
     c1, c2 = st.columns(2)
 
+    # Pydeck map in the first column
     with c1:
         st.pydeck_chart(pdk.Deck(
-            height = 100,
+            height=100,
             layers=[
                 pdk.Layer(
                     "ScatterplotLayer",
@@ -2401,26 +2414,30 @@ def prop_details_dialog(conn, user_id, prop_id):
             tooltip={"text": "Property Location\nRegion: {Region}\nType: {Type}"},
         ))
 
+    # Property details in the second column
     with c2:
         with st.container(border=True):
             st.subheader(f"{data[2]} {data[3]}", divider="rainbow")
             st.text("")
-            c1, c2 = st.columns(2)
-            c1.write(f":blue[[Property Price]]")
-            c1.write(f":red[${numerize(data[0])}]")
-            c2.write(f":blue[[Rent Income]]")
-            c2.write(f":green[${numerize(data[1])} / Day]")
-            c1.text("")
-            c1.text("")
-            c1.write(f":blue[[Region]]")
-            c1.write(f":orange[{data[3]}]")
-            c2.text("")
-            c2.text("")
-            c2.write(f":blue[[Demand Factor]]")
-            c2.write(f":orange[{numerize(data[4] * 100)}%]")
+            col1, col2 = st.columns(2)
+            col1.write(f":blue[[Property Price]]")
+            col1.write(f":red[${numerize(data[0])}]")
+            col2.write(f":blue[[Rent Income]]")
+            col2.write(f":green[${numerize(data[1])} / Day]")
+            col1.text("")
+            col1.text("")
+            col1.write(f":blue[[Region]]")
+            col1.write(f":orange[{data[3]}]")
+            col2.text("")
+            col2.text("")
+            col2.write(f":blue[[Demand Factor]]")
+            col2.write(f":orange[{numerize(data[4] * 100)}%]")
 
-        for i in range(5):
+        # Spacer for better layout
+        for _ in range(5):
             st.text("")
+
+        # Confirm Buy Property button
         if st.button("Confirm Buy Property", type="primary", use_container_width=True, disabled=balance < data[0]):
             with st.spinner("Purchasing property..."):
                 buy_property(conn, user_id, prop_id)
@@ -2429,29 +2446,11 @@ def prop_details_dialog(conn, user_id, prop_id):
             time.sleep(2)
             st.rerun()
 
+        # Display latitude and longitude
         c1, c2, c3 = st.columns([1, 1, 1])
         c1.caption(f":gray[LATITUDE: {data[5]}]")
         c3.caption(f":gray[LONGITUDE: {data[6]}]")
 
-def buy_property(conn, user_id, property_id):
-    c = conn.cursor()
-
-    user_balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
-    prop_price = c.execute("SELECT price FROM real_estate WHERE property_id = ?", (property_id,)).fetchone()[0]
-    if user_balance < prop_price:
-        st.warning("❌ Insufficient balance to buy this property.")
-        return
-
-    c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (prop_price, user_id))
-    c.execute("UPDATE real_estate SET user_id = ? WHERE property_id = ?", (user_id, property_id))
-
-    c.execute("""
-        INSERT INTO user_properties (user_id, property_id, purchase_date, rent_income)
-        SELECT ?, property_id, ?, rent_income FROM real_estate WHERE property_id = ?
-    """, (user_id, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), property_id))
-    c.execute("UPDATE real_estate SET sold = 1 WHERE property_id = ?", (property_id,))
-
-    conn.commit()
 
 def admin_panel(conn):
     c = conn.cursor()
