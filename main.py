@@ -688,6 +688,22 @@ def init_db():
               seller_id INTEGER NOT NULL
               );''')
 
+    c.execute('''CREATE TABLE IF NOT EXISTS real_estate (
+            property_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER DEFAULT NONE,
+            region TEXT NOT NULL,
+            type TEXT NOT NULL,
+            price REAL NOT NULL,
+            rent_income REAL NOT NULL,
+            demand_factor REAL NOT NULL,
+            image_url TEXT,
+            latitude TEXT NOT NULL,
+            longitude TEXT NOT NULL,
+            sold INTEGER DEFAULT 0,
+            is_owned INTEGER DEFAULT 0,
+            username TEXT DEFAULT NULL
+            );''')
+
     c.execute('''CREATE TABLE IF NOT EXISTS user_properties (
             user_id INTEGER,
             property_id INTEGER,
