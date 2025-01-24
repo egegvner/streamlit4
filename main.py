@@ -3142,16 +3142,45 @@ def main(conn):
 
         elif st.session_state.current_menu == "Admin Panel":
                 admin_panel(conn)
+            
+def column_exists(c, table_name, column_name):
+    # Execute PRAGMA to get column information
+    c.execute(f"PRAGMA table_info({table_name});")
+    columns = c.fetchall()
+    
+    # Check if the column exists in the table
+    return any(column[1] == column_name for column in columns)
 
-def add_column_if_not_exists(conn):
-    c = conn.cursor()
+def add_column_if_not_exists(c, table_name, column_name, column_type):
+    if not column_exists(c, table_name, column_name):
+        # If the column doesn't exist, add it
+        alter_table_query = f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type};"
+        print(f"Adding column: {alter_table_query}")
+        c.execute(alter_table_query)
+    else:
+        print(f"Column '{column_name}' already exists, skipping.")
 
-    c.execute("PRAGMA table_info(real_estate);")
-    columns = [column[1] for column in c.fetchall()]
-    conn.commit()
 
 if __name__ == "__main__":
     conn = get_db_connection()
+
+    columns_to_add = [
+    ("property_id", "INTEGER"),
+    ("region", "TEXT"),
+    ("type", "TEXT"),
+    ("price", "INTEGER"),
+    ("rent_income", "INTEGER"),
+    ("demand_factor", "REAL"),
+    ("latitude", "REAL"),
+    ("longitude", "REAL"),
+    ("image_url", "TEXT"),
+    ("sold", "INTEGER"),
+    ("is_owned", "INTEGER"),
+    ("username", "TEXT"),
+]
+
+    for column_name, column_type in columns_to_add:
+        add_column_if_not_exists(conn, 'real_estate', column_name, column_type)
     init_db()
     add_column_if_not_exists(conn)
     main(conn)
