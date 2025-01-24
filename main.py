@@ -2315,7 +2315,7 @@ def real_estate_marketplace_view(conn, user_id):
         initial_view_state=pdk.ViewState(
             latitude=df["LAT"].mean(),
             longitude=df["LON"].mean(),
-            zoom=11,
+            zoom=6,
             pitch=45,
         ),
         tooltip={
