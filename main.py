@@ -3148,7 +3148,7 @@ def add_column_if_not_exists(conn):
 
     c.execute("PRAGMA table_info(real_estate);")
     columns = [column[1] for column in c.fetchall()]
-
+    c.execute("ALTER TABLE real_estate ADD COLUMN sold INTEGER DEFAULT 0;")
     conn.commit()
 
 if __name__ == "__main__":
