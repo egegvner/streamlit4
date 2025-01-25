@@ -2263,10 +2263,9 @@ def investments_view(conn, user_id):
 
 def real_estate_marketplace_view(conn, user_id):
     c = conn.cursor()
-    st.toast("🏠 Scroll to see available properties!")
+    st.toast("🏠 Scroll down to see available properties!")
     st.header("🏠 Real Estate Marketplace", divider="rainbow")
     
-    # Fetch properties with ownership information
     properties = c.execute("""
         SELECT 
             re.property_id, re.region, re.type, re.price, re.rent_income, re.demand_factor, 
@@ -2281,22 +2280,29 @@ def real_estate_marketplace_view(conn, user_id):
         st.info("No properties available in the marketplace.")
         return
 
-    # Create a DataFrame
     df = pd.DataFrame(properties, columns=[
         "Property ID", "Region", "Type", "Price", "Rent Income", "Demand Factor", "LAT", "LON", "Image URL", "Sold", "Is Owned", "Username"
     ])
 
+    # Convert LAT and LON to numeric, coerce errors to NaN
+    df["LAT"] = pd.to_numeric(df["LAT"], errors="coerce")
+    df["LON"] = pd.to_numeric(df["LON"], errors="coerce")
+
+    # Drop rows with NaN LAT or LON values
+    df = df.dropna(subset=["LAT", "LON"])
+
+    df["Formatted Price"] = df["Price"].apply(numerize)
+    df["Formatted Rent Income"] = df["Rent Income"].apply(numerize)
+
     st.subheader("Available Properties")
 
-    # Assign colors: Cyan (for sale), Red (sold), Green (owned by the user)
     df["Color"] = df.apply(
         lambda row: [0, 255, 0] if row["Is Owned"] else ([0, 255, 255] if row["Sold"] == 0 else [255, 0, 0]), 
         axis=1
     )
 
-    # Create the Pydeck layer
     layer = pdk.Layer(
-        "ScatterplotLayer",  # Changed to Scatterplot for better styling
+        "PointCloudLayer",
         data=df,
         get_position="[LON, LAT]",
         get_color="Color",
@@ -2304,24 +2310,24 @@ def real_estate_marketplace_view(conn, user_id):
         pickable=True,
     )
 
-    # Display the map
     st.pydeck_chart(pdk.Deck(
         layers=[layer],
         initial_view_state=pdk.ViewState(
-            latitude=df["LAT"].mean(),  # Center the map
+            latitude=df["LAT"].mean(),
             longitude=df["LON"].mean(),
-            zoom=11,
+            zoom=4,
             pitch=45,
         ),
         tooltip={
-            "html": "<b>{Type}</b><br>Region: {Region}<br>Cost: ${Price}<br>Rent Income: ${Rent Income}",
+            "html": """
+                <b>{Type}</b><br>[Region] {Region}<br>[Cost] ${Formatted Price}<br>[Rent Income] ${Formatted Rent Income}<br>
+                [Owner] {Username}
+            """,
             "style": {"color": "white"},
         },
     ))
 
-    st.divider()
-
-    # Display property cards
+    st.header("Property List", divider="rainbow")
     for idx, row in df.iterrows():
         image_col, details_col = st.columns([1, 3])
         with image_col:
