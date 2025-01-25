@@ -2451,7 +2451,23 @@ def prop_details_dialog(conn, user_id, prop_id):
         c1.caption(f":gray[LATITUDE: {data[5]}]")
         c3.caption(f":gray[LONGITUDE: {data[6]}]")
 
+def buy_property(conn, user_id, property_id, price):
+    c = conn.cursor()
+    user_balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
+    if user_balance < price:
+        st.warning("❌ Insufficient balance to buy this property.")
+        return
+
+    c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (price, user_id))
+    c.execute("""
+        INSERT INTO user_properties (user_id, property_id, purchase_date, rent_income)
+        SELECT ?, property_id, ?, rent_income FROM real_estate WHERE property_id = ?
+    """, (user_id, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), property_id))
+    conn.commit()
+
+    st.success("🎉 Property purchased successfully!")
+    
 def admin_panel(conn):
     c = conn.cursor()
     st.header("Marketplace Items", divider = "rainbow")
