@@ -2451,10 +2451,11 @@ def prop_details_dialog(conn, user_id, prop_id):
         c1.caption(f":gray[LATITUDE: {data[5]}]")
         c3.caption(f":gray[LONGITUDE: {data[6]}]")
 
-def buy_property(conn, user_id, property_id, price):
+def buy_property(conn, user_id, property_id):
     c = conn.cursor()
     user_balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
-
+    price = c.execute("SELECT price FROM real_estate WHERE property_id = ?", (property_id,)).fetchone()[0]
+    
     if user_balance < price:
         st.warning("❌ Insufficient balance to buy this property.")
         return
