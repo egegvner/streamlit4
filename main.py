@@ -2269,9 +2269,12 @@ def real_estate_marketplace_view(conn, user_id):
     # Fetch properties with ownership information
     properties = c.execute("""
         SELECT 
-            property_id, region, type, price, rent_income, demand_factor, latitude, longitude, image_url, sold,
-            CASE WHEN owner_id = ? THEN 1 ELSE 0 END AS is_owned
-        FROM real_estate
+            re.property_id, re.region, re.type, re.price, re.rent_income, re.demand_factor, 
+            re.latitude, re.longitude, re.image_url, re.sold,
+            CASE WHEN re.user_id = ? THEN 1 ELSE 0 END AS is_owned,
+            u.username
+        FROM real_estate re
+        LEFT JOIN users u ON re.user_id = u.user_id
     """, (user_id,)).fetchall()
 
     if not properties:
