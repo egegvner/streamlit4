@@ -2283,7 +2283,7 @@ def real_estate_marketplace_view(conn, user_id):
 
     # Create a DataFrame
     df = pd.DataFrame(properties, columns=[
-        "Property ID", "Region", "Type", "Price", "Rent Income", "Demand Factor", "LAT", "LON", "Image URL", "Sold", "Is Owned",
+        "Property ID", "Region", "Type", "Price", "Rent Income", "Demand Factor", "LAT", "LON", "Image URL", "Sold", "Is Owned", "Username"
     ])
 
     st.subheader("Available Properties")
