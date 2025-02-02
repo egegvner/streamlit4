@@ -1255,10 +1255,7 @@ def inventory_view(conn, user_id):
         st.header("🏡 My Properties", divider="rainbow")
         
         properties = c.execute("""
-            SELECT r.property_id, r.region, r.type, r.image_url, p.purchase_date, p.rent_income 
-            FROM user_properties p 
-            JOIN real_estate r ON p.property_id = r.property_id 
-            WHERE p.user_id = ?
+            SELECT property_id, region, type, image_url, purchase_date, rent_income FROM user_properties WHERE user_id = ?
         """, (user_id,)).fetchall()
 
         if not properties:
