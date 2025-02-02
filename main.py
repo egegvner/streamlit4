@@ -1217,42 +1217,85 @@ def inventory_view(conn, user_id):
         owned_item_ids = [owned_item[0] for owned_item in c.execute("SELECT item_id FROM user_inventory WHERE user_id = ?", (user_id,)).fetchall()]
         if not owned_item_ids:
             st.write("No items in your inventory.")
-            return
-
-        st.subheader("Your GNFTs")
-        
-        for idx, item_id in enumerate(owned_item_ids):
-            item_details = c.execute("SELECT name, description, rarity, image_url FROM marketplace_items WHERE item_id = ?", (item_id,)).fetchone()
-
-            if item_details is None:
-                st.error(f"Item with ID {item_id} not found in the marketplace.")
-                continue
-
-            name, description, rarity, image_url = item_details
+        else:
+            st.subheader("Your GNFTs")
             
-            item_number = c.execute("SELECT item_number FROM user_inventory WHERE user_id = ? AND item_id = ?", (user_id, item_id)).fetchone()[0]
-            acquired_at = c.execute("SELECT acquired_at FROM user_inventory WHERE user_id = ? AND item_id = ?", (user_id, item_id)).fetchone()[0]
-            
-            image_col, details_col = st.columns([1, 3])
+            for idx, item_id in enumerate(owned_item_ids):
+                item_details = c.execute("SELECT name, description, rarity, image_url FROM marketplace_items WHERE item_id = ?", (item_id,)).fetchone()
 
-            with image_col:
-                if image_url:
-                    st.image(image_url, width=100, use_container_width=True, output_format="PNG")
+                if item_details is None:
+                    st.error(f"Item with ID {item_id} not found in the marketplace.")
+                    continue
 
-            with details_col:
-                st.write(f"#### **{item_colors[rarity]}[{name}]**")
-                st.write(f":gray[#{item_number}]   •   {rarity.upper()}")
-                st.write(description)
+                name, description, rarity, image_url1 = item_details
+                
+                item_number = c.execute("SELECT item_number FROM user_inventory WHERE user_id = ? AND item_id = ?", (user_id, item_id)).fetchone()[0]
+                acquired_at = c.execute("SELECT acquired_at FROM user_inventory WHERE user_id = ? AND item_id = ?", (user_id, item_id)).fetchone()[0]
+                
+                image_col, details_col = st.columns([1, 3])
 
-                if st.button(f"🔧 OPTIONS", key=f"options_{item_id}", use_container_width=True):
-                    inventory_item_options(conn, user_id, item_id)
+                with image_col:
+                    if image_url1:
+                        st.image(image_url1, width=100, use_container_width=True, output_format="PNG")
 
-                st.caption(f"Acquired: {acquired_at}")
-            
-            st.divider()
+                with details_col:
+                    st.write(f"#### **{item_colors[rarity]}[{name}]**")
+                    st.write(f":gray[#{item_number}]   •   {rarity.upper()}")
+                    st.write(description)
+
+                    if st.button(f"🔧 OPTIONS", key=f"options_{item_id}", use_container_width=True):
+                        inventory_item_options(conn, user_id, item_id)
+
+                    st.caption(f"Acquired: {acquired_at}")
+                
+                st.divider()
 
     with t2:
         st.header("🏡 My Properties", divider="rainbow")
+
+        owned_properties = c.execute("""
+            SELECT property_id FROM user_properties WHERE user_id = ?
+        """, (user_id,)).fetchall()
+        
+        p = c.execute("SELECT purchase_date FROM user_properties WHERE user_id = ?", (user_id,)).fetchall()
+        
+        if not owned_properties:
+            st.info("You don't own any properties yet.")
+        else:
+            counter = 0
+            for prop_id in owned_properties:
+                prop_details = c.execute("""
+                    SELECT region, type, image_url, rent_income
+                    FROM real_estate WHERE property_id = ?
+                """, prop_id,).fetchone()
+
+                if prop_details:
+                    region, prop_type, image_url, rent_income = prop_details
+                    
+                    with st.container(border=True):
+                        col1, col2 = st.columns([1, 3])
+                        
+                        with col1:
+                            if image_url:
+                                st.image(image_url, use_container_width=True)
+                        
+                        with col2:
+                            st.subheader(f"{region} - {prop_type}")
+                            st.write(f"📅 Purchased: :blue[{p[counter][0]}]")
+                            st.write(f"💵 Daily Rent: :green[${numerize(rent_income)}]")
+                            counter =+ 1
+                            if st.button("Sell To Bank", key=prop_id, use_container_width=True):
+                                with st.spinner("Selling..."):
+                                    c.execute("DELETE FROM user_properties WHERE property_id = ?", (prop_id,))
+                                    c.execute("UPDATE real_estate SET sold = 0, is_owned = 0, username = None, user_id = 0 WHERE property_id = ?", (prop_id,))
+                                    conn.commit()
+                                    time.sleep(3)
+                                st.success("Sold property to the bank for free.")
+                                st.rerun()
+
+                    st.divider()
+                else:
+                    st.info("error")
 
 def manage_pending_transfers(conn, receiver_id):
     c = conn.cursor()
