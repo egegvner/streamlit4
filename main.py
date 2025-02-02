@@ -1276,7 +1276,7 @@ def inventory_view(conn, user_id):
                 with col2:
                     st.subheader(f"{region} - {prop_type}")
                     st.write(f"📅 Purchased: {purchase_date}")
-                    st.write(f"💵 Monthly Rent: :green[${numerize(rent_income)}]")
+                    st.write(f"💵 Daily Rent: :green[${numerize(rent_income)}]")
                     if st.button("Sell To Bank", key=prop_id, use_container_width=True):
                         with st.spinner("Selling..."):
                             c.execute("DELETE FROM user_properties WHERE property_id = ?", (prop_id,))
@@ -2847,6 +2847,7 @@ def admin_panel(conn):
         conn.commit()
         st.rerun()
 
+    st.subheader("User Inventory", divider = "rainbow")
     user = st.selectbox("Select User", [u[0] for u in c.execute("SELECT username FROM users").fetchall()], key="inv2")
     if user:
         user_id = c.execute("SELECT user_id FROM users WHERE username = ?", (user,)).fetchone()[0]
@@ -2872,14 +2873,12 @@ def admin_panel(conn):
             with st.container(border=True):
                 c1, c2 = st.columns(2)
                 item_id_to_delete2 = c1.number_input("Enter item ID to Delete", min_value=0, step=1)
-                instance_id_to_delete = c2.number_input("Enter instance ID to Delete", min_value=0, step=1)
 
-            if st.button("Delete Item(s)", use_container_width = True):
+            if c2.button("Delete Item(s)", use_container_width = True):
                 with st.spinner("Processing..."):
-                    c.execute("DELETE FROM user_inventory WHERE item_id = ? AND instance_id = ?", (item_id_to_delete2, instance_id_to_delete))
+                    c.execute("DELETE FROM user_inventory WHERE item_id = ?", (item_id_to_delete2,))
                 conn.commit()
                 st.rerun()
-
         else:
             st.write(f"No transactions found for {user}.")
 
