@@ -58,6 +58,7 @@ item_colors = {
         "Rare":":blue",
         "Epic":":violet",
         "Ultimate":":orange"
+        
     }
 
 def format_currency(amount):
@@ -1254,10 +1255,9 @@ def inventory_view(conn, user_id):
 
     with t2:
         st.header("🏡 My Properties", divider="rainbow")
-        c = conn.cursor()
-
+        
         properties = c.execute("""
-            SELECT r.region, r.type, p.purchase_date, p.rent_income 
+            SELECT r.property_id, r.region, r.type, r.image_url, p.purchase_date, p.rent_income 
             FROM user_properties p 
             JOIN real_estate r ON p.property_id = r.property_id 
             WHERE p.user_id = ?
@@ -1267,10 +1267,19 @@ def inventory_view(conn, user_id):
             st.info("You don't own any properties yet.")
             return
 
-        for region, prop_type, purchase_date, rent_income in properties:
-            st.subheader(f"{region} - {prop_type}")
-            st.write(f"📅 Purchased: {purchase_date}")
-            st.write(f"💵 Rent Income: :blue[${numerize(rent_income)}]")
+        for prop_id, region, prop_type, image_url, purchase_date, rent_income in properties:
+            with st.container(border=True):
+                col1, col2 = st.columns([1, 3])
+                
+                with col1:
+                    if image_url:
+                        st.image(image_url, use_container_width=True)
+                
+                with col2:
+                    st.subheader(f"{region} - {prop_type}")
+                    st.write(f"📅 Purchased: {purchase_date}")
+                    st.write(f"💵 Monthly Rent: :green[${numerize(rent_income)}]")
+            
             st.divider()
 
 def manage_pending_transfers(conn, receiver_id):
@@ -1691,6 +1700,9 @@ def stocks_view(conn, user_id):
     if "graph_color" not in st.session_state:
         st.session_state.graph_color = (0, 255, 0)
 
+    if "hours" not in st.session_state:
+        st.session_state.hours = 24
+
     st.write("Available Stocks:")
     stock_buttons = st.columns(len(stocks))
     for idx, stock in enumerate(stocks):
@@ -1704,7 +1716,7 @@ def stocks_view(conn, user_id):
     stock_id, name, symbol, price, stock_amount = selected_stock
 
     now = datetime.datetime.now()
-    start_time = now - datetime.timedelta(hours=24)  # Change time period as needed
+    start_time = now - datetime.timedelta(hours=st.session_state.hours)  # Change time period as needed
     start_time_str = start_time.strftime("%Y-%m-%d %H:%M:%S")
 
     history = c.execute("""
@@ -1713,29 +1725,22 @@ def stocks_view(conn, user_id):
         ORDER BY timestamp ASC
     """, (stock_id, start_time_str)).fetchall()
 
-    history2 = c.execute("""
-        SELECT timestamp, price FROM stock_history 
-        WHERE stock_id = ?
-        ORDER BY timestamp ASC
-    """, (stock_id,)).fetchall()
-
     if len(history) > 1:
         last_price = history[-1][1]
         previous_price = history[-2][1]
         percentage_change = ((last_price - previous_price) / previous_price) * 100
         
         if last_price > previous_price:
-            change_color = ":green[+{:.2f}%] :gray[(24h)".format(percentage_change)
+            change_color = f":green[+{numerize(percentage_change)}%] :gray[({st.session_state.hours}h)".format(percentage_change)
             st.session_state.graph_color = (0, 255, 0)
 
         elif last_price < previous_price:
-            change_color = ":red[-{:.2f}%] :gray[(24h)".format(abs(percentage_change))
+            change_color = f":green[+{numerize(percentage_change)}%] :gray[({st.session_state.hours}h)".format(percentage_change)
             st.session_state.graph_color = (255, 0, 0)
 
         else:
-            change_color = ":orange[0.00%] :gray[(24h)"
+            change_color = f":orange[0.00%] :gray[({st.session_state.hours})"
             st.session_state.graph_color = (255, 255, 0)
-
     else:
         percentage_change = 0
         change_color = ":orange[0.00%] :gray[(24h)"
@@ -1753,7 +1758,9 @@ def stocks_view(conn, user_id):
             st.line_chart(df, color=st.session_state.graph_color)
         else:
             st.info("Stock history will be available after 60 seconds of stock creation.")
-
+        
+        st.session_state.hours = st.select_slider("Time Range (Hours)", options=[1, 5, 10, 24, 48, 72, 96, 120, 144], on_change=st.rerun)
+    
     with c2:
         user_stock = c.execute("SELECT quantity, avg_buy_price FROM user_stocks WHERE user_id = ? AND stock_id = ?", 
                                 (user_id, stock_id)).fetchall()
@@ -1810,49 +1817,15 @@ def stocks_view(conn, user_id):
     st.subheader("Metrics", divider="rainbow")
     col1, col2, col3, col4, col5 = st.columns(5)
     
-    col1.metric("24H High", 
-                f"${format_currency(stock_metrics['high_24h'])}" if stock_metrics['high_24h'] else "N/A",
-                f"{format_currency(stock_metrics['delta_24h_high'])}" if stock_metrics['delta_24h_high'] else None)
+    col1.write(f"${numerize(stock_metrics['high_24h'])}" if stock_metrics['high_24h'] else "N/A")
     
-    col2.metric("24H Low", 
-                f"${format_currency(stock_metrics['low_24h'])}" if stock_metrics['low_24h'] else "N/A",
-                f"{format_currency(stock_metrics['delta_24h_low'])}" if stock_metrics['delta_24h_low'] else None)
+    col2.write(f"${numerize(stock_metrics['low_24h'])}" if stock_metrics['low_24h'] else "N/A")
     
-    col3.metric("All-Time High", 
-                f"${format_currency(stock_metrics['all_time_high'])}" if stock_metrics['all_time_high'] else "N/A",
-                f"{format_currency(stock_metrics['delta_all_time_high'])}" if stock_metrics['delta_all_time_high'] else None)
+    col3.write(f"${numerize(stock_metrics['all_time_high'])}" if stock_metrics['all_time_high'] else "N/A")
     
-    col4.metric("All-Time Low", 
-                f"${format_currency(stock_metrics['all_time_low'])}" if stock_metrics['all_time_low'] else "N/A",
-                f"{format_currency(stock_metrics['delta_all_time_low'])}" if stock_metrics['delta_all_time_low'] else None)
+    col4.write(f":red[${numerize(stock_metrics['all_time_low'])}]" if stock_metrics['all_time_low'] else "N/A")
     
-    col5.metric("24H Change", 
-                f"{stock_metrics['price_change']:.2f}%", 
-                delta_color="inverse")
-
-    st.header(f"Details for {name}", divider="rainbow")
-    df = pd.DataFrame(history2, columns=["Timestamp", "Price"])
-    df['Timestamp'] = pd.to_datetime(df['Timestamp'])
-    df.set_index('Timestamp', inplace=True)
-    df_resampled = df.resample(f"{st.session_state.ti}T").mean()  
-    st.line_chart(df_resampled, color = st.session_state.graph_color)
-    c1, c2 = st.columns(2)
-    sample_rate = c1.slider("Sample Rate (Lower = More Lag)", min_value = 1, max_value = 100, step = 1)
-    if c1.button("Set Resampling", use_container_width=True):
-        st.session_state.ti = sample_rate
-        st.rerun() 
-
-    with c2.popover("Graph Color", use_container_width = True):
-        r = st.slider(":red[Red]", min_value = 0, max_value = 255, step = 1)
-        g = st.slider(":green[Green]", min_value = 0, max_value = 255, step = 1)
-        b = st.slider(":blue[Blue]", min_value = 0, max_value = 255, step = 1)
-        if st.button("Apply Color", use_container_width = True):
-            st.session_state.graph_color2 = (r, g, b)
-            st.rerun()
-        if c2.button("Price Prediction", type = "primary", use_container_width = True):
-            st.toast("Coming Soon")
-        if c2.button("Don't Click Here", type = "primary", use_container_width = True):
-            st.toast("Congrats! You have clicked the button!")
+    col5.write(f"{stock_metrics['price_change']:.2f}%")
     
     st.text("")
     st.text("")
@@ -2263,102 +2236,65 @@ def investments_view(conn, user_id):
 
 def real_estate_marketplace_view(conn, user_id):
     c = conn.cursor()
-    st.toast("🏠 Scroll down to see available properties!")
-    st.header("🏠 Real Estate Marketplace", divider="rainbow")
     
+    # Get all properties with ownership information
     properties = c.execute("""
-        SELECT 
-            re.property_id, re.region, re.type, re.price, re.rent_income, re.demand_factor, 
-            re.latitude, re.longitude, re.image_url, re.sold,
-            CASE WHEN re.user_id = ? THEN 1 ELSE 0 END AS is_owned,
-            u.username
-        FROM real_estate re
-        LEFT JOIN users u ON re.user_id = u.user_id
-    """, (user_id,)).fetchall()
-
-    if not properties:
-        st.info("No properties available in the marketplace.")
-        return
-
+        SELECT r.property_id, r.region, r.type, r.price, r.rent_income, 
+               r.demand_factor, r.image_url, r.latitude, r.longitude, 
+               r.sold, r.is_owned, u.username
+        FROM real_estate r
+        LEFT JOIN users u ON r.user_id = u.user_id
+    """).fetchall()
+    
+    # Create DataFrame for map visualization
     df = pd.DataFrame(properties, columns=[
-        "Property ID", "Region", "Type", "Price", "Rent Income", "Demand Factor", "LAT", "LON", "Image URL", "Sold", "Is Owned", "Username"
+        "property_id", "region", "type", "price", "rent_income",
+        "demand_factor", "image_url", "LAT", "LON", "sold",
+        "is_owned", "owner"
     ])
-
-    # Convert LAT and LON to numeric, coerce errors to NaN
+    
+    # Convert coordinates to numeric
     df["LAT"] = pd.to_numeric(df["LAT"], errors="coerce")
     df["LON"] = pd.to_numeric(df["LON"], errors="coerce")
-
-    # Drop rows with NaN LAT or LON values
-    df = df.dropna(subset=["LAT", "LON"])
-
-    df["Formatted Price"] = df["Price"].apply(numerize)
-    df["Formatted Rent Income"] = df["Rent Income"].apply(numerize)
-
-    st.subheader("Available Properties")
-
-    df["Color"] = df.apply(
-        lambda row: [0, 255, 0] if row["Is Owned"] else ([0, 255, 255] if row["Sold"] == 0 else [255, 0, 0]), 
-        axis=1
-    )
-
-    layer = pdk.Layer(
-        "PointCloudLayer",
-        data=df,
-        get_position="[LON, LAT]",
-        get_color="Color",
-        get_radius=500,
-        pickable=True,
-    )
-
+    
+    # Add color column based on ownership
+    df["color"] = df.apply(lambda row: [255, 0, 0] if row["is_owned"] else [0, 255, 255], axis=1)
+    
+    # Create the map
     st.pydeck_chart(pdk.Deck(
-        layers=[layer],
+        height=400,
+        layers=[
+            pdk.Layer(
+                "ScatterplotLayer",
+                data=df,
+                get_position="[LON, LAT]",
+                get_color="color",  # Use the color column
+                get_radius=250,
+                pickable=True,
+            ),
+        ],
         initial_view_state=pdk.ViewState(
-            latitude=df["LAT"].mean(),
-            longitude=df["LON"].mean(),
-            zoom=4,
+            latitude=float(df["LAT"].mean()),
+            longitude=float(df["LON"].mean()),
+            zoom=11,
             pitch=45,
         ),
         tooltip={
             "html": """
-                <b>{Type}</b><br>[Region] {Region}<br>[Cost] ${Formatted Price}<br>[Rent Income] ${Formatted Rent Income}<br>
-                [Owner] {Username}
+                <b>Property Details</b><br/>
+                Region: {region}<br/>
+                Type: {type}<br/>
+                Price: ${price:,.2f}<br/>
+                Rent: ${rent_income:,.2f}/day<br/>
+                Owner: {owner}
             """,
-            "style": {"color": "white"},
-        },
+            "style": {
+                "backgroundColor": "steelblue",
+                "color": "white"
+            }
+        }
     ))
 
-    st.header("Property List", divider="rainbow")
-    for idx, row in df.iterrows():
-        image_col, details_col = st.columns([1, 3])
-        with image_col:
-            if row["Image URL"]:
-                st.image(row["Image URL"], width=150)
-
-        with details_col:
-            if row["Is Owned"]:
-                st.subheader(f"{row['Type']} :green[ - Owned]", divider="rainbow")
-            elif row["Sold"]:
-                st.subheader(f"{row['Type']} :red[ - Sold]", divider="rainbow")
-            else:
-                st.subheader(f"{row['Type']}", divider="rainbow")
-
-            st.text("")
-            c1, c2 = st.columns(2)
-            c1.write(f":blue[COST] :red[${numerize(row['Price'], 2)}]")
-            c2.write(f":blue[RENT] :green[${numerize(row['Rent Income'])} / day]")
-            c1.write(f":blue[Region] :orange[{row['Region']}]")
-            c2.write(f":blue[Demand Factor] :orange[{row['Demand Factor']} ({row['Demand Factor'] * 100}%)]")
-
-            st.text("")
-            if row["Is Owned"]:
-                st.success("You own this property.")
-            elif row["Sold"] == 0:
-                if st.button(f"Property Options", key=f"buy_{row['Property ID']}", use_container_width=True):
-                    prop_details_dialog(conn, user_id, row["Property ID"])
-            else:
-                st.warning("This property has already been sold.")
-
-        st.divider()
 
 @st.dialog("Property Details", width="large")
 def prop_details_dialog(conn, user_id, prop_id):
@@ -2451,23 +2387,61 @@ def prop_details_dialog(conn, user_id, prop_id):
         c1.caption(f":gray[LATITUDE: {data[5]}]")
         c3.caption(f":gray[LONGITUDE: {data[6]}]")
 
-def buy_property(conn, user_id, property_id):
+def buy_property(conn, user_id, property_id, price):
     c = conn.cursor()
-    user_balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
-    price = c.execute("SELECT price FROM real_estate WHERE property_id = ?", (property_id,)).fetchone()[0]
     
-    if user_balance < price:
-        st.warning("❌ Insufficient balance to buy this property.")
-        return
-
-    c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (price, user_id))
-    c.execute("""
-        INSERT INTO user_properties (user_id, property_id, purchase_date, rent_income)
-        SELECT ?, property_id, ?, rent_income FROM real_estate WHERE property_id = ?
-    """, (user_id, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), property_id))
-    conn.commit()
-
-    st.success("🎉 Property purchased successfully!")
+    # Get username for the buyer
+    username = c.execute("SELECT username FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+    
+    try:
+        c.execute("BEGIN TRANSACTION")
+        
+        # Update user balance
+        c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (price, user_id))
+        
+        # Update property ownership
+        c.execute("""
+            UPDATE real_estate 
+            SET sold = 1, 
+                is_owned = 1, 
+                user_id = ?,
+                username = ?  # Add username to property record
+            WHERE property_id = ?
+        """, (user_id, username, property_id))
+        
+        # Add to user_properties
+        purchase_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        property_data = c.execute("""
+            SELECT region, type, rent_income 
+            FROM real_estate 
+            WHERE property_id = ?
+        """, (property_id,)).fetchone()
+        
+        region, prop_type, rent_income = property_data
+        
+        c.execute("""
+            INSERT INTO user_properties 
+            (user_id, property_id, purchase_date, rent_income) 
+            VALUES (?, ?, ?, ?)
+        """, (user_id, property_id, purchase_date, rent_income))
+        
+        # Record transaction
+        c.execute("""
+            INSERT INTO transactions 
+            (transaction_id, user_id, type, amount, timestamp) 
+            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+        """, (random.randint(100000000000, 999999999999), 
+              user_id, 
+              f"Property Purchase: {region} {prop_type}", 
+              price))
+        
+        conn.commit()
+        return True
+        
+    except Exception as e:
+        conn.rollback()
+        st.error(f"Error purchasing property: {e}")
+        return False
     
 def admin_panel(conn):
     c = conn.cursor()
@@ -3173,17 +3147,14 @@ def main(conn):
             
 def column_exists(conn, table_name, column_name):
     c = conn.cursor()
-    # Execute PRAGMA to get column information
     c.execute(f"PRAGMA table_info({table_name});")
     columns = c.fetchall()
     
-    # Check if the column exists in the table
     return any(column[1] == column_name for column in columns)
 
 def add_column_if_not_exists(conn, table_name, column_name, column_type):
     c = conn.cursor()
     if not column_exists(conn, table_name, column_name):
-        # If the column doesn't exist, add it
         alter_table_query = f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type};"
         c.execute(alter_table_query)
         conn.commit()
