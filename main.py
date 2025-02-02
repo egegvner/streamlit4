@@ -1254,8 +1254,6 @@ def inventory_view(conn, user_id):
     with t2:
         st.header("🏡 My Properties", divider="rainbow")
 
-        c = conn.cursor()
-
         owned_properties = c.execute("""
             SELECT property_id FROM user_properties WHERE user_id = ?
         """, (user_id,)).fetchall()
@@ -1264,6 +1262,7 @@ def inventory_view(conn, user_id):
         
         if not owned_properties:
             st.info("You don't own any properties yet.")
+            return
         else:
             counter = 0
             for (prop_id,) in owned_properties:
