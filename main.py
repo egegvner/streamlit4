@@ -1266,11 +1266,11 @@ def inventory_view(conn, user_id):
 
         else:
             counter = 0
-            for (prop_id,) in owned_properties:
+            for prop_id in owned_properties:
                 prop_details = c.execute("""
                     SELECT region, type, image_url, rent_income
                     FROM real_estate WHERE property_id = ?
-                """, (prop_id,)).fetchone()
+                """, prop_id,).fetchone()
 
                 if prop_details:
                     region, prop_type, image_url, rent_income = prop_details
