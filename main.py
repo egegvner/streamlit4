@@ -1264,41 +1264,7 @@ def inventory_view(conn, user_id):
             st.info("You don't own any properties yet.")
             return
 
-        else:
-            counter = 0
-            for prop_id in owned_properties:
-                prop_details = c.execute("""
-                    SELECT region, type, image_url, rent_income
-                    FROM real_estate WHERE property_id = ?
-                """, prop_id,).fetchone()
-
-                if prop_details:
-                    region, prop_type, image_url, rent_income = prop_details
-                    
-                    with st.container(border=True):
-                        col1, col2 = st.columns([1, 3])
-                        
-                        with col1:
-                            if image_url:
-                                st.image(image_url, use_container_width=True)
-                        
-                        with col2:
-                            st.subheader(f"{region} - {prop_type}")
-                            st.write(f"📅 Purchased: :blue[{p[counter][0]}]")
-                            st.write(f"💵 Daily Rent: :green[${numerize(rent_income)}]")
-                            counter =+ 1
-                            if st.button("Sell To Bank", key=prop_id, use_container_width=True):
-                                with st.spinner("Selling..."):
-                                    c.execute("DELETE FROM user_properties WHERE property_id = ?", (prop_id,))
-                                    c.execute("UPDATE real_estate SET sold = 0, is_owned = 0, username = None, user_id = 0 WHERE property_id = ?", (prop_id,))
-                                    conn.commit()
-                                    time.sleep(3)
-                                st.success("Sold property to the bank for free.")
-                                st.rerun()
-
-                    st.divider()
-                else:
-                    st.info("error")
+        
 
 def manage_pending_transfers(conn, receiver_id):
     c = conn.cursor()
