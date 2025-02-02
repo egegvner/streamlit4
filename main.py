@@ -1297,6 +1297,8 @@ def inventory_view(conn, user_id):
                                 st.rerun()
 
                     st.divider()
+                else:
+                    st.info("error")
 
 def manage_pending_transfers(conn, receiver_id):
     c = conn.cursor()
