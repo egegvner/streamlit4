@@ -226,7 +226,7 @@ def leaderboard_logic(c):
 def get_transaction_history(conn, user_id):
     c = conn.cursor()
 
-    query = "SELECT transaction_id, type, amount, receiver_username, status, stock_id, quantity, timestamp FROM transactions WHERE user_id = ?"
+    query = "SELECT transaction_id, type, amount, receiver_username, status, stock_id, quantity, timestamp FROM transactions WHERE user_id = ? ORDER BY timestamp DESC"
 
     transactions = c.execute(query, (user_id,)).fetchall()
 
@@ -1279,7 +1279,14 @@ def inventory_view(conn, user_id):
                     st.subheader(f"{region} - {prop_type}")
                     st.write(f"📅 Purchased: {purchase_date}")
                     st.write(f"💵 Monthly Rent: :green[${numerize(rent_income)}]")
-            
+                    if st.button("Sell To Bank", key=prop_id, use_container_width=True):
+                        with st.spinner("Selling..."):
+                            c.execute("DELETE FROM user_properties WHERE property_id = ?", (prop_id,))
+                            c.execute("UPDATE real_estate SET sold = 0, is_owned = 0, username = ?", (None,))
+                            conn.commit()
+                            time.sleep(3)
+                        st.success("Sold property to the bank for free.")
+
             st.divider()
 
 def manage_pending_transfers(conn, receiver_id):
@@ -1612,7 +1619,7 @@ def buy_blackmarket_item(conn, buyer_id, item_id, item_number, seller_id, price)
 def buy_stock(conn, user_id, stock_id, quantity):
     c = conn.cursor()
 
-    price = c.execute("SELECT price FROM stocks WHERE stock_id = ?", (stock_id,)).fetchone()[0]
+    price, symbol = c.execute("SELECT price, symbol FROM stocks WHERE stock_id = ?", (stock_id,)).fetchone()
     balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     cost = price * quantity
 
@@ -1639,15 +1646,11 @@ def buy_stock(conn, user_id, stock_id, quantity):
         c.execute("INSERT INTO user_stocks (user_id, stock_id, quantity, avg_buy_price) VALUES (?, ?, ?, ?)", 
                   (user_id, stock_id, quantity, price))
 
-    c.execute("""
-        INSERT INTO transactions (transaction_id, user_id, type, amount, stock_id, quantity, timestamp)
-        VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-    """, (random.randint(100000000, 999999999), user_id, "Buy Stock", cost, stock_id, quantity))
+    c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, stock_id, quantity, timestamp) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)", (random.randint(100000000, 999999999), user_id, f"Buy Stock ({symbol})", cost, stock_id, quantity))
     c.execute("UPDATE stocks SET stock_amount = stock_amount - ? WHERE stock_id = ?", (quantity, stock_id))
     
     conn.commit()
-    st.toast(f"Purchased :blue[{quantity}] shares for :green[${numerize(cost, 2)}]")
-
+    st.toast(f"Purchased :blue[{numerize(quantity)}] shares for :green[${numerize(cost, 2)}]")
 
 def sell_stock(conn, user_id, stock_id, quantity):
 
@@ -1677,7 +1680,7 @@ def sell_stock(conn, user_id, stock_id, quantity):
     c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (net_profit, user_id))
 
     conn.commit()
-    st.toast(f"Sold :blue[{quantity}] shares for :green[${numerize(net_profit, 2)}]") 
+    st.toast(f"Sold :blue[{numerize(quantity)}] shares for :green[${numerize(net_profit, 2)}]") 
 
 def stocks_view(conn, user_id):
     c = conn.cursor()
@@ -1687,7 +1690,8 @@ def stocks_view(conn, user_id):
     st_autorefresh(interval=300000, key="stock_autorefresh")
 
     stocks = c.execute("SELECT stock_id, name, symbol, price, stock_amount FROM stocks").fetchall()
-    
+    balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+
     if "selected_stock" not in st.session_state:
         st.session_state.selected_stock = stocks[0][0]
 
@@ -1759,8 +1763,10 @@ def stocks_view(conn, user_id):
         else:
             st.info("Stock history will be available after 60 seconds of stock creation.")
         
-        st.session_state.hours = st.select_slider("Time Range (Hours)", options=[1, 5, 10, 24, 48, 72, 96, 120, 144], on_change=st.rerun)
-    
+        cl1, cl2 = st.columns(2)
+        st.session_state.hours = cl1.select_slider("Time Range (Hours)", options=[1, 5, 10, 24, 48, 72, 96, 120, 144, 168])
+        if cl2.button("Set Range", use_container_width=True):
+            st.rerun()
     with c2:
         user_stock = c.execute("SELECT quantity, avg_buy_price FROM user_stocks WHERE user_id = ? AND stock_id = ?", 
                                 (user_id, stock_id)).fetchall()
@@ -1781,13 +1787,22 @@ def stocks_view(conn, user_id):
         col1, col2 = st.columns(2)
         
         with col1:
+            buy_max_quantity = numerize(balance / price)
             buy_quantity = st.number_input(f"Buy {symbol}", min_value=0.0, step=0.25, key=f"buy_{stock_id}")
-            st.write(f"[Cost]  :red[${numerize(buy_quantity * price, 2)}]")
+            st.write(f"[Cost]  :red[${numerize(buy_quantity * price)}]")
+            
             if st.button(f"Buy {symbol}", key=f"buy_btn_{stock_id}", type="primary", use_container_width=True, 
-                        disabled=True if buy_quantity == 0 or stock_amount < buy_quantity else False, help="Not enough stock available in the market" if stock_amount < buy_quantity else "Insufficent balance"):
+                        disabled=True if buy_quantity == 0 or stock_amount < buy_quantity else False, help="Not enough stock available in the market" if stock_amount < buy_quantity else None):
                 with st.spinner("Purchasing..."):
                     time.sleep(3)
                     buy_stock(conn, user_id, stock_id, buy_quantity)
+                time.sleep(2.5)
+                st.rerun()
+            
+            if st.button(f"Buy MAX: :orange[{buy_max_quantity}] ~ :green[${numerize(balance)}]", key=f"buy_max_btn_{stock_id}", use_container_width=True):
+                with st.spinner("Purchasing..."):
+                    time.sleep(3)
+                    buy_stock(conn, user_id, stock_id, balance / price)
                 time.sleep(2.5)
                 st.rerun()
                         
@@ -1813,19 +1828,38 @@ def stocks_view(conn, user_id):
                 st.rerun()
 
     stock_metrics = get_stock_metrics(conn, stock_id)
+    stock_volume = c.execute("SELECT SUM(quantity) FROM transactions WHERE stock_id = ? AND timestamp >= DATETIME('now', '-24 hours')", (stock_id,)).fetchone()[0]
+    if not stock_volume:
+        stock_volume = 0
 
+    st.text("")
+    st.text("")
     st.subheader("Metrics", divider="rainbow")
-    col1, col2, col3, col4, col5 = st.columns(5)
+    col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8)
     
-    col1.write(f"${numerize(stock_metrics['high_24h'])}" if stock_metrics['high_24h'] else "N/A")
+    col1.write("24h HIGH")
+    col1.write(f"#### :green[${numerize(stock_metrics['high_24h'])}]" if stock_metrics['high_24h'] else "N/A")
     
-    col2.write(f"${numerize(stock_metrics['low_24h'])}" if stock_metrics['low_24h'] else "N/A")
+    col2.write("24h LOW")
+    col2.write(f"#### :red[${numerize(stock_metrics['low_24h'])}]" if stock_metrics['low_24h'] else "N/A")
     
-    col3.write(f"${numerize(stock_metrics['all_time_high'])}" if stock_metrics['all_time_high'] else "N/A")
+    col3.write("All Time High")
+    col3.write(f"#### :green[${numerize(stock_metrics['all_time_high'])}]" if stock_metrics['all_time_high'] else "N/A")
     
-    col4.write(f":red[${numerize(stock_metrics['all_time_low'])}]" if stock_metrics['all_time_low'] else "N/A")
+    col4.write("All Time Low")
+    col4.write(f"#### :red[${numerize(stock_metrics['all_time_low'])}]" if stock_metrics['all_time_low'] else "N/A")
     
-    col5.write(f"{stock_metrics['price_change']:.2f}%")
+    col5.write("24h Change")
+    col5.write(f"#### :orange[{numerize(stock_metrics['price_change'], 2)}%]")
+    
+    col6.write("24h Volume")
+    col6.write(f"#### :blue[{numerize(stock_volume)}]")
+
+    col7.write("Volatility Index")
+    col7.write(f"#### :violet[{numerize(((stock_metrics['all_time_high'] - stock_metrics['all_time_low']) / stock_metrics['all_time_low']) * 100)} σ]")
+
+    col8.write("Market Cap")
+    col8.write(f"#### :green[${numerize(stock_amount * price)}]")
     
     st.text("")
     st.text("")
@@ -2237,97 +2271,117 @@ def investments_view(conn, user_id):
 def real_estate_marketplace_view(conn, user_id):
     c = conn.cursor()
     
-    # Get all properties with ownership information
     properties = c.execute("""
-        SELECT r.property_id, r.region, r.type, r.price, r.rent_income, 
-               r.demand_factor, r.image_url, r.latitude, r.longitude, 
-               r.sold, r.is_owned, u.username
-        FROM real_estate r
-        LEFT JOIN users u ON r.user_id = u.user_id
+    SELECT property_id, user_id, region, type, price, rent_income, demand_factor, latitude, longitude, image_url, sold, username 
+    FROM real_estate
     """).fetchall()
     
-    # Create DataFrame for map visualization
     df = pd.DataFrame(properties, columns=[
-        "property_id", "region", "type", "price", "rent_income",
-        "demand_factor", "image_url", "LAT", "LON", "sold",
-        "is_owned", "owner"
+        "Property ID", "User ID", "Region", "Type", "Price", "Rent Income", "Demand Factor", "LAT", "LON", "Image URL", "Sold", "user"
     ])
-    
-    # Convert coordinates to numeric
+
     df["LAT"] = pd.to_numeric(df["LAT"], errors="coerce")
     df["LON"] = pd.to_numeric(df["LON"], errors="coerce")
-    
-    # Add color column based on ownership
-    df["color"] = df.apply(lambda row: [255, 0, 0] if row["is_owned"] else [0, 255, 255], axis=1)
-    
-    # Create the map
+
+    df["Color"] = df.apply(lambda row: 
+        [0, 255, 0] if row["User ID"] == user_id else 
+        ([255, 0, 0] if row["Sold"] else [0, 255, 255]), axis=1
+    )
+
+    df["Color"] = df["Color"].astype(object)
+
     st.pydeck_chart(pdk.Deck(
-        height=400,
+        height=40,
         layers=[
             pdk.Layer(
-                "ScatterplotLayer",
+                "PointCloudLayer",
                 data=df,
-                get_position="[LON, LAT]",
-                get_color="color",  # Use the color column
+                get_position=["LON", "LAT"],  # Ensure correct column references
+                get_color="Color",  # FIXED: Use the correct column name
                 get_radius=250,
                 pickable=True,
             ),
         ],
         initial_view_state=pdk.ViewState(
-            latitude=float(df["LAT"].mean()),
+            latitude=float(df["LAT"].mean()),  
             longitude=float(df["LON"].mean()),
             zoom=11,
             pitch=45,
         ),
         tooltip={
             "html": """
-                <b>Property Details</b><br/>
-                Region: {region}<br/>
-                Type: {type}<br/>
-                Price: ${price:,.2f}<br/>
-                Rent: ${rent_income:,.2f}/day<br/>
-                Owner: {owner}
+                <b>Property Details</b><br/><hr>
+                [Title] <span style="color: cyan;">{Type}</span><br/>
+                [Region] <span style="color: cyan;">{Region}</span><br/>
+                [Cost] <span style="color: red;">${Price}</span><br/>
+                [Rent] <span style="color: green;">${Rent Income} / day</span><br/>
+                [Owner] <span style="color: gray;">{user}</span>
             """,
             "style": {
-                "backgroundColor": "steelblue",
+                "backgroundColor": "black",
                 "color": "white"
             }
         }
     ))
 
+    st.header("Property List", divider="rainbow")
+    for idx, row in df.iterrows():
+        image_col, details_col = st.columns([1, 3])
+        with image_col:
+            if row["Image URL"]:
+                st.image(row["Image URL"], width=150)
+
+        with details_col:
+            if row["User ID"] == user_id:
+                st.subheader(f"{row['Type']} :green[ - Owned]", divider="rainbow")
+            elif row["Sold"]:
+                st.subheader(f"{row['Type']} :red[ - Sold]", divider="rainbow")
+            else:
+                st.subheader(f"{row['Type']}", divider="rainbow")
+
+            st.text("")
+            c1, c2 = st.columns(2)
+            c1.write(f":blue[COST] :red[${numerize(row['Price'], 2)}]")
+            c2.write(f":blue[RENT] :green[${numerize(row['Rent Income'])} / day]")
+            c1.write(f":blue[Region] :grey[{row['Region']}]")
+            c2.write(f":blue[Demand Factor] :green[{numerize(row['Demand Factor'])}]")
+
+            st.text("")
+            if row["User ID"] == user_id:
+                st.success("You own this property.")
+            elif row["Sold"] == 0:
+                if st.button(f"Property Options", key=f"buy_{row['Property ID']}", use_container_width=True):
+                    prop_details_dialog(conn, user_id, row["Property ID"])
+            else:
+                st.warning("This property has already been sold.")
+
+        st.divider()
 
 @st.dialog("Property Details", width="large")
 def prop_details_dialog(conn, user_id, prop_id):
     c = conn.cursor()
 
-    # Fetch property data from the database
     data = c.execute("""
         SELECT price, rent_income, type, region, demand_factor, latitude, longitude 
         FROM real_estate 
         WHERE property_id = ?
     """, (prop_id,)).fetchone()
 
-    # Fetch user balance
     balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
-    # Create DataFrame from fetched data
     df = pd.DataFrame([data], columns=[
         "Price", "Rent Income", "Type", "Region", "Demand Factor", "LAT", "LON"
     ])
 
-    # Convert LAT and LON to numeric
     df["LAT"] = pd.to_numeric(df["LAT"], errors="coerce")
     df["LON"] = pd.to_numeric(df["LON"], errors="coerce")
 
-    # Check for invalid or missing data
     if df["LAT"].isnull().any() or df["LON"].isnull().any():
         st.error("Invalid or missing latitude/longitude data for the property.")
         return
 
-    # Display columns for layout
     c1, c2 = st.columns(2)
 
-    # Pydeck map in the first column
     with c1:
         st.pydeck_chart(pdk.Deck(
             height=100,
@@ -2350,7 +2404,6 @@ def prop_details_dialog(conn, user_id, prop_id):
             tooltip={"text": "Property Location\nRegion: {Region}\nType: {Type}"},
         ))
 
-    # Property details in the second column
     with c2:
         with st.container(border=True):
             st.subheader(f"{data[2]} {data[3]}", divider="rainbow")
@@ -2369,11 +2422,9 @@ def prop_details_dialog(conn, user_id, prop_id):
             col2.write(f":blue[[Demand Factor]]")
             col2.write(f":orange[{numerize(data[4] * 100)}%]")
 
-        # Spacer for better layout
         for _ in range(5):
             st.text("")
 
-        # Confirm Buy Property button
         if st.button("Confirm Buy Property", type="primary", use_container_width=True, disabled=balance < data[0]):
             with st.spinner("Purchasing property..."):
                 buy_property(conn, user_id, prop_id)
@@ -2382,34 +2433,30 @@ def prop_details_dialog(conn, user_id, prop_id):
             time.sleep(2)
             st.rerun()
 
-        # Display latitude and longitude
         c1, c2, c3 = st.columns([1, 1, 1])
         c1.caption(f":gray[LATITUDE: {data[5]}]")
         c3.caption(f":gray[LONGITUDE: {data[6]}]")
 
-def buy_property(conn, user_id, property_id, price):
+def buy_property(conn, user_id, property_id):
     c = conn.cursor()
     
-    # Get username for the buyer
     username = c.execute("SELECT username FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
-    
+    price = c.execute("SELECT price FROM real_estate WHERE property_id = ?", (property_id,)).fetchone()[0]
+
     try:
         c.execute("BEGIN TRANSACTION")
         
-        # Update user balance
         c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (price, user_id))
         
-        # Update property ownership
         c.execute("""
             UPDATE real_estate 
             SET sold = 1, 
                 is_owned = 1, 
                 user_id = ?,
-                username = ?  # Add username to property record
+                username = ?
             WHERE property_id = ?
         """, (user_id, username, property_id))
         
-        # Add to user_properties
         purchase_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         property_data = c.execute("""
             SELECT region, type, rent_income 
@@ -2425,7 +2472,6 @@ def buy_property(conn, user_id, property_id, price):
             VALUES (?, ?, ?, ?)
         """, (user_id, property_id, purchase_date, rent_income))
         
-        # Record transaction
         c.execute("""
             INSERT INTO transactions 
             (transaction_id, user_id, type, amount, timestamp) 
@@ -2656,12 +2702,12 @@ def admin_panel(conn):
 
     st.header("Manage Real Estates", divider = "rainbow")
     with st.spinner("Loading PrimeEstates™..."):
-        estate_data = c.execute("SELECT property_id, region, type, price, rent_income, demand_factor, image_url, latitude, longitude, sold, username FROM real_estate").fetchall()
-    df = pd.DataFrame(estate_data, columns = ["Estate ID", "Region", "Title", "Price", "Rent Income", "Demand Factor", "Image Path", "Latitude", "Longitude", "Sold", "Username"])
+        estate_data = c.execute("SELECT property_id, region, type, price, rent_income, demand_factor, image_url, latitude, longitude, sold, username, user_id FROM real_estate").fetchall()
+    df = pd.DataFrame(estate_data, columns = ["Estate ID", "Region", "Title", "Price", "Rent Income", "Demand Factor", "Image Path", "Latitude", "Longitude", "Sold", "Username", "User ID"])
     edited_df = st.data_editor(df, key = "estate_table", num_rows = "fixed", use_container_width = True, hide_index = True)
     if st.button("Update Estates", use_container_width = True):
         for _, row in edited_df.iterrows():
-            c.execute("UPDATE OR IGNORE real_estate SET region = ?, type = ?, price = ?, rent_income = ?, demand_factor = ?, image_url = ?, latitude = ?, longitude = ?, sold = ?, username = ? WHERE property_id = ?", (row["Region"], row["Title"], row["Price"], row["Rent Income"], row["Demand Factor"], row["Image Path"], row["Latitude"], row["Longitude"], row["Sold"], row["Username"], row["Estate ID"]))
+            c.execute("UPDATE OR IGNORE real_estate SET region = ?, type = ?, price = ?, rent_income = ?, demand_factor = ?, image_url = ?, latitude = ?, longitude = ?, sold = ?, username = ?, user_id = ? WHERE property_id = ?", (row["Region"], row["Title"], row["Price"], row["Rent Income"], row["Demand Factor"], row["Image Path"], row["Latitude"], row["Longitude"], row["Sold"], row["Username"], row["User ID"], row["Estate ID"]))
         conn.commit()
         st.rerun()
 
