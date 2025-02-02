@@ -2880,7 +2880,42 @@ def admin_panel(conn):
                 conn.commit()
                 st.rerun()
         else:
-            st.write(f"No transactions found for {user}.")
+            st.write(f"No items found for {user}.")
+
+    st.subheader("User Properties", divider = "rainbow")
+    user = st.selectbox("Select User", [u[0] for u in c.execute("SELECT username FROM users").fetchall()], key="inv3")
+    if user:
+        user_id = c.execute("SELECT user_id FROM users WHERE username = ?", (user,)).fetchone()[0]
+        user_properties = c.execute("SELECT * FROM user_properties WHERE user_id = ? ORDER BY purchase_date DESC", (user_id,)).fetchall()
+
+        if user_properties:
+            df = pd.DataFrame(user_properties, columns = ["User ID", "Property ID", "Purchase Date", "Rent Income"])
+            edited_df = st.data_editor(df, key = "user_inventory_table2", num_rows = "fixed", use_container_width = True, hide_index = False)
+            
+            if st.button("Update User Properties", use_container_width = True):
+                for _, row in edited_df.iterrows():
+                    c.execute("""
+                        UPDATE OR IGNORE user_properties 
+                        SET purchase_date = ?, rent_income = ?
+                        WHERE property_id = ?
+                    """, (row["Purchase Date"], row["Rent Income"], row["Property ID"]))
+                conn.commit()
+                st.success("User properties updated successfully.")
+                st.rerun()
+            
+            st.text("")
+
+            with st.container(border=True):
+                c1, c2 = st.columns(2)
+                item_id_to_delete3 = c1.number_input("Enter property ID to Delete", min_value=0, step=1)
+
+            if c2.button("Delete Property", use_container_width = True):
+                with st.spinner("Processing..."):
+                    c.execute("DELETE FROM user_properties WHERE property_id = ?", (item_id_to_delete3,))
+                conn.commit()
+                st.rerun()
+        else:
+            st.write(f"No property found for {user}.")
 
 def settings(conn, username):
     c = conn.cursor()
