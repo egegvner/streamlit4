@@ -1740,7 +1740,7 @@ def stocks_view(conn, user_id):
             st.session_state.graph_color = (0, 255, 0)
 
         elif last_price < previous_price:
-            change_color = f":green[+{numerize(percentage_change)}%] :gray[({st.session_state.hours}h)".format(percentage_change)
+            change_color = f":red[-{numerize(percentage_change)}%] :gray[({st.session_state.hours}h)".format(percentage_change)
             st.session_state.graph_color = (255, 0, 0)
 
         else:
