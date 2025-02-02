@@ -5,3 +5,4 @@ streamlit_autorefresh
 argon2-cffi
 numerize
 pydeck
+plotly
