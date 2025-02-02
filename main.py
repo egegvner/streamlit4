@@ -1263,6 +1263,7 @@ def inventory_view(conn, user_id):
         if not owned_properties:
             st.info("You don't own any properties yet.")
             return
+
         else:
             counter = 0
             for (prop_id,) in owned_properties:
@@ -1289,7 +1290,7 @@ def inventory_view(conn, user_id):
                             if st.button("Sell To Bank", key=prop_id, use_container_width=True):
                                 with st.spinner("Selling..."):
                                     c.execute("DELETE FROM user_properties WHERE property_id = ?", (prop_id,))
-                                    c.execute("UPDATE real_estate SET sold = 0, is_owned = 0, username = NULL WHERE property_id = ?", (prop_id,))
+                                    c.execute("UPDATE real_estate SET sold = 0, is_owned = 0, username = None, user_id = 0 WHERE property_id = ?", (prop_id,))
                                     conn.commit()
                                     time.sleep(3)
                                 st.success("Sold property to the bank for free.")
