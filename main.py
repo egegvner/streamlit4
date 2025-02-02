@@ -1254,18 +1254,6 @@ def inventory_view(conn, user_id):
     with t2:
         st.header("🏡 My Properties", divider="rainbow")
 
-        owned_properties = c.execute("""
-            SELECT property_id FROM user_properties WHERE user_id = ?
-        """, (user_id,)).fetchall()
-        
-        p = c.execute("SELECT purchase_date FROM user_properties WHERE user_id = ?", (user_id,)).fetchall()
-        
-        if not owned_properties:
-            st.info("You don't own any properties yet.")
-            return
-
-        
-
 def manage_pending_transfers(conn, receiver_id):
     c = conn.cursor()
     st.header("📥 Pending Transfers", divider = "rainbow")
