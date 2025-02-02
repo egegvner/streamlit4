@@ -1,7 +1,6 @@
 # Copyright Ege Güvener, 20/12/2024
 # License: MIT
 
-
 import numerize.numerize
 import streamlit as st
 import sqlite3
@@ -14,6 +13,7 @@ import argon2
 from streamlit_autorefresh import st_autorefresh
 from numerize.numerize import numerize
 import pydeck as pdk
+import plotly.graph_objects as go
 import streamlit as st
 
 if "current_menu" not in st.session_state:
@@ -267,14 +267,17 @@ def update_stock_prices(conn):
     c = conn.cursor()
     now = datetime.datetime.now()
 
-    stocks = c.execute("SELECT stock_id, price, last_updated, change_rate FROM stocks").fetchall()
+    stocks = c.execute("SELECT stock_id, price, last_updated, change_rate, open_price, close_price FROM stocks").fetchall()
 
-    for stock_id, current_price, last_updated, change_rate in stocks:
+    for stock_id, current_price, last_updated, change_rate, open_price, close_price in stocks:
         try:
             if last_updated:
                 last_updated = datetime.datetime.strptime(last_updated, "%Y-%m-%d %H:%M:%S")
             else:
                 last_updated = now - datetime.timedelta(seconds=300)
+
+            if open_price is None:
+                open_price = current_price
 
             elapsed_time = (now - last_updated).total_seconds()
             num_updates = int(elapsed_time // 300)
@@ -292,9 +295,11 @@ def update_stock_prices(conn):
                         )
                     current_price = new_price
 
+            close_price = current_price
+
             c.execute(
-                "UPDATE stocks SET price = ?, last_updated = ? WHERE stock_id = ?",
-                (current_price, now.strftime("%Y-%m-%d %H:%M:%S"), stock_id)
+                "UPDATE stocks SET price = ?, open_price = ?, close_price = ?, last_updated = ? WHERE stock_id = ?",
+                (current_price, open_price, close_price, now.strftime("%Y-%m-%d %H:%M:%S"), stock_id)
             )
         except Exception as e:
             continue
@@ -624,7 +629,9 @@ def init_db():
                 starting_price REAL NOT NULL,
                 price REAL NOT NULL,
                 stock_amount INTEGER NOT NULL,
-                last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                open_price REAL,
+                close_price REAL
                 );''')
     
     c.execute('''CREATE TABLE IF NOT EXISTS user_stocks (
@@ -669,17 +676,6 @@ def init_db():
                 );''')
     
     c.execute('''CREATE TABLE IF NOT EXISTS blackmarket_items (
-              item_id INTEGER NOT NULL,
-              item_number INTEGER NOT NULL,
-              name TEXT NOT NULL,
-              description TEXT,
-              rarity TEXT NOT NULL,
-              price REAL NOT NULL,
-              image_url TEXT NOT NULL,
-              seller_id INTEGER NOT NULL
-              );''')
-
-    c.execute('''CREATE TABLE IF NOT EXISTS stock_market_transactions (
               item_id INTEGER NOT NULL,
               item_number INTEGER NOT NULL,
               name TEXT NOT NULL,
@@ -1707,6 +1703,9 @@ def stocks_view(conn, user_id):
 
     if "hours" not in st.session_state:
         st.session_state.hours = 24
+    
+    if "g_type" not in st.session_state:
+        st.session_state.g_type = "Candlestick"
 
     st.write("Available Stocks:")
     stock_buttons = st.columns(len(stocks))
@@ -1756,11 +1755,33 @@ def stocks_view(conn, user_id):
     c1, c2 = st.columns(2)
     with c1:
         if len(history) > 1:
-            df = pd.DataFrame(history, columns=["Timestamp", "Price"])
-            df['Timestamp'] = pd.to_datetime(df['Timestamp'])
-            df.set_index('Timestamp', inplace=True)
+            if st.session_state.g_type == "Candlestick":
+                df = pd.DataFrame(history, columns=["Timestamp", "Price"])
+                df['Timestamp'] = pd.to_datetime(df['Timestamp'])
+                df.set_index('Timestamp', inplace=True)
+                
+                df_resampled = df.resample('H').ohlc()['Price']
+                
+                fig = go.Figure(data=[go.Candlestick(x=df_resampled.index,
+                                                    open=df_resampled['open'],
+                                                    high=df_resampled['high'],
+                                                    low=df_resampled['low'],
+                                                    close=df_resampled['close'],
+                                                    )])
 
-            st.line_chart(df, color=st.session_state.graph_color)
+                fig.update_layout(title = "History",
+                                xaxis_title='Timestamp',
+                                yaxis_title='Price',
+                                template='plotly_dark')
+
+                st.plotly_chart(fig, use_container_width=True, theme="streamlit")
+            
+            else:
+                df = pd.DataFrame(history, columns=["Timestamp", "Price"])
+                df['Timestamp'] = pd.to_datetime(df['Timestamp'])
+                df.set_index('Timestamp', inplace=True)
+
+                st.line_chart(df, color=st.session_state.graph_color)
         else:
             st.info("Stock history will be available after 60 seconds of stock creation.")
         
@@ -1768,6 +1789,12 @@ def stocks_view(conn, user_id):
         st.session_state.hours = cl1.select_slider("Time Range (Hours)", options=[1, 5, 10, 24, 48, 72, 96, 120, 144, 168])
         if cl2.button("Set Range", use_container_width=True):
             st.rerun()
+        
+        cm1, cm2 = st.columns(2)
+        st.session_state.g_type = cm1.selectbox(label="fe", label_visibility="collapsed", options=["Candlestick", "Line Chart"])
+        if cm2.button("Set Graph Type", use_container_width=True):
+            st.rerun()
+
     with c2:
         user_stock = c.execute("SELECT quantity, avg_buy_price FROM user_stocks WHERE user_id = ? AND stock_id = ?", 
                                 (user_id, stock_id)).fetchall()
@@ -3210,5 +3237,7 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
 
 if __name__ == "__main__":
     conn = get_db_connection()
+    add_column_if_not_exists(conn, "stocks", "open_price", "REAL")
+    add_column_if_not_exists(conn, "stocks", "close_price", "REAL")
     init_db()
     main(conn)
