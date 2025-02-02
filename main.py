@@ -1816,7 +1816,7 @@ def stocks_view(conn, user_id):
         col1, col2 = st.columns(2)
         
         with col1:
-            buy_max_quantity = numerize(min(balance / price, price))
+            buy_max_quantity = min(balance / price, price)
             buy_quantity = st.number_input(f"Buy {symbol}", min_value=0.0, step=0.25, key=f"buy_{stock_id}")
             st.write(f"[Cost]  :red[${numerize(buy_quantity * price)}]")
             
@@ -1828,10 +1828,10 @@ def stocks_view(conn, user_id):
                 time.sleep(2.5)
                 st.rerun()
             
-            if st.button(f"Buy MAX: :orange[{buy_max_quantity}] ~ :green[${numerize(balance)}]", key=f"buy_max_btn_{stock_id}", use_container_width=True):
+            if st.button(f"Buy MAX: :orange[{numerize(buy_max_quantity)}] ~ :green[${numerize(balance)}]", key=f"buy_max_btn_{stock_id}", use_container_width=True):
                 with st.spinner("Purchasing..."):
                     time.sleep(3)
-                    buy_stock(conn, user_id, stock_id, balance / price)
+                    buy_stock(conn, user_id, stock_id, buy_max_quantity)
                 time.sleep(2.5)
                 st.rerun()
                         
