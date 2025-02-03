@@ -1334,8 +1334,9 @@ def inventory_view(conn, user_id):
                             c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (rent_income, user_id))
                             c.execute("UPDATE user_properties SET last_collected = ? WHERE property_id = ?", (now.strftime("%Y-%m-%d %H:%M:%S"), prop_id))
                             conn.commit()
-                        st.toast(f"💰 Collected :green[${numerize(rent_income)}] in rent income!")
-
+                        st.success(f"💰 Collected :green[${numerize(rent_income)}] in rent income!")
+                        time.sleep(1)
+                        st.rerun()
                 st.divider()
 
 def manage_pending_transfers(conn, receiver_id):
