@@ -1815,7 +1815,6 @@ def sell_stock(conn, user_id, stock_id, quantity):
 
 def stocks_view(conn, user_id):
     c = conn.cursor()
-    st.header("📈 Stock Market", divider="rainbow")
     
     update_stock_prices(conn)
     st_autorefresh(interval=300000, key="stock_autorefresh")
@@ -1840,16 +1839,35 @@ def stocks_view(conn, user_id):
     
     if "g_type" not in st.session_state:
         st.session_state.g_type = "Candlestick"
-
-    st.write("Available Stocks:")
-    stock_buttons = st.columns(len(stocks))
-    for idx, stock in enumerate(stocks):
-        stock_id, name, symbol, price, stock_amount = stock
-        if stock_buttons[idx].button(f"{symbol}", key=f"stock_btn_{stock_id}", use_container_width = True):
-            st.session_state.selected_stock = stock_id
     
-    st.divider()
+    stock_ticker_html = """
+    <div style="white-space: nowrap; overflow: hidden; background-color:; color: white; padding: 10px; font-size: 20px;">
+        <marquee behavior="scroll" direction="left" scrollamount="5">
+    """
 
+    now = datetime.datetime.now()
+    start_time = now - datetime.timedelta(hours=24)
+    start_time_str = start_time.strftime("%Y-%m-%d %H:%M:%S")
+
+    for stock_id, name, symbol, current_price, amt in stocks:
+        price_24h_ago = c.execute("""
+            SELECT price FROM stock_history 
+            WHERE stock_id = ? AND timestamp <= ? 
+            ORDER BY timestamp DESC LIMIT 1
+        """, (stock_id, start_time_str)).fetchone()
+
+        if price_24h_ago:
+            price_24h_ago = price_24h_ago[0]
+            price_color = "lime" if current_price >= price_24h_ago else "red"
+        else:
+            price_color = "white"
+
+        stock_ticker_html += f" <span style='color: white;'>{symbol}</span> <span style='color: {price_color};'>${numerize(current_price, 2)}</span> <span style='color: darkgray'> | </span>"
+
+    stock_ticker_html += "</marquee></div>"
+
+    st.markdown(stock_ticker_html, unsafe_allow_html=True)
+    
     selected_stock = next(s for s in stocks if s[0] == st.session_state.selected_stock)
     stock_id, name, symbol, price, stock_amount = selected_stock
 
@@ -1883,11 +1901,15 @@ def stocks_view(conn, user_id):
         percentage_change = 0
         change_color = ":orange[0.00%] :gray[(24h)"
 
-    st.subheader(f"{name} ({symbol})")
-    st.header(f":green[${numerize(price, 2)}] \n ##### {change_color}]")
+    c1, c2, c3 = st.columns([1, 6, 6])
 
-    c1, c2 = st.columns(2)
     with c1:
+        for i in range(len(stocks)):
+            if st.button(label = f"{stocks[i][2]}", key=stocks[i][0], use_container_width=True):
+                st.session_state.selected_stock = stocks[i][0]
+                st.rerun()
+                
+    with c2:
         if len(history) > 1:
             if st.session_state.g_type == "Candlestick":
                 df = pd.DataFrame(history, columns=["Timestamp", "Price"])
@@ -1906,7 +1928,8 @@ def stocks_view(conn, user_id):
                 fig.update_layout(title = "History",
                                 xaxis_title='Timestamp',
                                 yaxis_title='Price',
-                                template='plotly_dark')
+                                template='plotly_dark',
+                                )
 
                 st.plotly_chart(fig, use_container_width=True, theme="streamlit")
             
@@ -1929,7 +1952,9 @@ def stocks_view(conn, user_id):
         if cm2.button("Set Graph Type", use_container_width=True):
             st.rerun()
 
-    with c2:
+    with c3:
+        st.subheader(f"{name} ({symbol})")
+        st.header(f":green[${numerize(price)}] \n {change_color}]")
         user_stock = c.execute("SELECT quantity, avg_buy_price FROM user_stocks WHERE user_id = ? AND stock_id = ?", 
                                 (user_id, stock_id)).fetchall()
 
@@ -2452,6 +2477,9 @@ def real_estate_marketplace_view(conn, user_id):
     df["LAT"] = pd.to_numeric(df["LAT"], errors="coerce")
     df["LON"] = pd.to_numeric(df["LON"], errors="coerce")
 
+    df["Formatted Price"] = df["Price"].apply(lambda x: numerize(x))
+    df["Formatted Rent"] = df["Rent Income"].apply(lambda x: numerize(x))
+
     df["Color"] = df.apply(lambda row: 
         [0, 255, 0] if row["User ID"] == user_id else 
         ([255, 0, 0] if row["Sold"] else [0, 255, 255]), axis=1
@@ -2460,31 +2488,32 @@ def real_estate_marketplace_view(conn, user_id):
     df["Color"] = df["Color"].astype(object)
 
     st.pydeck_chart(pdk.Deck(
-        height=40,
+        height=400,
         layers=[
             pdk.Layer(
                 "PointCloudLayer",
                 data=df,
-                get_position=["LON", "LAT"],  # Ensure correct column references
-                get_color="Color",  # FIXED: Use the correct column name
-                get_radius=250,
+                get_position=["LON", "LAT"],  
+                get_color="Color",
                 pickable=True,
+                pointSize = 5,
             ),
         ],
         initial_view_state=pdk.ViewState(
             latitude=float(df["LAT"].mean()),  
             longitude=float(df["LON"].mean()),
-            zoom=11,
-            pitch=45,
+            zoom=1,
+            pitch = 50,
+            bearing=0
         ),
         tooltip={
             "html": """
                 <b>Property Details</b><br/><hr>
-                [Title] <span style="color: cyan;">{Type}</span><br/>
-                [Region] <span style="color: cyan;">{Region}</span><br/>
-                [Cost] <span style="color: red;">${Price}</span><br/>
-                [Rent] <span style="color: green;">${Rent Income} / day</span><br/>
-                [Owner] <span style="color: gray;">{user}</span>
+                <span style="color: gray;">Title</span> <span style="color: teal;">{Type}</span><br/>
+                <span style="color: gray;">Region</span> <span style="color: teal;">{Region}</span><br/>
+                <span style="color: gray;">Price</span> <span style="color: red;">${Formatted Price}</span><br/>
+                <span style="color: gray;">Rent</span> <span style="color: lime;">${Formatted Rent} / day</span><br/>
+                <span style="color: gray;">Owner</span> <span style="color: white;">{user}</span>
             """,
             "style": {
                 "backgroundColor": "black",
@@ -2510,7 +2539,7 @@ def real_estate_marketplace_view(conn, user_id):
 
             st.text("")
             c1, c2 = st.columns(2)
-            c1.write(f":blue[COST] :red[${numerize(row['Price'], 2)}]")
+            c1.write(f":blue[COST] :red[${numerize(row['Price'])}]")
             c2.write(f":blue[RENT] :green[${numerize(row['Rent Income'])} / day]")
             c1.write(f":blue[Region] :grey[{row['Region']}]")
             c2.write(f":blue[Demand Factor] :green[{numerize(row['Demand Factor'])}]")
@@ -2559,36 +2588,49 @@ def prop_details_dialog(conn, user_id, prop_id):
                     "GridCellLayer",
                     data=df,
                     get_position="[LON, LAT]",
-                    get_color="[0, 255, 255]",
-                    get_radius=250,
-                    pickable=True,
+                    get_color="[0, 150, 255]",
+                    pickable=True, 
+                    cellSize = 1000,                 
                 ),
             ],
             initial_view_state=pdk.ViewState(
                 latitude=float(df["LAT"].mean()),
                 longitude=float(df["LON"].mean()),
                 zoom=11,
-                pitch=60,
+                pitch=90,
+                bearing=30,
             ),
-            tooltip={"text": "Property Location\nRegion: {Region}\nType: {Type}"},
+            tooltip={
+            "html": """
+                <b>Property Details</b><br/><hr>
+                <span style="color: gray;">Title</span> <span style="color: teal;">{Type}</span><br/>
+                <span style="color: gray;">Region</span> <span style="color: teal;">{Region}</span><br/>
+                <span style="color: gray;">Cost</span> <span style="color: red;">${Price}</span><br/>
+                <span style="color: gray;">Rent</span> <span style="color: lime;">${Rent Income} / day</span><br/>
+            """,
+            "style": {
+                "backgroundColor": "black",
+                "color": "white"
+            }
+        }
         ))
 
     with c2:
         with st.container(border=True):
-            st.subheader(f"{data[2]} {data[3]}", divider="rainbow")
+            st.subheader(f"{data[2]}, {data[3]}", divider="rainbow")
             st.text("")
             col1, col2 = st.columns(2)
-            col1.write(f":blue[[Property Price]]")
+            col1.write(f":gray[Property Price]")
             col1.write(f":red[${numerize(data[0])}]")
-            col2.write(f":blue[[Rent Income]]")
+            col2.write(f":gray[Rent Income]")
             col2.write(f":green[${numerize(data[1])} / Day]")
             col1.text("")
             col1.text("")
-            col1.write(f":blue[[Region]]")
+            col1.write(f":gray[Region]")
             col1.write(f":orange[{data[3]}]")
             col2.text("")
             col2.text("")
-            col2.write(f":blue[[Demand Factor]]")
+            col2.write(f":gray[Demand Factor]")
             col2.write(f":orange[{numerize(data[4] * 100)}%]")
 
         for _ in range(5):
