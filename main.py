@@ -1910,7 +1910,7 @@ def stocks_view(conn, user_id):
             cot = st.container(border=False, height=600)
             with cot:
                 for i in range(len(stocks)):
-                    if st.button(label = f"{stocks[i][2]}", key=stocks[i][0], use_container_width=True, type="primary"):
+                    if st.button(label = f"{stocks[i][2]}", key=stocks[i][0], use_container_width=True):
                         st.session_state.selected_stock = stocks[i][0]
                         st.rerun()
 
