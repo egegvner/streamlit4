@@ -3294,6 +3294,15 @@ def main(conn):
             st.sidebar.header(" ", divider="rainbow")
 
         t1, t2 = st.sidebar.tabs(["🌐 Global", "💠 Personal"])
+        st.markdown('''
+                    <style>
+                button[data-baseweb="tab"] {
+                font-size: 24px;
+                margin: 0;
+                width: 100%;
+                }
+                </style>
+                ''', unsafe_allow_html=True)
         
         with t1:
             c1, c2 = st.columns(2)
