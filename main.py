@@ -21,7 +21,7 @@ if "current_menu" not in st.session_state:
     st.session_state.current_menu = "Dashboard"
 
 previous_layout = st.session_state.get("previous_layout", "centered")
-current_layout = "wide" if st.session_state.current_menu == "Blackmarket" or st.session_state.current_menu == "Investments" or st.session_state.current_menu == "Bank" or st.session_state.current_menu == "Stocks" or st.session_state.current_menu == "Char" or st.session_state.current_menu == "View Savings" or st.session_state.current_menu == "Transaction History" or st.session_state.current_menu == "Main Account" or st.session_state.current_menu == "Inventory" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "Real Estate" else "centered"
+current_layout = "wide" if st.session_state.current_menu == "Blackmarket" or st.session_state.current_menu == "Investments" or st.session_state.current_menu == "Bank" or st.session_state.current_menu == "Stocks" or st.session_state.current_menu == "Char" or st.session_state.current_menu == "View Savings" or st.session_state.current_menu == "Transaction History" or st.session_state.current_menu == "Main Account" or st.session_state.current_menu == "Inventory" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "Real Estate" or st.session_state.current_menu == "Chat" else "centered"
 
 if previous_layout != current_layout:
     st.session_state.previous_layout = current_layout
@@ -623,6 +623,14 @@ def init_db():
                 FOREIGN KEY (user_id) REFERENCES users(user_id)
                 );''')
 
+    c.execute('''CREATE TABLE IF NOT EXISTS chats2 (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                message TEXT NOT NULL,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(user_id)
+                );''')
+
     c.execute('''CREATE TABLE IF NOT EXISTS stocks (
                 stock_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
@@ -1073,9 +1081,15 @@ def privacy_policy_dialog():
         st.rerun()
 
 def leaderboard(c):
-    st.header("🏆 Leaderboard", divider="rainbow")
-
-    tab1, tab2= st.tabs(["💰 Vault", "🏦 Savings"])
+    tab1, tab2= st.tabs(["💰 VAULT", "🏦 SAVINGS"])
+    st.markdown('''<style>
+                        button[data-baseweb="tab"] {
+                        font-size: 24px;
+                        margin: 0;
+                        width: 100%;
+                        }
+                        </style>
+                ''', unsafe_allow_html=True)
 
     balance_data = c.execute("""
         SELECT username, visible_name, balance FROM users 
@@ -1097,11 +1111,17 @@ def leaderboard(c):
         ]
 
     with tab1:
-        st.subheader("💰 Vault Ranking")
+        st.text("")
+        st.text("")
+
+        st.header("💰 Vault Ranking", divider="rainbow")
         st.table(format_leaderboard(balance_data) if balance_data else ["No users found."])
 
     with tab2:
-        st.subheader("🏦 Savings Balance Ranking")
+        st.text("")
+        st.text("")
+
+        st.header("🏦 Savings Balance Ranking", divider="rainbow")
         st.table(format_leaderboard(savings_balance_data) if savings_balance_data else ["No users found."])
 
 @st.dialog("Item Options")
@@ -1209,16 +1229,25 @@ def marketplace_view(conn, user_id):
 
 def inventory_view(conn, user_id):
     c = conn.cursor()
-    st.header("Your Inventory", divider="rainbow")
 
     t1, t2 = st.tabs(["💠 GNFTs", "🏠 Properties"])
+    st.markdown('''<style>
+                        button[data-baseweb="tab"] {
+                        font-size: 24px;
+                        margin: 0;
+                        width: 100%;
+                        }
+                        </style>
+                ''', unsafe_allow_html=True)
     
     with t1:
         owned_item_ids = [owned_item[0] for owned_item in c.execute("SELECT item_id FROM user_inventory WHERE user_id = ?", (user_id,)).fetchall()]
         if not owned_item_ids:
             st.write("No items in your inventory.")
         else:
-            st.subheader("Your GNFTs")
+            st.text("")
+            st.text("")
+            st.header("Your GNFTs", divider="rainbow")
             
             for idx, item_id in enumerate(owned_item_ids):
                 item_details = c.execute("SELECT name, description, rarity, image_url FROM marketplace_items WHERE item_id = ?", (item_id,)).fetchone()
@@ -1251,51 +1280,63 @@ def inventory_view(conn, user_id):
                 st.divider()
 
     with t2:
+        st.text("")
+        st.text("")
         st.header("🏡 My Properties", divider="rainbow")
 
         owned_properties = c.execute("""
-            SELECT property_id FROM user_properties WHERE user_id = ?
+            SELECT up.property_id, re.region, re.type, re.image_url, up.rent_income, up.last_collected
+            FROM user_properties up
+            JOIN real_estate re ON up.property_id = re.property_id
+            WHERE up.user_id = ?
         """, (user_id,)).fetchall()
-        
-        p = c.execute("SELECT purchase_date FROM user_properties WHERE user_id = ?", (user_id,)).fetchall()
-        
+
         if not owned_properties:
             st.info("You don't own any properties yet.")
-        else:
-            counter = 0
-            for prop_id in owned_properties:
-                prop_details = c.execute("""
-                    SELECT region, type, image_url, rent_income
-                    FROM real_estate WHERE property_id = ?
-                """, prop_id,).fetchone()
+            return
 
-                if prop_details:
-                    region, prop_type, image_url, rent_income = prop_details
-                    
+        for property in owned_properties:
+            prop_id, region, prop_type, image_url, rent_income, last_collected = property
+            
+            last_collected = datetime.datetime.strptime(last_collected, "%Y-%m-%d %H:%M:%S") if last_collected else None
+            now = datetime.datetime.now()
+            can_collect = last_collected is None or (now - last_collected).total_seconds() >= 86400  # 24 hours
+
+            with st.container(border=True):
+                col1, col2 = st.columns([1, 3])
+
+                with col1:
+                    if image_url:
+                        st.image(image_url, use_container_width=True)
+
+                with col2:
+                    st.subheader(f"{region} - {prop_type}")
+                    st.write(f"💵 Daily Rent: :green[${numerize(rent_income)}]")
+                    if last_collected:
+                        st.write(f"🕒 Last Collected: :blue[{last_collected.strftime('%Y-%m-%d %H:%M:%S')}]")
+
                     with st.container(border=True):
-                        col1, col2 = st.columns([1, 3])
-                        
-                        with col1:
-                            if image_url:
-                                st.image(image_url, use_container_width=True)
-                        
-                        with col2:
-                            st.subheader(f"{region} - {prop_type}")
-                            st.write(f"📅 Purchased: :blue[{p[counter][0]}]")
-                            st.write(f"💵 Daily Rent: :green[${numerize(rent_income)}]")
-                            counter =+ 1
-                            if st.button("Sell To Bank", key=prop_id, use_container_width=True):
-                                with st.spinner("Selling..."):
-                                    c.execute("DELETE FROM user_properties WHERE property_id = ?", (prop_id,))
-                                    c.execute("UPDATE real_estate SET sold = 0, is_owned = 0, username = None, user_id = 0 WHERE property_id = ?", (prop_id,))
-                                    conn.commit()
-                                    time.sleep(3)
-                                st.success("Sold property to the bank for free.")
-                                st.rerun()
+                        st.success(f"[Accumulated Rent] :green[${numerize(rent_income)}]")
 
-                    st.divider()
-                else:
-                    st.info("error")
+                    c1, c2 = st.columns(2)
+
+                    if c1.button("Sell To Bank", key=f"sell_{prop_id}", use_container_width=True):
+                        with st.spinner("Selling..."):
+                            c.execute("DELETE FROM user_properties WHERE property_id = ?", (prop_id,))
+                            c.execute("UPDATE real_estate SET sold = 0, is_owned = 0, username = NULL, user_id = 0 WHERE property_id = ?", (prop_id,))
+                            conn.commit()
+                            time.sleep(3)
+                        st.success("Sold property to the bank for free.")
+                        st.rerun()
+
+                    if c2.button("**Collect Rent**", type="primary", key=f"rent_{prop_id}", use_container_width=True, disabled=not can_collect, help="Rent for this property has already been collected today." if not can_collect else None):
+                        with st.spinner("Collecting Rent..."):
+                            c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (rent_income, user_id))
+                            c.execute("UPDATE user_properties SET last_collected = ? WHERE property_id = ?", (now.strftime("%Y-%m-%d %H:%M:%S"), prop_id))
+                            conn.commit()
+                        st.toast(f"💰 Collected :green[${numerize(rent_income)}] in rent income!")
+
+                st.divider()
 
 def manage_pending_transfers(conn, receiver_id):
     c = conn.cursor()
@@ -1530,45 +1571,116 @@ def chat_view(conn):
     st_autorefresh(interval=5000, key="chat_autorefresh")
 
     c = conn.cursor()
-    messages = c.execute("""
+    messages1 = c.execute("""
         SELECT u.username, c.message, c.timestamp 
         FROM chats c 
         JOIN users u ON c.user_id = u.user_id 
         ORDER BY c.timestamp DESC 
-        LIMIT 6
+        LIMIT 20
     """).fetchall()
 
-    messages.reverse()
+    messages2 = c.execute("""
+        SELECT u.username, c.message, c.timestamp 
+        FROM chats2 c 
+        JOIN users u ON c.user_id = u.user_id 
+        ORDER BY c.timestamp DESC 
+        LIMIT 20
+    """).fetchall()
 
-    chat_container = st.container()
-    with chat_container:
-        for username, message, timestamp in messages:
-            if username == "egegvner":
-                with st.chat_message(name="ai"):
-                    st.write(f":orange[[{username}] **:blue[[DEV]]** :gray[{timestamp.split()[1]}:]] **{message}**")
+    messages1.reverse()
+    messages2.reverse()
 
-            else:
-                with st.chat_message(name="user"):
-                    st.write(f":gray[[{username}] :gray[[{timestamp.split()[1]}]]] {message}")
+    t1, t2 = st.tabs(["🌐 #ENGLISH", "💬 #OTHER"])
+    st.markdown('''<style>
+                        button[data-baseweb="tab"] {
+                        font-size: 24px;
+                        margin: 0;
+                        width: 100%;
+                        }
+                        </style>
+                ''', unsafe_allow_html=True)
+    
+    with t1:
+        with st.container(height=500, border=False):  
+            chat_container = st.container()
+            with chat_container:
+                for username, message, timestamp in messages1:
+                    if username == "egegvner":
+                        with st.chat_message(name="ai"):
+                            st.write(f":orange[[{username}] **:red[[DEV]]** :gray[{timestamp.split()[1]}]] **{message}**")
+                    elif username == "JohnyJohnJohn":
+                        with st.chat_message(name="ai"):
+                            st.write(f":blue[[{username}] **:blue[[ADMIN]]** :gray[{timestamp.split()[1]}]] **{message}**")
+                    else:
+                        with st.chat_message(name="user"):
+                            st.write(f":gray[[{username}] :gray[[{timestamp.split()[1]}]]] {message}")
 
-    with st.container(border=True):
-        new_message = st.text_input("", label_visibility="collapsed", placeholder="Your brilliant message goes here...", key="chat_input")
-        if st.button("Send", use_container_width=True):
-            time_diff = (datetime.datetime.now() - st.session_state.cd).total_seconds()
+        with st.container(border=True):
+            col1, col2 = st.columns([10, 1])
+            
+            with col1:
+                new_message = st.text_input("", label_visibility="collapsed", placeholder="Message @English", key="chat_input")
 
-            if time_diff > 2:
-                if new_message.strip():
-                    c.execute(
-                        "INSERT INTO chats (user_id, message, timestamp) VALUES (?, ?, CURRENT_TIMESTAMP)", 
-                        (st.session_state.user_id, new_message.strip())
-                    )
-                    conn.commit()
+            with col2:
+                send_disabled = (datetime.datetime.now() - st.session_state.cd).total_seconds() < 2  # Cooldown check
+                if st.button("", use_container_width=True, icon=":material/send:"):
+                    if not send_disabled:
+                        if new_message.strip():
+                            c.execute(
+                                "INSERT INTO chats (user_id, message, timestamp) VALUES (?, ?, CURRENT_TIMESTAMP)", 
+                                (st.session_state.user_id, new_message.strip())
+                            )
+                            conn.commit()
+                            
+                            st.session_state.last_chat_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                            st.session_state.cd = datetime.datetime.now()
+                            st.rerun()
+                        else:
+                            st.toast("Message cannot be empty!")
 
-                    st.session_state.last_chat_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    st.session_state.cd = datetime.datetime.now()
-                    st.rerun()
-            else:
-                st.toast("Please wait a bit before sending another message.")
+                    else:
+                        st.toast("Please wait a bit before sending another message.")
+
+    with t2:
+        with st.container(height=500, border=False):  
+            chat_container = st.container()
+            with chat_container:
+                for username, message, timestamp in messages2:
+                    if username == "egegvner":
+                        with st.chat_message(name="ai"):
+                            st.write(f":orange[[{username}] **:red[[DEV]]** :gray[{timestamp.split()[1]}]] **{message}**")
+                    elif username == "JohnyJohnJohn":
+                        with st.chat_message(name="ai"):
+                            st.write(f":blue[[{username}] **:blue[[ADMIN]]** :gray[{timestamp.split()[1]}]] **{message}**")
+                    else:
+                        with st.chat_message(name="user"):
+                            st.write(f":gray[[{username}] :gray[[{timestamp.split()[1]}]]] {message}")
+
+        with st.container(border=True):
+            col1, col2 = st.columns([10, 1])
+            
+            with col1:
+                new_message = st.text_input("", label_visibility="collapsed", placeholder="Message @Other", key="chat_input2")
+
+            with col2:
+                send_disabled = (datetime.datetime.now() - st.session_state.cd).total_seconds() < 2  # Cooldown check
+                if st.button("", use_container_width=True, icon=":material/send:", key="s1"):
+                    if not send_disabled:
+                        if new_message.strip():
+                            c.execute(
+                                "INSERT INTO chats2 (user_id, message, timestamp) VALUES (?, ?, CURRENT_TIMESTAMP)", 
+                                (st.session_state.user_id, new_message.strip())
+                            )
+                            conn.commit()
+                            
+                            st.session_state.last_chat_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                            st.session_state.cd = datetime.datetime.now()
+                            st.rerun()
+                        else:
+                            st.toast("Message cannot be empty!")
+
+                    else:
+                        st.toast("Please wait a bit before sending another message.")
 
 def get_latest_message_time(conn):
     c = conn.cursor()
@@ -2098,8 +2210,6 @@ def repay_loan(conn, user_id, amount):
     st.session_state.repay = 0.0
 
 def bank_view(conn, user_id):
-    st.header("🏦 The Bank", divider="rainbow")
-
     update_inflation(conn)
     check_and_apply_loan_penalty(conn, user_id)
 
@@ -2117,6 +2227,15 @@ def bank_view(conn, user_id):
     inflation_rate = inflation_rate[0] if inflation_rate else 0.01  # Default 1% interest
 
     t1, t2 = st.tabs(["Economy", "Loans & Repayments"])
+    st.markdown('''
+                    <style>
+                button[data-baseweb="tab"] {
+                font-size: 24px;
+                margin: 0;
+                width: 100%;
+                }
+                </style>
+                ''', unsafe_allow_html=True)
     with t1:
         st.header("Total Government Funds", divider="rainbow")
         st.text("")
@@ -3284,5 +3403,7 @@ if __name__ == "__main__":
     conn = get_db_connection()
     add_column_if_not_exists(conn, "stocks", "open_price", "REAL")
     add_column_if_not_exists(conn, "stocks", "close_price", "REAL")
+    add_column_if_not_exists(conn, "user_properties", "last_collected", "NULL")
+
     init_db()
     main(conn)
