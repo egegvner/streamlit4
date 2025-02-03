@@ -1901,11 +1901,11 @@ def stocks_view(conn, user_id):
         percentage_change = 0
         change_color = ":orange[0.00%] :gray[(24h)"
 
-    c1, c2, c3 = st.columns([1, 6, 6])
+    c1, c2, c3 = st.columns([2, 10, 10])
 
     with c1:
-        with st.container(border=False, height=1):
-            cot = st.container(border=True, height=1)
+        with st.container(border=False, height=500):
+            cot = st.container(border=False, height=500)
             with cot:
                 for i in range(len(stocks)):
                     if st.button(label = f"{stocks[i][2]}", key=stocks[i][0], use_container_width=True, type="primary"):
