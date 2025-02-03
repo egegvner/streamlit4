@@ -1904,8 +1904,10 @@ def stocks_view(conn, user_id):
     c1, c2, c3 = st.columns([2, 10, 10])
 
     with c1:
-        with st.container(border=False, height=500):
-            cot = st.container(border=False, height=500)
+        st.text("")
+        st.text("")
+        with st.container(border=False, height=600):
+            cot = st.container(border=False, height=600)
             with cot:
                 for i in range(len(stocks)):
                     if st.button(label = f"{stocks[i][2]}", key=stocks[i][0], use_container_width=True, type="primary"):
