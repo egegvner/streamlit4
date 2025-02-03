@@ -1285,7 +1285,7 @@ def inventory_view(conn, user_id):
         st.header("🏡 My Properties", divider="rainbow")
 
         owned_properties = c.execute("""
-            SELECT up.property_id, re.region, re.type, re.image_url, up.rent_income, up.last_collected
+            SELECT up.property_id, re.region, re.type, re.image_url, up.rent_income, up.last_collected, up.purchase_date
             FROM user_properties up
             JOIN real_estate re ON up.property_id = re.property_id
             WHERE up.user_id = ?
@@ -1296,7 +1296,7 @@ def inventory_view(conn, user_id):
             return
 
         for property in owned_properties:
-            prop_id, region, prop_type, image_url, rent_income, last_collected = property
+            prop_id, region, prop_type, image_url, rent_income, last_collected, purchase_date = property
             
             last_collected = datetime.datetime.strptime(last_collected, "%Y-%m-%d %H:%M:%S") if last_collected else None
             now = datetime.datetime.now()
@@ -1308,16 +1308,27 @@ def inventory_view(conn, user_id):
                 with col1:
                     if image_url:
                         st.image(image_url, use_container_width=True)
-
+                import math
                 with col2:
                     st.subheader(f"{region} - {prop_type}")
-                    st.write(f"💵 Daily Rent: :green[${numerize(rent_income)}]")
+                    cw1, cw2 = st.columns(2)
+                    cw1.write(f":gray[Rent] :green[${numerize(rent_income)} / day]")
+                    cw1.write(f":gray[Purchased] :blue[{purchase_date}]")
                     if last_collected:
-                        st.write(f"🕒 Last Collected: :blue[{last_collected.strftime('%Y-%m-%d %H:%M:%S')}]")
+                        current_time = datetime.datetime.now()
+                        elapsed_time = current_time - last_collected
+                        time_left = datetime.timedelta(hours=24) - elapsed_time
+                        hours, remainder = divmod(time_left.total_seconds(), 3600)
+                        minutes, _ = divmod(remainder, 60)
+                        cw2.write(f":gray[Last Collected] :blue[{last_collected.strftime('%Y-%m-%d %H:%M:%S')}]")
+                        cw2.write(f":gray[Ready In] :green[{int(hours)}] :blue[Hours,] :green[{int(minutes)}] :blue[Minutes]")
 
                     with st.container(border=True):
-                        st.success(f"[Accumulated Rent] :green[${numerize(rent_income)}]")
-
+                        if time_left.total_seconds() < 0:
+                            st.success(f"[Accumulated Rent] :green[${numerize(rent_income)}]")
+                        else:
+                            st.success(f"[Accumulated Rent] :green[$0]")
+                    
                     c1, c2 = st.columns(2)
 
                     if c1.button("Sell To Bank", key=f"sell_{prop_id}", use_container_width=True):
@@ -1337,7 +1348,6 @@ def inventory_view(conn, user_id):
                         st.success(f"💰 Collected :green[${numerize(rent_income)}] in rent income!")
                         time.sleep(1)
                         st.rerun()
-                st.divider()
 
 def manage_pending_transfers(conn, receiver_id):
     c = conn.cursor()
@@ -2546,7 +2556,7 @@ def prop_details_dialog(conn, user_id, prop_id):
             height=100,
             layers=[
                 pdk.Layer(
-                    "ScatterplotLayer",
+                    "GridCellLayer",
                     data=df,
                     get_position="[LON, LAT]",
                     get_color="[0, 255, 255]",
@@ -2558,7 +2568,7 @@ def prop_details_dialog(conn, user_id, prop_id):
                 latitude=float(df["LAT"].mean()),
                 longitude=float(df["LON"].mean()),
                 zoom=11,
-                pitch=45,
+                pitch=60,
             ),
             tooltip={"text": "Property Location\nRegion: {Region}\nType: {Type}"},
         ))
