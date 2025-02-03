@@ -1904,11 +1904,14 @@ def stocks_view(conn, user_id):
     c1, c2, c3 = st.columns([1, 6, 6])
 
     with c1:
-        for i in range(len(stocks)):
-            if st.button(label = f"{stocks[i][2]}", key=stocks[i][0], use_container_width=True):
-                st.session_state.selected_stock = stocks[i][0]
-                st.rerun()
-                
+        with st.container(border=False, height=1):
+            cot = st.container(border=True, height=1)
+            with cot:
+                for i in range(len(stocks)):
+                    if st.button(label = f"{stocks[i][2]}", key=stocks[i][0], use_container_width=True, type="primary"):
+                        st.session_state.selected_stock = stocks[i][0]
+                        st.rerun()
+
     with c2:
         if len(history) > 1:
             if st.session_state.g_type == "Candlestick":
@@ -1941,7 +1944,7 @@ def stocks_view(conn, user_id):
                 st.line_chart(df, color=st.session_state.graph_color)
         else:
             st.info("Stock history will be available after 60 seconds of stock creation.")
-        
+
         cl1, cl2 = st.columns(2)
         st.session_state.hours = cl1.select_slider("Time Range (Hours)", options=[1, 5, 10, 24, 48, 72, 96, 120, 144, 168])
         if cl2.button("Set Range", use_container_width=True):
