@@ -1886,7 +1886,7 @@ def stocks_view(conn, user_id):
     if "selected_real_stock" not in st.session_state:
         st.session_state.selected_real_stock = "AAPL"
 
-    t1, t2 = st.tabs(["VIRTUAL", "REAL"])
+    t1, t2 = st.tabs(["🕹️ VIRTUAL", "📈 REAL"])
     
     with t1:
 
