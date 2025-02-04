@@ -2207,8 +2207,7 @@ def stocks_view(conn, user_id):
                         st.rerun()
 
         with cc3:
-            with st.spinner("Fething stock data"):
-                stock_history = stock_data.history(period="3mo", interval = "1d")
+            stock_history = stock_data.history(period="3mo", interval = "1d")
 
             if not stock_history.empty:
                 fig = go.Figure(data=[go.Candlestick(
