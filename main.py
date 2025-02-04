@@ -1,7 +1,6 @@
 # Copyright Ege Güvener, 20/12/2024
 # License: MIT
 
-
 import streamlit as st
 import sqlite3
 import random
@@ -2136,7 +2135,7 @@ def stocks_view(conn, user_id):
     
     with t2:
 
-        real_stocks = ["AAPL", "GOOGL", "MSFT", "AMZN", "META", "NVDIA"]
+        real_stocks = ["AAPL", "GOOGL", "MSFT", "AMZN", "META", "NVDA"]
 
         cc1, cc2, cc3 = st.columns([1, 5, 5])
 
@@ -2208,15 +2207,15 @@ def stocks_view(conn, user_id):
                         st.rerun()
 
         with cc3:
-            stock_history = stock_data.history(period="3mo", interval = "1d")
+            stock_history2 = stock_data.history(period="3mo", interval = "1d")
 
-            if not stock_history.empty:
+            if not stock_history2.empty:
                 fig = go.Figure(data=[go.Candlestick(
-                    x=stock_history.index,
-                    open=stock_history["Open"],
-                    high=stock_history["High"],
-                    low=stock_history["Low"],
-                    close=stock_history["Close"],
+                    x=stock_history2.index,
+                    open=stock_history2["Open"],
+                    high=stock_history2["High"],
+                    low=stock_history2["Low"],
+                    close=stock_history2["Close"],
                 )])
 
                 fig.update_layout(
