@@ -38,6 +38,7 @@ hide = """
         <style>
             #MainMenu {visibility: hidden;}
             footer {visibility: hidden;}
+            #GithubIcon {visibility: hidden;}
         </style>
         """
 st.markdown(hide, unsafe_allow_html=True)
