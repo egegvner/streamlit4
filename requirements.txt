@@ -7,3 +7,4 @@ numerize
 pydeck
 plotly
 yfinance
+streamlit_lightweight_charts
