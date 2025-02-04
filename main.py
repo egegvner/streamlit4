@@ -2464,9 +2464,9 @@ def investments_view(conn, user_id):
         for company, amount, rate, status in completed_investments:
             outcome = "Profit" if rate > 0 else "Loss"
             if rate > 0:
-                st.write(f"**{company}** - {outcome}: :green[${numerize(rate)}] ({status.capitalize()})")
+                st.write(f"**{company}** - {outcome}: :green[${numerize(rate)}] ({status.upper()})")
             else:
-                st.write(f"**{company}** - {outcome}: :red[${numerize(rate)}] ({status.capitalize()})")
+                st.write(f"**{company}** - {outcome}: :red[${numerize(rate)}] ({status.upper()})")
     else:
 
         st.info("No completed investments yet.")
