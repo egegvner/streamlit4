@@ -13,6 +13,8 @@ from streamlit_autorefresh import st_autorefresh
 import pydeck as pdk
 import plotly.graph_objects as go
 import math
+import yfinance as yf
+from numerize.numerize import numerize
 import streamlit as st
 
 if "current_menu" not in st.session_state:
@@ -39,8 +41,20 @@ ph = argon2.PasswordHasher(
 )
 
 def format_number(num, decimals=2):
-    decimals = min(decimals, 2)
+    """
+    Converts a large number into a more human-readable format.
     
+    Parameters:
+    - num (int or float): The number to be formatted.
+    - decimals (int): The number of decimal places (maximum allowed is 2).
+    
+    Returns:
+    - A string representing the formatted number with the appropriate suffix.
+    """
+    # Ensure decimals does not exceed 2
+    decimals = min(decimals, 2)
+
+    # Suffix list ordered from largest to smallest
     suffixes = [
         (1e33, 'D'),   # Decillions
         (1e30, 'N'),   # Nonillions
@@ -55,11 +69,11 @@ def format_number(num, decimals=2):
         (1e3, 'K'),    # Thousands
     ]
     
+    # If the number is below 1000 (absolute value), round it
     if abs(num) < 1000:
-        if num == int(num):
-            return str(int(num))
-        return str(num)
-    
+        return str(round(num))  # Keeps the negative sign if necessary
+
+    # Find the appropriate suffix
     for threshold, suffix in suffixes:
         if abs(num) >= threshold:
             formatted_num = num / threshold
@@ -67,7 +81,7 @@ def format_number(num, decimals=2):
             formatted_str = formatted_str.rstrip('0').rstrip('.') if '.' in formatted_str else formatted_str
             return f"{formatted_str}{suffix}"
     
-    return str(num)
+    return str(num) 
 
 def write_stream(s, delay = 0, random_delay = False):
     if random_delay:
@@ -1851,8 +1865,8 @@ def stocks_view(conn, user_id):
     stocks = c.execute("SELECT stock_id, name, symbol, price, stock_amount FROM stocks").fetchall()
     balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
-    if "selected_stock" not in st.session_state:
-        st.session_state.selected_stock = stocks[0][0]
+    if "selected_game_stock" not in st.session_state:
+        st.session_state.selected_game_stock = stocks[0][0]
 
     if "ti" not in st.session_state:
         st.session_state.ti = 1
@@ -1868,247 +1882,352 @@ def stocks_view(conn, user_id):
     
     if "g_type" not in st.session_state:
         st.session_state.g_type = "Candlestick"
+
+    if "selected_real_stock" not in st.session_state:
+        st.session_state.selected_real_stock = "AAPL"
+
+    t1, t2 = st.tabs(["VIRTUAL", "REAL"])
     
-    stock_ticker_html = """
-    <div style="white-space: nowrap; overflow: hidden; background-color:; color: white; padding: 10px; font-size: 20px;">
-        <marquee behavior="scroll" direction="left" scrollamount="5">
-    """
+    with t1:
 
-    now = datetime.datetime.now()
-    start_time = now - datetime.timedelta(hours=24)
-    start_time_str = start_time.strftime("%Y-%m-%d %H:%M:%S")
+        stock_ticker_html = """
+        <div style="white-space: nowrap; overflow: hidden; background-color:; color: white; padding: 10px; font-size: 20px;">
+            <marquee behavior="scroll" direction="left" scrollamount="5">
+        """
 
-    for stock_id, name, symbol, current_price, amt in stocks:
-        price_24h_ago = c.execute("""
-            SELECT price FROM stock_history 
-            WHERE stock_id = ? AND timestamp <= ? 
-            ORDER BY timestamp DESC LIMIT 1
-        """, (stock_id, start_time_str)).fetchone()
+        now = datetime.datetime.now()
+        start_time = now - datetime.timedelta(hours=24)
+        start_time_str = start_time.strftime("%Y-%m-%d %H:%M:%S")
 
-        if price_24h_ago:
-            price_24h_ago = price_24h_ago[0]
-            price_color = "lime" if current_price >= price_24h_ago else "red"
-        else:
-            price_color = "white"
+        for stock_id, name, symbol, current_price, amt in stocks:
+            price_24h_ago = c.execute("""
+                SELECT price FROM stock_history 
+                WHERE stock_id = ? AND timestamp <= ? 
+                ORDER BY timestamp DESC LIMIT 1
+            """, (stock_id, start_time_str)).fetchone()
 
-        stock_ticker_html += f" <span style='color: white;'>{symbol}</span> <span style='color: {price_color};'>${format_number(current_price, 2)}</span> <span style='color: darkgray'> | </span>"
+            if price_24h_ago:
+                price_24h_ago = price_24h_ago[0]
+                price_color = "lime" if current_price >= price_24h_ago else "red"
+            else:
+                price_color = "white"
 
-    stock_ticker_html += "</marquee></div>"
+            stock_ticker_html += f" <span style='color: white;'>{symbol}</span> <span style='color: {price_color};'>${format_number(current_price, 2)}</span> <span style='color: darkgray'> | </span>"
 
-    st.markdown(stock_ticker_html, unsafe_allow_html=True)
-    
-    selected_stock = next(s for s in stocks if s[0] == st.session_state.selected_stock)
-    stock_id, name, symbol, price, stock_amount = selected_stock
+        stock_ticker_html += "</marquee></div>"
 
-    now = datetime.datetime.now()
-    start_time = now - datetime.timedelta(hours=st.session_state.hours)  # Change time period as needed
-    start_time_str = start_time.strftime("%Y-%m-%d %H:%M:%S")
-
-    history = c.execute("""
-        SELECT timestamp, price FROM stock_history 
-        WHERE stock_id = ? AND timestamp >= ?
-        ORDER BY timestamp ASC
-    """, (stock_id, start_time_str)).fetchall()
-
-    if len(history) > 1:
-        last_price = history[-1][1]
-        previous_price = history[-2][1]
-        percentage_change = ((last_price - previous_price) / previous_price) * 100
+        st.markdown(stock_ticker_html, unsafe_allow_html=True)
         
-        if last_price > previous_price:
-            change_color = f":green[+{format_number(percentage_change)}%] :gray[({st.session_state.hours}h)".format(percentage_change)
-            st.session_state.graph_color = (0, 255, 0)
+        selected_stock = next(s for s in stocks if s[0] == st.session_state.selected_game_stock)
+        stock_id, name, symbol, price, stock_amount = selected_stock
 
-        elif last_price < previous_price:
-            change_color = f":red[{format_number(percentage_change)}%] :gray[({st.session_state.hours}h)".format(percentage_change)
-            st.session_state.graph_color = (255, 0, 0)
+        now = datetime.datetime.now()
+        start_time = now - datetime.timedelta(hours=st.session_state.hours)  # Change time period as needed
+        start_time_str = start_time.strftime("%Y-%m-%d %H:%M:%S")
 
+        history = c.execute("""
+            SELECT timestamp, price FROM stock_history 
+            WHERE stock_id = ? AND timestamp >= ?
+            ORDER BY timestamp ASC
+        """, (stock_id, start_time_str)).fetchall()
+
+        if len(history) > 1:
+            last_price = history[-1][1]
+            previous_price = history[-2][1]
+            percentage_change = ((last_price - previous_price) / previous_price) * 100
+            
+            if last_price > previous_price:
+                change_color = f":green[+{format_number(percentage_change)}%] :gray[({st.session_state.hours}h)".format(percentage_change)
+                st.session_state.graph_color = (0, 255, 0)
+
+            elif last_price < previous_price:
+                change_color = f":red[{format_number(percentage_change)}%] :gray[({st.session_state.hours}h)".format(percentage_change)
+                st.session_state.graph_color = (255, 0, 0)
+
+            else:
+                change_color = f":orange[0.00%] :gray[({st.session_state.hours})"
+                st.session_state.graph_color = (255, 255, 0)
         else:
-            change_color = f":orange[0.00%] :gray[({st.session_state.hours})"
-            st.session_state.graph_color = (255, 255, 0)
-    else:
-        percentage_change = 0
-        change_color = ":orange[0.00%] :gray[(24h)"
+            percentage_change = 0
+            change_color = ":orange[0.00%] :gray[(24h)"
 
-    c1, c2, c3 = st.columns([2, 10, 10])
+        c1, c2, c3 = st.columns([2, 10, 10])
 
-    with c1:
+        with c1:
+            st.text("")
+            st.text("")
+            with st.container(border=False, height=600):
+                cot = st.container(border=False, height=600)
+                with cot:
+                    for i in range(len(stocks)):
+                        if st.button(label = f"{stocks[i][2]}", key=stocks[i][0], use_container_width=True):
+                            st.session_state.selected_game_stock = stocks[i][0]
+                            st.rerun()
+
+        with c2:
+            if len(history) > 1:
+                if st.session_state.g_type == "Candlestick":
+                    df = pd.DataFrame(history, columns=["Timestamp", "Price"])
+                    df['Timestamp'] = pd.to_datetime(df['Timestamp'])
+                    df.set_index('Timestamp', inplace=True)
+                    
+                    df_resampled = df.resample('h').ohlc()['Price']
+                    
+                    fig = go.Figure(data=[go.Candlestick(x=df_resampled.index,
+                                                        open=df_resampled['open'],
+                                                        high=df_resampled['high'],
+                                                        low=df_resampled['low'],
+                                                        close=df_resampled['close'],
+                                                        )])
+
+                    fig.update_layout(title = "History",
+                                    xaxis_title='Timestamp',
+                                    yaxis_title='Price',
+                                    template='plotly_dark',
+                                    xaxis_rangeslider_visible=False,
+                                    )
+
+                    st.plotly_chart(fig, use_container_width=True)
+                
+                else:
+                    df = pd.DataFrame(history, columns=["Timestamp", "Price"])
+                    df['Timestamp'] = pd.to_datetime(df['Timestamp'])
+                    df.set_index('Timestamp', inplace=True)
+
+                    st.line_chart(df, color=st.session_state.graph_color)
+            else:
+                st.info("Stock history will be available after 60 seconds of stock creation.")
+
+            cl1, cl2 = st.columns(2)
+            st.session_state.hours = cl1.select_slider("Time Range (Hours)", options=[1, 5, 10, 24, 48, 72, 96, 120, 144, 168])
+            if cl2.button("Set Range", use_container_width=True):
+                st.rerun()
+            
+            cm1, cm2 = st.columns(2)
+            st.session_state.g_type = cm1.selectbox(label="fe", label_visibility="collapsed", options=["Candlestick", "Line Chart"])
+            if cm2.button("Set Graph Type", use_container_width=True):
+                st.rerun()
+
+        with c3:
+            st.subheader(f"{name} ({symbol})")
+            st.header(f":green[${numerize(price)}] \n {change_color}]")
+            user_stock = c.execute("SELECT quantity, avg_buy_price FROM user_stocks WHERE user_id = ? AND stock_id = ?", 
+                                    (user_id, stock_id)).fetchall()
+
+            if user_stock:
+                user_quantity = user_stock[0][0] if user_stock[0][0] else 0
+                avg_price = user_stock[0][1] if user_stock[0][1] else 0
+            else:
+                user_quantity = 0
+                avg_price = 0
+
+            with st.container(border=True):
+                st.write(f"**[HOLDING]** :blue[{format_number(user_quantity, 2)} {symbol}] ~ :green[${format_number(user_quantity * price, 2)}]")
+                st.write(f"[AVG. Bought At] :green[${format_number(avg_price, 2)}]")
+
+                st.write(f"[Available] :orange[{format_number(stock_amount, 2)} {symbol}]")                                
+
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                buy_max_quantity = min(balance / price, stock_amount)
+                buy_quantity = st.number_input(f"Buy {symbol}", min_value=0.0, step=0.25, key=f"buy_{stock_id}")
+                st.write(f"[Cost]  :red[${format_number(buy_quantity * price)}]")
+                
+                if st.button(f"Buy {symbol}", key=f"buy_btn_{stock_id}", type="primary", use_container_width=True, 
+                            disabled=True if buy_quantity == 0 or stock_amount < buy_quantity else False, help="Not enough stock available in the market" if stock_amount < buy_quantity else None):
+                    with st.spinner("Purchasing..."):
+                        time.sleep(3)
+                        buy_stock(conn, user_id, stock_id, buy_quantity)
+                    time.sleep(2.5)
+                    st.rerun()
+                
+                if st.button(f"Buy MAX: :orange[{format_number(buy_max_quantity)}] ~ :green[${format_number(balance)}]", key=f"buy_max_btn_{stock_id}", use_container_width=True):
+                    with st.spinner("Purchasing..."):
+                        time.sleep(3)
+                        buy_stock(conn, user_id, stock_id, buy_max_quantity)
+                    time.sleep(2.5)
+                    st.rerun()
+                            
+            with col2:
+                sell_quantity = st.number_input(f"Sell {symbol}", min_value=0.0, max_value=float(user_quantity), step=0.25, key=f"sell_{stock_id}")
+                tax = ((sell_quantity * price) / 100) * 0.05
+                net_profit = (sell_quantity * price) - tax
+                st.write(f"[Profit] :green[${numerize(net_profit)}] | :red[${numerize(tax)}] [Capital Tax]")
+
+                if st.button(f"Sell {symbol}", key=f"sell_btn_{stock_id}", use_container_width=True, 
+                            disabled=True if sell_quantity == 0 else False):
+                    with st.spinner("Selling..."):
+                        time.sleep(3)
+                        sell_stock(conn, user_id, stock_id, sell_quantity)
+                    time.sleep(2.5)
+                    st.rerun()
+
+                if st.button(f"Sell MAX", key=f"sell_max_btn_{stock_id}", use_container_width=True, disabled=True if not user_quantity else False):
+                    with st.spinner("Selling..."):
+                        time.sleep(3)
+                        sell_stock(conn, user_id, stock_id, user_quantity)
+                    time.sleep(2.5)
+                    st.rerun()
+
+        stock_metrics = get_stock_metrics(conn, stock_id)
+        stock_volume = c.execute("SELECT SUM(quantity) FROM transactions WHERE stock_id = ? AND timestamp >= DATETIME('now', '-24 hours')", (stock_id,)).fetchone()[0]
+        
+        if not stock_volume:
+            stock_volume = 0
+
         st.text("")
         st.text("")
-        with st.container(border=False, height=600):
-            cot = st.container(border=False, height=600)
-            with cot:
-                for i in range(len(stocks)):
-                    if st.button(label = f"{stocks[i][2]}", key=stocks[i][0], use_container_width=True):
-                        st.session_state.selected_stock = stocks[i][0]
+        st.subheader("Metrics", divider="rainbow")
+        col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8)
+        
+        col1.write("24h HIGH")
+        col1.write(f"#### :green[${format_number(stock_metrics['high_24h'])}]" if stock_metrics['high_24h'] else "N/A")
+        
+        col2.write("24h LOW")
+        col2.write(f"#### :red[${format_number(stock_metrics['low_24h'])}]" if stock_metrics['low_24h'] else "N/A")
+        
+        col3.write("All Time High")
+        col3.write(f"#### :green[${format_number(stock_metrics['all_time_high'])}]" if stock_metrics['all_time_high'] else "N/A")
+        
+        col4.write("All Time Low")
+        col4.write(f"#### :red[${format_number(stock_metrics['all_time_low'])}]" if stock_metrics['all_time_low'] else "N/A")
+        
+        col5.write("24h Change")
+        col5.write(f"#### :orange[{format_number(stock_metrics['price_change'], 2)}%]")
+        
+        col6.write("24h Volume")
+        col6.write(f"#### :blue[{format_number(stock_volume)}]")
+
+        col7.write("Volatility Index")
+        col7.write(f"#### :violet[{format_number(((stock_metrics['all_time_high'] - stock_metrics['all_time_low']) / stock_metrics['all_time_low']) * 100)} σ]")
+
+        col8.write("Market Cap")
+        col8.write(f"#### :green[${format_number(stock_amount * price)}]")
+        
+        st.text("")
+        st.text("")
+        st.text("")
+
+        leaderboard_data = []
+        selected_stock_id = st.session_state.selected_game_stock  # Get the currently selected stock's ID
+        
+        stockholders = c.execute("""
+            SELECT u.username, SUM(us.quantity) AS total_quantity
+            FROM user_stocks us
+            JOIN users u ON us.user_id = u.user_id
+            WHERE us.stock_id = ?
+            GROUP BY us.user_id
+            ORDER BY total_quantity ASC
+        """, (selected_stock_id,)).fetchall()
+        
+        for stockholder in stockholders:
+            username = stockholder[0]
+            total_quantity = stockholder[1]
+            leaderboard_data.append([username, total_quantity])
+        
+        st.subheader("🏆 Stockholder Leaderboard", divider="rainbow")
+        if leaderboard_data:
+            leaderboard_df = pd.DataFrame(leaderboard_data, columns=["Stockholder", "Shares Held"])
+            st.dataframe(leaderboard_df, use_container_width=True)
+        else:
+            st.info("No stockholder data available yet.")
+    
+    with t2:
+
+        real_stocks = ["AAPL", "GOOGL", "MSFT", "AMZN", "META", "NVDIA"]
+
+        cc1, cc2, cc3 = st.columns([1, 5, 5])
+
+        with cc1:
+            for i in range(len(real_stocks)):
+                if st.button(f"{real_stocks[i]}", use_container_width=True):
+                    st.session_state.selected_real_stock = real_stocks[i]
+                    st.rerun()
+
+        with cc2:
+            selected_real_stock = st.session_state.selected_real_stock
+            stock_data = yf.Ticker(selected_real_stock)
+            stock_price = stock_data.history(period="1d")["Close"].iloc[-1]
+            
+            stock_history = stock_data.history(period="2d")["Close"]
+
+            if len(stock_history) >= 2:
+                prev_close = stock_history.iloc[0]
+            else:
+                prev_close = stock_price  # If not enough data, assume no change
+
+            price_change = stock_price - prev_close
+            price_change_percent = (price_change / prev_close) * 100 if prev_close > 0 else 0
+
+            user_stock = c.execute(
+                "SELECT quantity, avg_buy_price FROM user_stocks WHERE user_id = ? AND stock_id = ?",
+                (user_id, selected_real_stock[0])
+            ).fetchone()
+            
+            user_quantity = user_stock[0] if user_stock else 0
+            avg_price = user_stock[1] if user_stock else 0
+
+            st.write(f"### {selected_real_stock}")
+            st.header(f":green[${numerize(stock_price, 2)}]")
+
+            with st.container(border=True):
+                st.write(f"**[HOLDING]** :blue[{user_quantity} {selected_real_stock}] ~ :green[**${format_number(user_quantity * stock_price)}**]")
+                st.write(f"[AVG. Bought At] :green[**${format_number(avg_price)}**]")
+
+                balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    buy_quantity = st.number_input(f"Buy {selected_real_stock}", min_value=0.0, step=0.25)
+                    st.write(f"[Cost]  :red[${buy_quantity * stock_price:.2f}]")
+
+                    if st.button(f"Buy {selected_real_stock}", type="primary", use_container_width=True, disabled=buy_quantity * stock_price > balance):
+                        with st.spinner("Purchasing..."):
+                            c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (buy_quantity * stock_price, user_id))
+                            c.execute("INSERT INTO user_stocks (user_id, stock_id, quantity, avg_buy_price) VALUES (?, ?, ?, ?) "
+                                    "ON CONFLICT(user_id, stock_id) DO UPDATE SET quantity = quantity + ?, avg_buy_price = ?",
+                                    (user_id, selected_real_stock, buy_quantity, stock_price, buy_quantity, stock_price))
+                            conn.commit()
+                        st.success("Stock purchased successfully!")
                         st.rerun()
 
-    with c2:
-        if len(history) > 1:
-            if st.session_state.g_type == "Candlestick":
-                df = pd.DataFrame(history, columns=["Timestamp", "Price"])
-                df['Timestamp'] = pd.to_datetime(df['Timestamp'])
-                df.set_index('Timestamp', inplace=True)
-                
-                df_resampled = df.resample('H').ohlc()['Price']
-                
-                fig = go.Figure(data=[go.Candlestick(x=df_resampled.index,
-                                                    open=df_resampled['open'],
-                                                    high=df_resampled['high'],
-                                                    low=df_resampled['low'],
-                                                    close=df_resampled['close'],
-                                                    )])
+                with col2:
+                    sell_quantity = st.number_input(f"Sell {selected_real_stock}", min_value=0.0, max_value=float(user_quantity), step=0.25)
+                    tax = ((sell_quantity * price) / 100) * 0.05
+                    net_profit = (sell_quantity * price) - tax
+                    st.write(f"[Profit] :green[${numerize(net_profit)}] | :red[${numerize(tax)}] [Capital Tax]")
+                    
+                    if st.button(f"Sell {selected_real_stock}", use_container_width=True, disabled=sell_quantity == 0):
+                        with st.spinner("Selling..."):
+                            c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (sell_quantity * stock_price, user_id))
+                            c.execute("UPDATE user_stocks SET quantity = quantity - ? WHERE user_id = ? AND stock_id = ?", (sell_quantity, user_id, selected_real_stock))
+                            conn.commit()
+                        st.success("Stock sold successfully!")
+                        st.rerun()
 
-                fig.update_layout(title = "History",
-                                xaxis_title='Timestamp',
-                                yaxis_title='Price',
-                                template='plotly_dark',
-                                )
+        with cc3:
+            with st.spinner("Fething stock data"):
+                stock_history = stock_data.history(period="3mo", interval = "1d")
 
-                st.plotly_chart(fig, use_container_width=True, theme="streamlit")
-            
-            else:
-                df = pd.DataFrame(history, columns=["Timestamp", "Price"])
-                df['Timestamp'] = pd.to_datetime(df['Timestamp'])
-                df.set_index('Timestamp', inplace=True)
+                if not stock_history.empty:
+                    fig = go.Figure(data=[go.Candlestick(
+                        x=stock_history.index,
+                        open=stock_history["Open"],
+                        high=stock_history["High"],
+                        low=stock_history["Low"],
+                        close=stock_history["Close"],
+                    )])
 
-                st.line_chart(df, color=st.session_state.graph_color)
-        else:
-            st.info("Stock history will be available after 60 seconds of stock creation.")
-
-        cl1, cl2 = st.columns(2)
-        st.session_state.hours = cl1.select_slider("Time Range (Hours)", options=[1, 5, 10, 24, 48, 72, 96, 120, 144, 168])
-        if cl2.button("Set Range", use_container_width=True):
-            st.rerun()
-        
-        cm1, cm2 = st.columns(2)
-        st.session_state.g_type = cm1.selectbox(label="fe", label_visibility="collapsed", options=["Candlestick", "Line Chart"])
-        if cm2.button("Set Graph Type", use_container_width=True):
-            st.rerun()
-
-    with c3:
-        st.subheader(f"{name} ({symbol})")
-        st.header(f":green[${format_number(price)}] \n {change_color}]")
-        user_stock = c.execute("SELECT quantity, avg_buy_price FROM user_stocks WHERE user_id = ? AND stock_id = ?", 
-                                (user_id, stock_id)).fetchall()
-
-        if user_stock:
-            user_quantity = user_stock[0][0] if user_stock[0][0] else 0
-            avg_price = user_stock[0][1] if user_stock[0][1] else 0
-        else:
-            user_quantity = 0
-            avg_price = 0
-
-        with st.container(border=True):
-            st.write(f"**[HOLDING]** :blue[{format_number(user_quantity, 2)} {symbol}] ~ :green[${format_number(user_quantity * price, 2)}]")
-            st.write(f"[AVG. Bought At] :green[${format_number(avg_price, 2)}]")
-
-            st.write(f"[Available] :orange[{format_number(stock_amount, 2)} {symbol}]")                                
-
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            buy_max_quantity = min(balance / price, stock_amount)
-            buy_quantity = st.number_input(f"Buy {symbol}", min_value=0.0, step=0.25, key=f"buy_{stock_id}")
-            st.write(f"[Cost]  :red[${format_number(buy_quantity * price)}]")
-            
-            if st.button(f"Buy {symbol}", key=f"buy_btn_{stock_id}", type="primary", use_container_width=True, 
-                        disabled=True if buy_quantity == 0 or stock_amount < buy_quantity else False, help="Not enough stock available in the market" if stock_amount < buy_quantity else None):
-                with st.spinner("Purchasing..."):
-                    time.sleep(3)
-                    buy_stock(conn, user_id, stock_id, buy_quantity)
-                time.sleep(2.5)
-                st.rerun()
-            
-            if st.button(f"Buy MAX: :orange[{format_number(buy_max_quantity)}] ~ :green[${format_number(balance)}]", key=f"buy_max_btn_{stock_id}", use_container_width=True):
-                with st.spinner("Purchasing..."):
-                    time.sleep(3)
-                    buy_stock(conn, user_id, stock_id, buy_max_quantity)
-                time.sleep(2.5)
-                st.rerun()
-                        
-        with col2:
-            sell_quantity = st.number_input(f"Sell {symbol}", min_value=0.0, max_value=float(user_quantity), step=0.25, key=f"sell_{stock_id}")
-            tax = ((sell_quantity * price) / 100) * 0.05
-            net_profit = (sell_quantity * price) - tax
-            st.write(f"[Profit] :green[${format_number(net_profit)}] | :red[${format_number(tax)}] [Capital Tax]")
-
-            if st.button(f"Sell {symbol}", key=f"sell_btn_{stock_id}", use_container_width=True, 
-                        disabled=True if sell_quantity == 0 else False):
-                with st.spinner("Selling..."):
-                    time.sleep(3)
-                    sell_stock(conn, user_id, stock_id, sell_quantity)
-                time.sleep(2.5)
-                st.rerun()
-
-            if st.button(f"Sell MAX", key=f"sell_max_btn_{stock_id}", use_container_width=True, disabled=True if not user_quantity else False):
-                with st.spinner("Selling..."):
-                    time.sleep(3)
-                    sell_stock(conn, user_id, stock_id, user_quantity)
-                time.sleep(2.5)
-                st.rerun()
-
-    stock_metrics = get_stock_metrics(conn, stock_id)
-    stock_volume = c.execute("SELECT SUM(quantity) FROM transactions WHERE stock_id = ? AND timestamp >= DATETIME('now', '-24 hours')", (stock_id,)).fetchone()[0]
-    if not stock_volume:
-        stock_volume = 0
-
-    st.text("")
-    st.text("")
-    st.subheader("Metrics", divider="rainbow")
-    col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8)
-    
-    col1.write("24h HIGH")
-    col1.write(f"#### :green[${format_number(stock_metrics['high_24h'])}]" if stock_metrics['high_24h'] else "N/A")
-    
-    col2.write("24h LOW")
-    col2.write(f"#### :red[${format_number(stock_metrics['low_24h'])}]" if stock_metrics['low_24h'] else "N/A")
-    
-    col3.write("All Time High")
-    col3.write(f"#### :green[${format_number(stock_metrics['all_time_high'])}]" if stock_metrics['all_time_high'] else "N/A")
-    
-    col4.write("All Time Low")
-    col4.write(f"#### :red[${format_number(stock_metrics['all_time_low'])}]" if stock_metrics['all_time_low'] else "N/A")
-    
-    col5.write("24h Change")
-    col5.write(f"#### :orange[{format_number(stock_metrics['price_change'], 2)}%]")
-    
-    col6.write("24h Volume")
-    col6.write(f"#### :blue[{format_number(stock_volume)}]")
-
-    col7.write("Volatility Index")
-    col7.write(f"#### :violet[{format_number(((stock_metrics['all_time_high'] - stock_metrics['all_time_low']) / stock_metrics['all_time_low']) * 100)} σ]")
-
-    col8.write("Market Cap")
-    col8.write(f"#### :green[${format_number(stock_amount * price)}]")
-    
-    st.text("")
-    st.text("")
-    st.text("")
-
-    leaderboard_data = []
-    selected_stock_id = st.session_state.selected_stock  # Get the currently selected stock's ID
-    
-    stockholders = c.execute("""
-        SELECT u.username, SUM(us.quantity) AS total_quantity
-        FROM user_stocks us
-        JOIN users u ON us.user_id = u.user_id
-        WHERE us.stock_id = ?
-        GROUP BY us.user_id
-        ORDER BY total_quantity ASC
-    """, (selected_stock_id,)).fetchall()
-    
-    for stockholder in stockholders:
-        username = stockholder[0]
-        total_quantity = stockholder[1]
-        leaderboard_data.append([username, total_quantity])
-    
-    st.subheader("🏆 Stockholder Leaderboard", divider="rainbow")
-    if leaderboard_data:
-        leaderboard_df = pd.DataFrame(leaderboard_data, columns=["Stockholder", "Shares Held"])
-        st.dataframe(leaderboard_df, use_container_width=True)
-    else:
-        st.info("No stockholder data available yet.")
+                    fig.update_layout(
+                        title=f"Candlestick Chart - {selected_real_stock}",
+                        xaxis_title="Date",
+                        yaxis_title="Price (USD)",
+                        xaxis_rangeslider_visible=False,  # Hide the range slider
+                        template="plotly_dark",  # Use a dark theme
+                    )
+                else:
+                    st.warning("No stock data available for the selected period.")
 
 def portfolio_view(conn, user_id):
     c = conn.cursor()
@@ -3505,6 +3624,5 @@ if __name__ == "__main__":
     add_column_if_not_exists(conn, "stocks", "close_price", "REAL")
     add_column_if_not_exists(conn, "user_properties", "last_collected", "NULL")
 
-    
     init_db()
     main(conn)
