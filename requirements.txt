@@ -6,3 +6,4 @@ argon2-cffi
 numerize
 pydeck
 plotly
+yfinance
