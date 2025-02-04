@@ -15,6 +15,7 @@ import plotly.graph_objects as go
 import math
 import yfinance as yf
 from numerize.numerize import numerize
+from streamlit_lightweight_charts import renderLightweightCharts
 import streamlit as st
 
 if "current_menu" not in st.session_state:
@@ -1970,33 +1971,72 @@ def stocks_view(conn, user_id):
             if len(history) > 1:
                 if st.session_state.g_type == "Candlestick":
                     df = pd.DataFrame(history, columns=["Timestamp", "Price"])
-                    df['Timestamp'] = pd.to_datetime(df['Timestamp'])
-                    df.set_index('Timestamp', inplace=True)
-                    
-                    df_resampled = df.resample('h').ohlc()['Price']
-                    
-                    fig = go.Figure(data=[go.Candlestick(x=df_resampled.index,
-                                                        open=df_resampled['open'],
-                                                        high=df_resampled['high'],
-                                                        low=df_resampled['low'],
-                                                        close=df_resampled['close'],
-                                                        )])
+                    df["Timestamp"] = pd.to_datetime(df["Timestamp"])
+                    df.set_index("Timestamp", inplace=True)
 
-                    fig.update_layout(title = "History",
-                                    xaxis_title='Timestamp',
-                                    yaxis_title='Price',
-                                    template='plotly_dark',
-                                    xaxis_rangeslider_visible=False,
-                                    )
+                    # Resample data to get OHLC (open, high, low, close)
+                    df_resampled = df.resample('H').ohlc()['Price'].dropna()
 
-                    st.plotly_chart(fig, use_container_width=True)
-                
+                    # Convert DataFrame to list of candlestick data
+                    candlestick_data = [
+                        {
+                            "time": int(timestamp.timestamp()),  # Convert to Unix timestamp
+                            "open": row["open"],
+                            "high": row["high"],
+                            "low": row["low"],
+                            "close": row["close"]
+                        }
+                        for timestamp, row in df_resampled.iterrows()
+                    ]
+
+                    # Define chart options
+                    chartOptions = {
+                        "layout": {
+                            "textColor": 'rgba(180, 180, 180, 1)',
+                            "background": {
+                                "type": 'solid',
+                                "color": 'rgba(15, 17, 22, 1)'
+                            }
+                        },
+                        "grid": {
+                            "vertLines": {"color": "rgba(30, 30, 30, 0.7)"},
+                            "horzLines": {"color": "rgba(30, 30, 30, 0.7)"}
+                        },
+                        "crosshair": {"mode": 0},
+                        "watermark": {
+                            "visible": True,
+                            "fontSize": 70,
+                            "horzAlign": 'center',
+                            "vertAlign": 'center',
+                            "color": 'rgba(50, 50, 50, 0.5)',
+                            "text": 'Genova',  # Stock symbol as watermark
+                        }
+                    }
+
+                    # Define candlestick series
+                    seriesCandlestickChart = [{
+                        "type": 'Candlestick',
+                        "data": candlestick_data,
+                        "options": {
+                            "upColor": '#26a69a',
+                            "downColor": '#ef5350',
+                            "borderVisible": False,
+                            "wickUpColor": '#26a69a',
+                            "wickDownColor": '#ef5350'
+                        }
+                    }]
+
+                    renderLightweightCharts([
+                        {"chart": chartOptions, "series": seriesCandlestickChart}
+                    ], 'candlestick')
+
                 else:
                     df = pd.DataFrame(history, columns=["Timestamp", "Price"])
                     df['Timestamp'] = pd.to_datetime(df['Timestamp'])
                     df.set_index('Timestamp', inplace=True)
 
                     st.line_chart(df, color=st.session_state.graph_color)
+
             else:
                 st.info("Stock history will be available after 60 seconds of stock creation.")
 
