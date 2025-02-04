@@ -34,6 +34,14 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+hide = """
+        <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+        </style>
+        """
+st.markdown(hide, unsafe_allow_html=True)
+
 ph = argon2.PasswordHasher(
     memory_cost=65536,  # 64MB RAM usage (default: 10240)
     time_cost=5,        # More iterations = stronger (default: 2)
@@ -282,6 +290,7 @@ def get_transaction_history(conn, user_id):
     else:
         st.info("No transaction history available.")
 
+@st.fragment()
 def claim_daily_reward(conn, user_id):
     c = conn.cursor()
     last_claimed = c.execute("SELECT last_daily_reward_claimed FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
@@ -504,6 +513,7 @@ def check_and_update_investments(conn, user_id):
 
     conn.commit()
 
+@st.fragment()
 def collect_rent(conn, user_id):
     c = conn.cursor()
     total_rent = c.execute("""
