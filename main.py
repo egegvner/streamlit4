@@ -3505,5 +3505,6 @@ if __name__ == "__main__":
     add_column_if_not_exists(conn, "stocks", "close_price", "REAL")
     add_column_if_not_exists(conn, "user_properties", "last_collected", "NULL")
 
+    
     init_db()
     main(conn)
