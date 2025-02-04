@@ -34,19 +34,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-st.markdown(
-    """
-    <style>
-    .css-1jc7ptx, .e1ewe7hr3, .viewerBadge_container__1QSob,
-    .styles_viewerBadge__1yB5_, .viewerBadge_link__1S137,
-    .viewerBadge_text__1JaDK {
-        display: none;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
 ph = argon2.PasswordHasher(
     memory_cost=65536,  # 64MB RAM usage (default: 10240)
     time_cost=5,        # More iterations = stronger (default: 2)
@@ -3351,6 +3338,19 @@ def settings(conn, username):
     st.button("Ege Güvener • © 2024", type = "tertiary", use_container_width = True, disabled = True)
 
 def main(conn):
+    st.markdown(
+    """
+    <style>
+    .css-1jc7ptx, .e1ewe7hr3, .viewerBadge_container__1QSob,
+    .styles_viewerBadge__1yB5_, .viewerBadge_link__1S137,
+    .viewerBadge_text__1JaDK {
+        display: none;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
     if 'current_menu' not in st.session_state:
         st.session_state.current_menu = "Deposit"
 
