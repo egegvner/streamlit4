@@ -1368,11 +1368,11 @@ def inventory_view(conn, user_id):
                         cw2.write(f":gray[Last Collected] :blue[{last_collected.strftime('%Y-%m-%d %H:%M:%S')}]")
                         cw2.write(f":gray[Ready In] :green[{int(hours)}] :blue[Hours,] :green[{int(minutes)}] :blue[Minutes]")
 
-                    with st.container(border=True):
-                        if time_left.total_seconds() < 0:
-                            st.success(f"[Accumulated Rent] :green[${format_number(rent_income)}]")
-                        else:
-                            st.success(f"[Accumulated Rent] :green[$0]")
+                        with st.container(border=True):
+                            if time_left.total_seconds() < 0:
+                                st.success(f"[Accumulated Rent] :green[${format_number(rent_income)}]")
+                            else:
+                                st.success(f"[Accumulated Rent] :green[$0]")
                     
                     c1, c2 = st.columns(2)
 
