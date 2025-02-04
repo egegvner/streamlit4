@@ -3616,6 +3616,7 @@ def main(conn):
             chat_view(conn)
         
         elif st.session_state.current_menu == "Stocks":
+            st.session_state.range = 24
             stocks_view(conn, st.session_state.user_id)
         
         elif st.session_state.current_menu == "Holdings":
