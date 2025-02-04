@@ -2532,7 +2532,7 @@ def real_estate_marketplace_view(conn, user_id):
         image_col, details_col = st.columns([1, 3])
         with image_col:
             if row["Image URL"]:
-                st.image(row["Image URL"], width=150)
+                st.image(row["Image URL"], use_container_width=True)
 
         with details_col:
             if row["User ID"] == user_id:
