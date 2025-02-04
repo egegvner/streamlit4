@@ -1915,7 +1915,7 @@ def stocks_view(conn, user_id):
             else:
                 price_color = "white"
 
-            stock_ticker_html += f" <span style='color: white;'>{symbol}</span> <span style='color: {price_color};'>${format_number(current_price, 2)}</span> <span style='color: darkgray'> | </span>"
+            stock_ticker_html += f" <span style='color: white;'>{symbol}</span> <span style='color: {price_color};'>${numerize(current_price)}</span> <span style='color: darkgray'> | </span>"
 
         stock_ticker_html += "</marquee></div>"
 
