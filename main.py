@@ -2135,7 +2135,7 @@ def stocks_view(conn, user_id):
     
     with t2:
 
-        real_stocks = ["AAPL", "GOOGL", "MSFT", "AMZN", "META", "NVDA"]
+        real_stocks = ["AAPL", "GOOGL", "MSFT", "AMZN", "META", "NVDA", "TSLA"]
 
         cc1, cc2, cc3 = st.columns([1, 5, 5])
 
@@ -2182,14 +2182,9 @@ def stocks_view(conn, user_id):
                     buy_quantity = st.number_input(f"Buy {selected_real_stock}", min_value=0.0, step=0.25)
                     st.write(f"[Cost]  :red[${buy_quantity * stock_price:.2f}]")
 
-                    if st.button(f"Buy {selected_real_stock}", type="primary", use_container_width=True, disabled=buy_quantity * stock_price > balance):
+                    if st.button(f"Buy {selected_real_stock}", type="primary", use_container_width=True, disabled = True, help="Coming Soon"):
                         with st.spinner("Purchasing..."):
-                            c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (buy_quantity * stock_price, user_id))
-                            c.execute("INSERT INTO user_stocks (user_id, stock_id, quantity, avg_buy_price) VALUES (?, ?, ?, ?) "
-                                    "ON CONFLICT(user_id, stock_id) DO UPDATE SET quantity = quantity + ?, avg_buy_price = ?",
-                                    (user_id, selected_real_stock, buy_quantity, stock_price, buy_quantity, stock_price))
-                            conn.commit()
-                        st.success("Stock purchased successfully!")
+                            st.success("Stock purchased successfully!")
                         st.rerun()
 
                 with col2:
@@ -2198,12 +2193,9 @@ def stocks_view(conn, user_id):
                     net_profit = (sell_quantity * price) - tax
                     st.write(f"[Profit] :green[${numerize(net_profit)}] | :red[${numerize(tax)}] [Capital Tax]")
                     
-                    if st.button(f"Sell {selected_real_stock}", use_container_width=True, disabled=sell_quantity == 0):
+                    if st.button(f"Sell {selected_real_stock}", use_container_width=True, disabled=True, help="Coming Soon"):
                         with st.spinner("Selling..."):
-                            c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (sell_quantity * stock_price, user_id))
-                            c.execute("UPDATE user_stocks SET quantity = quantity - ? WHERE user_id = ? AND stock_id = ?", (sell_quantity, user_id, selected_real_stock))
-                            conn.commit()
-                        st.success("Stock sold successfully!")
+                            st.success("Stock sold successfully!")
                         st.rerun()
 
         with cc3:
