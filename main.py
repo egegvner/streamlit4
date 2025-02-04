@@ -2210,24 +2210,24 @@ def stocks_view(conn, user_id):
             with st.spinner("Fething stock data"):
                 stock_history = stock_data.history(period="3mo", interval = "1d")
 
-                if not stock_history.empty:
-                    fig = go.Figure(data=[go.Candlestick(
-                        x=stock_history.index,
-                        open=stock_history["Open"],
-                        high=stock_history["High"],
-                        low=stock_history["Low"],
-                        close=stock_history["Close"],
-                    )])
+            if not stock_history.empty:
+                fig = go.Figure(data=[go.Candlestick(
+                    x=stock_history.index,
+                    open=stock_history["Open"],
+                    high=stock_history["High"],
+                    low=stock_history["Low"],
+                    close=stock_history["Close"],
+                )])
 
-                    fig.update_layout(
-                        title=f"Candlestick Chart - {selected_real_stock}",
-                        xaxis_title="Date",
-                        yaxis_title="Price (USD)",
-                        xaxis_rangeslider_visible=False,  # Hide the range slider
-                        template="plotly_dark",  # Use a dark theme
-                    )
-                else:
-                    st.warning("No stock data available for the selected period.")
+                fig.update_layout(
+                    title=f"Candlestick Chart - {selected_real_stock}",
+                    xaxis_title="Date",
+                    yaxis_title="Price (USD)",
+                    xaxis_rangeslider_visible=False,  # Hide the range slider
+                    template="plotly_dark",  # Use a dark theme
+                )
+            else:
+                st.warning("No stock data available for the selected period.")
 
 def portfolio_view(conn, user_id):
     c = conn.cursor()
