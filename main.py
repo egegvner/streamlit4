@@ -2463,8 +2463,12 @@ def investments_view(conn, user_id):
     if completed_investments:
         for company, amount, rate, status in completed_investments:
             outcome = "Profit" if rate > 0 else "Loss"
-            st.write(f"**{company}** - {outcome}: :green[${numerize(rate)}] ({status.title()})")
+            if amount > 0:
+                st.write(f"**{company}** - {outcome}: :green[${numerize(rate)}] ({status.capitalize()})")
+            else:
+                st.write(f"**{company}** - {outcome}: :red[${numerize(rate)}] ({status.capitalize()})")
     else:
+
         st.info("No completed investments yet.")
 
 def real_estate_marketplace_view(conn, user_id):
@@ -2532,7 +2536,7 @@ def real_estate_marketplace_view(conn, user_id):
         image_col, details_col = st.columns([1, 3])
         with image_col:
             if row["Image URL"]:
-                st.image(row["Image URL"])
+                st.image(row["Image URL"], use_container_width=True)
 
         with details_col:
             if row["User ID"] == user_id:
