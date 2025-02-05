@@ -14,7 +14,7 @@ import pydeck as pdk
 import plotly.graph_objects as go
 import math
 import yfinance as yf
-from numerize.numerize import numerize
+from decimal import Decimal
 from streamlit_lightweight_charts import renderLightweightCharts
 import streamlit as st
 
@@ -41,34 +41,37 @@ ph = argon2.PasswordHasher(
     parallelism=4       # Number of parallel threads (default: 1)
 )
 
-def format_number(num, decimals=2):
-    decimals = min(decimals, 2)
+def round_num(n, decimal=2):
+    n=Decimal(n)
+    return n.to_integral() if n == n.to_integral() else round(n.normalize(), decimal)
 
-    suffixes = [
-        (1e33, 'D'),   # Decillions
-        (1e30, 'N'),   # Nonillions
-        (1e27, 'O'),   # Octillions
-        (1e24, 'Sp'),  # Septillions
-        (1e21, 'Sx'),  # Sextillions
-        (1e18, 'Qt'),  # Quintillions
-        (1e15, 'Qd'),  # Quadrillions
-        (1e12, 'T'),   # Trillions
-        (1e9, 'B'),    # Billions
-        (1e6, 'M'),    # Millions
-        (1e3, 'K'),    # Thousands
-    ]
+def numerize(n, decimal=2):
+    sufixes = [ "", "K", "M", "B", "T", "Qa", "Qu", "S", "Oc", "No", 
+                "D", "Ud", "Dd", "Td", "Qt", "Qi", "Se", "Od", "Nd","V", 
+                "Uv", "Dv", "Tv", "Qv", "Qx", "Sx", "Ox", "Nx", "Tn", "Qa",
+                "Qu", "S", "Oc", "No", "D", "Ud", "Dd", "Td", "Qt", "Qi",
+                "Se", "Od", "Nd", "V", "Uv", "Dv", "Tv", "Qv", "Qx", "Sx",
+                "Ox", "Nx", "Tn", "x", "xx", "xxx", "X", "XX", "XXX", "END"] 
     
-    if abs(num) < 1000:
-        return str(round(num))  # Keeps the negative sign if necessary
-
-    for threshold, suffix in suffixes:
-        if abs(num) >= threshold:
-            formatted_num = num / threshold
-            formatted_str = f"{formatted_num:.{decimals}f}"
-            formatted_str = formatted_str.rstrip('0').rstrip('.') if '.' in formatted_str else formatted_str
-            return f"{formatted_str}{suffix}"
-    
-    return str(num) 
+    sci_expr = [1e0, 1e3, 1e6, 1e9, 1e12, 1e15, 1e18, 1e21, 1e24, 1e27, 
+                1e30, 1e33, 1e36, 1e39, 1e42, 1e45, 1e48, 1e51, 1e54, 1e57, 
+                1e60, 1e63, 1e66, 1e69, 1e72, 1e75, 1e78, 1e81, 1e84, 1e87, 
+                1e90, 1e93, 1e96, 1e99, 1e102, 1e105, 1e108, 1e111, 1e114, 1e117, 
+                1e120, 1e123, 1e126, 1e129, 1e132, 1e135, 1e138, 1e141, 1e144, 1e147, 
+                1e150, 1e153, 1e156, 1e159, 1e162, 1e165, 1e168, 1e171, 1e174, 1e177]
+    minus_buff = n
+    n=abs(n)
+    for x in range(len(sci_expr)):
+        try:
+            if n >= sci_expr[x] and n < sci_expr[x+1]:
+                sufix = sufixes[x]
+                if n >= 1e3:
+                    num = str(round_num(n/sci_expr[x], decimal))
+                else:
+                    num = str(n)
+                return num + sufix if minus_buff > 0 else "-" + num + sufix
+        except IndexError:
+            print("You've reached the end")
 
 def write_stream(s, delay = 0, random_delay = False):
     if random_delay:
@@ -3434,7 +3437,7 @@ def main(conn):
         
         with st.sidebar:
             balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (st.session_state.user_id,)).fetchone()[0]
-            st.sidebar.write(f"Vault   |   :green[${format_number(balance, 2)}]")
+            st.sidebar.write(f"Vault   |   :green[${numerize(balance, 2)}]")
             st.sidebar.header(" ", divider="rainbow")
 
         t1, t2 = st.sidebar.tabs(["🌐 Global", "💠 Personal"])
