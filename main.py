@@ -304,13 +304,13 @@ def update_stock_prices(conn):
             if last_updated:
                 last_updated = datetime.datetime.strptime(last_updated, "%Y-%m-%d %H:%M:%S")
             else:
-                last_updated = now - datetime.timedelta(seconds=20)
+                last_updated = now - datetime.timedelta(seconds=10)
 
             if open_price is None:
                 open_price = current_price
 
             elapsed_time = (now - last_updated).total_seconds()
-            num_updates = int(elapsed_time // 20)
+            num_updates = int(elapsed_time // 10)
 
             one_month_ago = now - datetime.timedelta(days=30)
             c.execute(
@@ -323,7 +323,7 @@ def update_stock_prices(conn):
                     change_percent = round(random.uniform(-change_rate, change_rate), 2)
                     new_price = max(1, round(current_price * (1 + change_percent / 100), 2))
 
-                    missed_update_time = last_updated + datetime.timedelta(seconds=(i + 1) * 20)
+                    missed_update_time = last_updated + datetime.timedelta(seconds=(i + 1) * 10)
                     if missed_update_time <= now:
                         c.execute(
                             "INSERT INTO stock_history (stock_id, price, timestamp) VALUES (?, ?, ?)",
@@ -1868,7 +1868,7 @@ def stocks_view(conn, user_id):
         st.session_state.resample = 24
 
     if "hours" not in st.session_state:
-        st.session_state.resample = 24
+        st.session_state.hours = 24
 
     if "selected_real_stock" not in st.session_state:
         st.session_state.selected_real_stock = "AAPL"
