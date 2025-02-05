@@ -1973,7 +1973,7 @@ def stocks_view(conn, user_id):
                     st.session_state.range = 24
                     st.rerun()
         
-        c1, c2 = st.columns(2)
+        c1, c2 = st.columns([2, 1.5])
 
         with c1:
             if len(history) > 1:
@@ -2013,7 +2013,7 @@ def stocks_view(conn, user_id):
                         "horzAlign": 'center',
                         "vertAlign": 'center',
                         "color": 'rgba(50, 50, 50, 0.5)',
-                        "text": 'Genova',  # Stock symbol as watermark
+                        "text": 'Genova',
                     }
                 }
 
@@ -3673,11 +3673,5 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
 
 if __name__ == "__main__":
     conn = get_db_connection()
-    add_column_if_not_exists(conn, "stocks", "open_price", "REAL")
-    add_column_if_not_exists(conn, "stocks", "close_price", "REAL")
-    add_column_if_not_exists(conn, "user_properties", "last_collected", "NULL")
-    add_column_if_not_exists(conn, "users", "last_username_change", "TIMESTAMP")
-    conn.cursor().execute("UPDATE users SET last_username_change = CURRENT_TIMESTAMP")
-    conn.commit()
     init_db()
     main(conn)
