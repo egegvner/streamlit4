@@ -1961,13 +1961,13 @@ def stocks_view(conn, user_id):
                             st.session_state.selected_game_stock = stocks[i][0]
                             st.rerun()
 
-        with c:
+        with c2:
             if len(history) > 1:
                 df = pd.DataFrame(history, columns=["Timestamp", "Price"])
                 df["Timestamp"] = pd.to_datetime(df["Timestamp"])
                 df.set_index("Timestamp", inplace=True)
 
-                df_resampled = df.resample('H').ohlc()['Price'].dropna()
+                df_resampled = df.resample('h').ohlc()['Price'].dropna()
 
                 candlestick_data = [
                     {
