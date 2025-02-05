@@ -2241,7 +2241,7 @@ def stocks_view(conn, user_id):
 
 def portfolio_view(conn, user_id):
     c = conn.cursor()
-    st_autorefresh(interval=5000, key="p")
+    st_autorefresh(interval=10000, key="p")
 
     if "portofolio_value" not in st.session_state:
         st.session_state.portofolio_value = 0
@@ -2275,28 +2275,28 @@ def portfolio_view(conn, user_id):
 
             with c1:
                 st.write("Holding")
-                st.write(f":blue[{format_number(quantity)}]")
+                st.write(f":blue[{numerize(quantity)}]")
 
             with c2:
                 st.write("AVG Buy P.")
-                st.write(f":red[{format_number(avg_buy_price)}]")
+                st.write(f":red[{numerize(avg_buy_price)}]")
 
             with c3:
                 st.write("Current P.")
-                st.write(f":green[{format_number(current_price)}]")
+                st.write(f":green[{numerize(current_price)}]")
 
             with c4:
                 st.write("Total Worth")
-                st.write(f":green[{format_number(stock_worth)}]")
+                st.write(f":green[{numerize(stock_worth)}]")
 
             with c5:
                 st.write("Gain / Loss")
                 if profit_loss < 0:
-                    st.subheader(f":red[{format_number(profit_loss)}]")
-                    st.caption(f":red[-{format_number(profit_loss_percent)}%]")
+                    st.subheader(f":red[{numerize(profit_loss)}]")
+                    st.caption(f":red[{numerize(profit_loss_percent)}%]")
                 else:
-                    st.subheader(f":green[{format_number(profit_loss)}]")
-                    st.caption(f":green[+{format_number(profit_loss_percent)}%]")
+                    st.subheader(f":green[{numerize(profit_loss)}]")
+                    st.caption(f":green[+{numerize(profit_loss_percent)}%]")
             
         if st.button("Quick Sell (ALL)", use_container_width = True, key = stock_id):
             with st.spinner("Processing..."):
