@@ -14,7 +14,6 @@ import pydeck as pdk
 import plotly.graph_objects as go
 import math
 import yfinance as yf
-from decimal import Decimal, ROUND_HALF_UP
 from streamlit_lightweight_charts import renderLightweightCharts
 import streamlit as st
 
@@ -41,33 +40,32 @@ ph = argon2.PasswordHasher(
     parallelism=4       # Number of parallel threads (default: 1)
 )
 
-def round_num(n, decimal=2):
-    n = Decimal(str(n))  # Convert to Decimal using string to avoid float precision errors
-    return n.quantize(Decimal('1') if decimal == 0 else Decimal(f'1e-{decimal}'), rounding=ROUND_HALF_UP)
+def format_number(num, decimals=2):
+    suffixes = [
+        (1e33, 'D'),   # Decillions
+        (1e30, 'N'),   # Nonillions
+        (1e27, 'O'),   # Octillions
+        (1e24, 'Sp'),  # Septillions
+        (1e21, 'Sx'),  # Sextillions
+        (1e18, 'Qt'),  # Quintillions
+        (1e15, 'Qd'),  # Quadrillions
+        (1e12, 'T'),   # Trillions
+        (1e9, 'B'),    # Billions
+        (1e6, 'M'),    # Millions
+        (1e3, 'K'),    # Thousands
+    ]
+    
+    if abs(num) < 1000:
+        return f"{num:.{decimals}f}".rstrip('0').rstrip('.')
 
-def numerize(n, decimal=2):
-    sufixes = ["", "K", "M", "B", "T", "Qa", "Qu", "S", "Oc", "No", 
-               "D", "Ud", "Dd", "Td", "Qt", "Qi", "Se", "Od", "Nd", "V", 
-               "Uv", "Dv", "Tv", "Qv", "Qx", "Sx", "Ox", "Nx", "Tn", "Qa",
-               "Qu", "S", "Oc", "No", "D", "Ud", "Dd", "Td", "Qt", "Qi",
-               "Se", "Od", "Nd", "V", "Uv", "Dv", "Tv", "Qv", "Qx", "Sx",
-               "Ox", "Nx", "Tn", "x", "xx", "xxx", "X", "XX", "XXX", "END"] 
+    for threshold, suffix in suffixes:
+        if abs(num) >= threshold:
+            formatted_num = num / threshold
+            formatted_str = f"{formatted_num:.{decimals}f}".rstrip('0').rstrip('.')
+            return f"{formatted_str}{suffix}"
+    
+    return str(num)
 
-    sci_expr = [Decimal(10) ** (3 * i) for i in range(len(sufixes))]  # Use Decimal for precision
-
-    sign = "-" if n < 0 else ""  # Preserve sign
-    n = abs(Decimal(str(n)))  # Convert n to Decimal to avoid floating-point errors
-
-    for x in range(len(sci_expr) - 1):
-        if sci_expr[x] <= n < sci_expr[x + 1]:
-            sufix = sufixes[x]
-            if n >= Decimal(1000):
-                num = str(round_num(n / sci_expr[x], decimal))
-            else:
-                num = str(n)
-            return f"{sign}{num}{sufix}"
-
-    return f"{sign}{round_num(n, decimal)}{sufixes[-1]}"
 
 def write_stream(s, delay = 0, random_delay = False):
     if random_delay:
@@ -294,6 +292,7 @@ def claim_daily_reward(conn, user_id):
         conn.commit()
         time.sleep(3)
 
+@st.fragment()
 def update_stock_prices(conn):
     c = conn.cursor()
     now = datetime.datetime.now()
@@ -305,20 +304,26 @@ def update_stock_prices(conn):
             if last_updated:
                 last_updated = datetime.datetime.strptime(last_updated, "%Y-%m-%d %H:%M:%S")
             else:
-                last_updated = now - datetime.timedelta(seconds=300)
+                last_updated = now - datetime.timedelta(seconds=10)
 
             if open_price is None:
                 open_price = current_price
 
             elapsed_time = (now - last_updated).total_seconds()
-            num_updates = int(elapsed_time // 300)
+            num_updates = int(elapsed_time // 10)
+
+            one_month_ago = now - datetime.timedelta(days=30)
+            c.execute(
+                "DELETE FROM stock_history WHERE stock_id = ? AND timestamp < ?",
+                (stock_id, one_month_ago.strftime("%Y-%m-%d %H:%M:%S"))
+            )
 
             if num_updates > 0:
                 for i in range(num_updates):
                     change_percent = round(random.uniform(-change_rate, change_rate), 2)
                     new_price = max(1, round(current_price * (1 + change_percent / 100), 2))
 
-                    missed_update_time = last_updated + datetime.timedelta(seconds=(i + 1) * 300)
+                    missed_update_time = last_updated + datetime.timedelta(seconds=(i + 1) * 10)
                     if missed_update_time <= now:
                         c.execute(
                             "INSERT INTO stock_history (stock_id, price, timestamp) VALUES (?, ?, ?)",
@@ -327,12 +332,12 @@ def update_stock_prices(conn):
                     current_price = new_price
 
             close_price = current_price
-
             c.execute(
                 "UPDATE stocks SET price = ?, open_price = ?, close_price = ?, last_updated = ? WHERE stock_id = ?",
                 (current_price, open_price, close_price, now.strftime("%Y-%m-%d %H:%M:%S"), stock_id)
             )
         except Exception as e:
+            print(f"Error updating stock {stock_id}: {e}")
             continue
 
     conn.commit()
@@ -485,9 +490,9 @@ def check_and_update_investments(conn, user_id):
             conn.commit()
 
             if success:
-                st.toast(f"✅ Your investment in {company_name} has completed successfully! You earned :green[${numerize(profit)}].")
+                st.toast(f"✅ Your investment in {company_name} has completed successfully! You earned :green[${format_number(profit)}].")
             else:
-                st.toast(f"❌ Your investment in {company_name} failed. You lost :red[${numerize(amount)}].")
+                st.toast(f"❌ Your investment in {company_name} failed. You lost :red[${format_number(amount)}].")
 
     conn.commit()
 
@@ -503,7 +508,7 @@ def collect_rent(conn, user_id):
     if total_rent > 0:
         c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (total_rent, user_id))
         conn.commit()
-        st.toast(f"💰 Collected :green[${numerize(total_rent)}] in rent income!")
+        st.toast(f"💰 Collected :green[${format_number(total_rent)}] in rent income!")
 
 def update_property_prices(conn):
     c = conn.cursor()
@@ -766,7 +771,7 @@ def withdraw_dialog(conn, user_id):
     if "withdraw_value" not in st.session_state:
         st.session_state.withdraw_value = 0.00
 
-    st.header(f"Balance -> :green[${numerize(current_balance, 2)}]", divider="rainbow")
+    st.header(f"Balance -> :green[${format_number(current_balance, 2)}]", divider="rainbow")
     st.text("")
 
     c1, c2, c3, c4 = st.columns(4)
@@ -783,9 +788,9 @@ def withdraw_dialog(conn, user_id):
     st.divider()
     tax = (amount / 100) * 0.5
     net = amount - tax
-    st.write(f"Net Withdraw -> :green[{numerize(net, 2)}] $|$ :red[${numerize(tax, 2)} Tax*]")
+    st.write(f"Net Withdraw -> :green[{format_number(net, 2)}] $|$ :red[${format_number(tax, 2)} Tax*]")
     c1, c2 = st.columns(2)
-    c1.write(f"Remaining Balance -> :green[${numerize((current_balance - amount), 2)}]")
+    c1.write(f"Remaining Balance -> :green[${format_number((current_balance - amount), 2)}]")
     if (current_balance - amount) < 0:
         c2.write("**:red[Insufficent]**")
     
@@ -818,7 +823,7 @@ def transfer_dialog(conn, user_id):
     st.header(" ", divider = "rainbow")
 
     current_balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
-    st.header(f"Current Balance -> :green[${numerize(current_balance)}]")
+    st.header(f"Current Balance -> :green[${format_number(current_balance)}]")
     st.divider()
     receiver_username = st.selectbox("Recipient Username", options = all_users)
     amount = st.number_input("Amount", min_value = 0.0, step=0.25)
@@ -826,7 +831,7 @@ def transfer_dialog(conn, user_id):
     net = amount - tax
     st.divider()
 
-    st.write(f"Net Transfer -> :green[${numerize(net, 2)}] $|$ :red[${numerize(tax, 2)} Tax]")
+    st.write(f"Net Transfer -> :green[${format_number(net, 2)}] $|$ :red[${format_number(tax, 2)} Tax]")
     st.caption("*Tax is not applied untill receiver accepts the transaction.")
     
     if st.button("Initiate Transfer", type = "primary", use_container_width = True, disabled = True if amount == 0.00 else False):
@@ -876,9 +881,9 @@ def deposit_to_savings_dialog(conn, user_id):
     current_savings = c.execute("SELECT balance FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
     main_balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
-    st.header(f"Savings -> :green[${numerize(current_savings, 2)}]", divider = "rainbow")
+    st.header(f"Savings -> :green[${format_number(current_savings, 2)}]", divider = "rainbow")
     st.write("#### Deposit Source")
-    st.session_state.deposit_source = st.radio("A", label_visibility = "collapsed", options = [f"Main Account   •   :green[${numerize(main_balance, 2)}]"])
+    st.session_state.deposit_source = st.radio("A", label_visibility = "collapsed", options = [f"Main Account   •   :green[${format_number(main_balance, 2)}]"])
 
     max_value = main_balance 
 
@@ -901,8 +906,8 @@ def deposit_to_savings_dialog(conn, user_id):
     net = amount - tax
 
     st.divider()
-    st.write(f"Net Deposit -> :green[${numerize(net, )}]   $|$   :red[${numerize(tax, 2)} Tax]")
-    st.write(f"New Savings -> :green[${numerize((current_savings + net), 2)}]")
+    st.write(f"Net Deposit -> :green[${format_number(net, )}]   $|$   :red[${format_number(tax, 2)} Tax]")
+    st.write(f"New Savings -> :green[${format_number((current_savings + net), 2)}]")
     if st.button("Confirm Deposition", type="primary", use_container_width = True, disabled = True if amount <= 0.00 else False):
         if check_cooldown(conn, user_id):
             if amount <= 0:
@@ -919,7 +924,7 @@ def deposit_to_savings_dialog(conn, user_id):
             update_last_transaction_time(conn, user_id)
             with st.spinner("Processing..."):
                 time.sleep(1)
-            st.success(f"Successfully transferred ${numerize(net, 2)} from vault to savings.")
+            st.success(f"Successfully transferred ${format_number(net, 2)} from vault to savings.")
             time.sleep(1)
             st.rerun()
 
@@ -935,7 +940,7 @@ def withdraw_from_savings_dialog(conn, user_id):
 
     current_savings = c.execute("SELECT balance FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
     
-    st.header(f"Savings -> :green[${numerize((current_savings), 2)}]", divider = "rainbow")
+    st.header(f"Savings -> :green[${format_number((current_savings), 2)}]", divider = "rainbow")
     
     c1, c2, c3, c4 = st.columns(4)
 
@@ -953,8 +958,8 @@ def withdraw_from_savings_dialog(conn, user_id):
     net = amount - tax
 
     st.divider()
-    st.write(f"Net Withdrawal -> :green[${numerize(net, 2)}] $|$ :red[${numerize(tax, 2)} Tax]")
-    st.write(f"Remaining Savings -> :green[${numerize((current_savings - amount), 2)}]")
+    st.write(f"Net Withdrawal -> :green[${format_number(net, 2)}] $|$ :red[${format_number(tax, 2)} Tax]")
+    st.write(f"Remaining Savings -> :green[${format_number((current_savings - amount), 2)}]")
 
     if st.button("Withdraw to Vault", type = "primary", use_container_width = True, disabled = True if amount <= 0.00 else False):
         if check_cooldown(conn, user_id):
@@ -968,7 +973,7 @@ def withdraw_from_savings_dialog(conn, user_id):
             update_last_transaction_time(conn, user_id)
             with st.spinner("Processing..."):
                 time.sleep(random.uniform(1, 2))
-            st.success(f"Successfully withdrawn ${numerize(net, 2)} to vault.")
+            st.success(f"Successfully withdrawn ${format_number(net, 2)} to vault.")
             time.sleep(1.5)
             st.session_state.withdraw_from_savings_value = 0.0
             st.rerun()
@@ -989,17 +994,17 @@ def item_options(conn, user_id, item_id):
         c1.image(image=item_data[5], use_container_width=True)
 
         c2.write(f"**:gray[[EFFECT]]** {item_data[1]}.")
-        c2.write(f"**:gray[[PRICE]]** :green[${numerize(item_data[3], 2)}]")
+        c2.write(f"**:gray[[PRICE]]** :green[${format_number(item_data[3], 2)}]")
         c2.write(f"**:gray[[STOCK]]** :green[{item_data[4]}]")
 
     st.divider()
-    st.write(f"Balance -> :green[${numerize(balance, 2)}]   **•**   :red[INSUFFICENT]" if balance < item_data[3] else f"Balance   **•**   :green[${numerize(balance, 2)}]")
+    st.write(f"Balance -> :green[${format_number(balance, 2)}]   **•**   :red[INSUFFICENT]" if balance < item_data[3] else f"Balance   **•**   :green[${format_number(balance, 2)}]")
     if item_id in owned_item_ids:
         st.warning("You already own this item.")
     c1, c2 = st.columns(2)
     if c1.button("Cancel", use_container_width = True):
         st.rerun()
-    if c2.button(f"**Pay :green[${numerize(item_data[3], 2)}]**", type = "primary", use_container_width = True, disabled = True if balance < item_data[3] or item_id in owned_item_ids else False):
+    if c2.button(f"**Pay :green[${format_number(item_data[3], 2)}]**", type = "primary", use_container_width = True, disabled = True if balance < item_data[3] or item_id in owned_item_ids else False):
         buy_item(conn, user_id, item_id)
     st.caption(f":gray[ID   {item_id}]")
 
@@ -1137,7 +1142,7 @@ def leaderboard(c):
 
     def format_leaderboard(data):
         return [
-            {"Rank": idx + 1, "Name": user[1] if user[1] else user[0], "Balance": f"${numerize(user[2], 2)}"}
+            {"Rank": idx + 1, "Name": user[1] if user[1] else user[0], "Balance": f"${format_number(user[2], 2)}"}
             for idx, user in enumerate(data)
         ]
 
@@ -1251,7 +1256,7 @@ def marketplace_view(conn, user_id):
         with details_col:
             st.write(f"#### **{item_colors[item[3]]}[{item[1]}]**")
             st.write(f":gray[{item[3].upper()}]   •   {item[2]}")
-            st.write(f":green[${numerize(item[4], 2)}]  •  :orange[{item[5]} Left]")
+            st.write(f":green[${format_number(item[4], 2)}]  •  :orange[{item[5]} Left]")
 
             if st.button(f"🔧 Options", key=f"buy_{item[0]}", use_container_width=True):
                 item_options(conn, user_id, item[0])
@@ -1343,7 +1348,7 @@ def inventory_view(conn, user_id):
                 with col2:
                     st.subheader(f"{region} - {prop_type}")
                     cw1, cw2 = st.columns(2)
-                    cw1.write(f":gray[Rent] :green[${numerize(rent_income)} / day]")
+                    cw1.write(f":gray[Rent] :green[${format_number(rent_income)} / day]")
                     cw1.write(f":gray[Purchased] :blue[{purchase_date}]")
                     if last_collected:
                         current_time = datetime.datetime.now()
@@ -1356,7 +1361,7 @@ def inventory_view(conn, user_id):
 
                         with st.container(border=True):
                             if time_left.total_seconds() < 0:
-                                st.success(f"[Accumulated Rent] :green[${numerize(rent_income)}]")
+                                st.success(f"[Accumulated Rent] :green[${format_number(rent_income)}]")
                             else:
                                 st.success(f"[Accumulated Rent] :green[$0]")
                     
@@ -1376,7 +1381,7 @@ def inventory_view(conn, user_id):
                             c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (rent_income, user_id))
                             c.execute("UPDATE user_properties SET last_collected = ? WHERE property_id = ?", (now.strftime("%Y-%m-%d %H:%M:%S"), prop_id))
                             conn.commit()
-                            st.toast(f"🎉 Collected :green[${numerize(rent_income)}]!")
+                            st.toast(f"🎉 Collected :green[${format_number(rent_income)}]!")
                             time.sleep(1)
                         st.rerun()
 
@@ -1406,7 +1411,7 @@ def manage_pending_transfers(conn, receiver_id):
         tax = (amount / 100) * 0.5
         net = amount - tax
 
-        st.write(f"💸   |   **{sender_username}** wants to transfer :green[${numerize(amount, 2)}]. You will receive :green[${numerize(net, 2)}]. :red[(%0.5 tax.)]")
+        st.write(f"💸   |   **{sender_username}** wants to transfer :green[${format_number(amount, 2)}]. You will receive :green[${format_number(net, 2)}]. :red[(%0.5 tax.)]")
         c1, c2 = st.columns(2)
 
         if c1.button(f"Accept", type = "primary", use_container_width = True, key = transaction_id):
@@ -1440,7 +1445,7 @@ def main_account_view(conn, user_id):
     current_balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
     st.header("Main Account (Vault)", divider = "rainbow")
-    st.subheader(f"Balance -> :green[${numerize(current_balance, 2)}]")
+    st.subheader(f"Balance -> :green[${format_number(current_balance, 2)}]")
     st.text("")
     st.text("")
 
@@ -1498,7 +1503,7 @@ def savings_view(conn, user_id):
             st.rerun()
     else:
         savings_balance = c.execute("SELECT balance FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
-        st.subheader(f"Savings -> :green[${numerize(savings_balance, 2)}]")
+        st.subheader(f"Savings -> :green[${format_number(savings_balance, 2)}]")
         st.text("")
         st.text("")
 
@@ -1564,12 +1569,12 @@ def dashboard(conn, user_id):
 
     with c1:
         st.write("Vault")
-        st.subheader(f":green[${numerize(balance, 2)}]")
+        st.subheader(f":green[${format_number(balance, 2)}]")
 
     with c2:
         st.write("Savings")
         if has_savings:
-            st.subheader(f":green[${numerize(savings_balance, 2)}]")
+            st.subheader(f":green[${format_number(savings_balance, 2)}]")
         else:
             st.subheader(f":red[Not owned]")
 
@@ -1809,7 +1814,7 @@ def buy_stock(conn, user_id, stock_id, quantity):
     c.execute("UPDATE stocks SET stock_amount = stock_amount - ? WHERE stock_id = ?", (quantity, stock_id))
     
     conn.commit()
-    st.toast(f"Purchased :blue[{numerize(quantity)}] shares for :green[${numerize(cost, 2)}]")
+    st.toast(f"Purchased :blue[{format_number(quantity)}] shares for :green[${format_number(cost, 2)}]")
 
 def sell_stock(conn, user_id, stock_id, quantity):
 
@@ -1839,13 +1844,13 @@ def sell_stock(conn, user_id, stock_id, quantity):
     c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (net_profit, user_id))
 
     conn.commit()
-    st.toast(f"Sold :blue[{numerize(quantity)}] shares for :green[${numerize(net_profit, 2)}]") 
+    st.toast(f"Sold :blue[{format_number(quantity)}] shares for :green[${format_number(net_profit, 2)}]") 
 
 def stocks_view(conn, user_id):
     c = conn.cursor()
     
     update_stock_prices(conn)
-    st_autorefresh(interval=300000, key="stock_autorefresh")
+    st_autorefresh(interval=10000, key="stock_autorefresh")
 
     stocks = c.execute("SELECT stock_id, name, symbol, price, stock_amount FROM stocks").fetchall()
     balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
@@ -1855,12 +1860,15 @@ def stocks_view(conn, user_id):
 
     if "ti" not in st.session_state:
         st.session_state.ti = 1
-    
-    if "range" not in st.session_state:
-        st.session_state.range = 24
 
     if "graph_color" not in st.session_state:
         st.session_state.graph_color = (0, 255, 0)
+
+    if "resample" not in st.session_state:
+        st.session_state.resample = 24
+
+    if "hours" not in st.session_state:
+        st.session_state.resample = 24
 
     if "selected_real_stock" not in st.session_state:
         st.session_state.selected_real_stock = "AAPL"
@@ -1891,7 +1899,7 @@ def stocks_view(conn, user_id):
             else:
                 price_color = "white"
 
-            stock_ticker_html += f" <span style='color: white;'>{symbol}</span> <span style='color: {price_color};'>${numerize(current_price, 2)}</span> <span style='color: darkgray'> | </span>"
+            stock_ticker_html += f" <span style='color: white;'>{symbol}</span> <span style='color: {price_color};'>${format_number(current_price, 2)}</span> <span style='color: darkgray'> | </span>"
 
         stock_ticker_html += "</marquee></div>"
 
@@ -1916,11 +1924,37 @@ def stocks_view(conn, user_id):
             percentage_change = ((last_price - previous_price) / previous_price) * 100
             
             if last_price > previous_price:
-                change_color = f":green[+{numerize(percentage_change)}%] :gray[(24h)".format(percentage_change)
+                change_color = f":green[+{format_number(percentage_change)}%] :gray[(7d)]"
                 st.session_state.graph_color = (0, 255, 0)
 
             elif last_price < previous_price:
-                change_color = f":red[{numerize(percentage_change)}%] :gray[(24h)".format(percentage_change)
+                change_color = f":red[{format_number(percentage_change)}%] :gray[(7d)]"
+                st.session_state.graph_color = (255, 0, 0)
+
+            else:
+                change_color = f":orange[0.00%] :gray[(7d)]"
+                st.session_state.graph_color = (255, 255, 0)
+        else:
+            percentage_change = 0
+            change_color = ":orange[0.00%] :gray[(7d)]"
+
+        history = c.execute("""
+            SELECT timestamp, price FROM stock_history 
+            WHERE stock_id = ? AND timestamp >= ?
+            ORDER BY timestamp ASC
+        """, (stock_id, start_time_str)).fetchall()
+
+        if len(history) > 1:
+            last_price = history[-1][1]
+            previous_price = history[-2][1]
+            percentage_change = ((last_price - previous_price) / previous_price) * 100
+            
+            if last_price > previous_price:
+                change_color = f":green[+{format_number(percentage_change)}%] :gray[(24h)".format(percentage_change)
+                st.session_state.graph_color = (0, 255, 0)
+
+            elif last_price < previous_price:
+                change_color = f":red[{format_number(percentage_change)}%] :gray[(24h)".format(percentage_change)
                 st.session_state.graph_color = (255, 0, 0)
 
             else:
@@ -1947,7 +1981,7 @@ def stocks_view(conn, user_id):
                 df["Timestamp"] = pd.to_datetime(df["Timestamp"])
                 df.set_index("Timestamp", inplace=True)
 
-                df_resampled = df.resample('h').ohlc()['Price'].dropna()
+                df_resampled = df.resample(f"{st.session_state.resample}h").ohlc()['Price'].dropna()
 
                 candlestick_data = [
                     {
@@ -2002,14 +2036,51 @@ def stocks_view(conn, user_id):
             else:
                 st.info("Stock history will be available after 60 seconds of stock creation.")
 
-            cl1, cl2 = st.columns(2)
-            st.session_state.hours = cl1.select_slider("Time Range (Hours)", options=[1, 5, 10, 24, 48, 72, 96, 120, 144, 168])
-            if cl2.button("Set Range", use_container_width=True):
+            q1, q2, q3, q4, q5, q6, q7, q8 = st.columns(8)
+
+            if q1.button("1h", type="tertiary", use_container_width=True):
+                st.session_state.resample = 1
+                st.session_state.hours = 1
+                st.rerun()
+
+            if q2.button("3h", type="tertiary", use_container_width=True):
+                st.session_state.resample = 1
+                st.session_state.hours = 3
+                st.rerun()
+
+            if q3.button("5h", type="tertiary", use_container_width=True):
+                st.session_state.resample = 1
+                st.session_state.hours = 5
+                st.rerun()
+
+            if q4.button("10h", type="tertiary", use_container_width=True):
+                st.session_state.resample = 0.8
+                st.session_state.hours = 10
+                st.rerun()
+
+            if q5.button("1d", type="tertiary", use_container_width=True):
+                st.session_state.resample = 0.6
+                st.session_state.hours = 24
+                st.rerun()
+
+            if q6.button("7d", type="tertiary", use_container_width=True):
+                st.session_state.resample = 3
+                st.session_state.hours = 168
+                st.rerun()
+
+            if q7.button("15d", type="tertiary", use_container_width=True):
+                st.session_state.resample = 4
+                st.session_state.hours = 360
+                st.rerun()
+
+            if q8.button("1mo", type="tertiary", use_container_width=True):
+                st.session_state.resample = 1
+                st.session_state.hours = 720
                 st.rerun()
 
         with c2:
             st.subheader(f"{name} ({symbol})")
-            st.header(f":green[${numerize(price)}] \n {change_color}]")
+            st.header(f":green[${format_number(price)}] \n {change_color}]")
             user_stock = c.execute("SELECT quantity, avg_buy_price FROM user_stocks WHERE user_id = ? AND stock_id = ?", 
                                     (user_id, stock_id)).fetchall()
 
@@ -2021,17 +2092,17 @@ def stocks_view(conn, user_id):
                 avg_price = 0
 
             with st.container(border=True):
-                st.write(f"**[HOLDING]** :blue[{numerize(user_quantity, 2)} {symbol}] ~ :green[${numerize(user_quantity * price, 2)}]")
-                st.write(f"[AVG. Bought At] :green[${numerize(avg_price, 2)}]")
+                st.write(f"**[HOLDING]** :blue[{format_number(user_quantity, 2)} {symbol}] ~ :green[${format_number(user_quantity * price, 2)}]")
+                st.write(f"[AVG. Bought At] :green[${format_number(avg_price, 2)}]")
 
-                st.write(f"[Available] :orange[{numerize(stock_amount, 2)} {symbol}]")                                
+                st.write(f"[Available] :orange[{format_number(stock_amount, 2)} {symbol}]")                                
 
             col1, col2 = st.columns(2)
             
             with col1:
                 buy_max_quantity = min(balance / price, stock_amount)
                 buy_quantity = st.number_input(f"Buy {symbol}", min_value=0.0, step=0.25, key=f"buy_{stock_id}")
-                st.write(f"[Cost]  :red[${numerize(buy_quantity * price)}]")
+                st.write(f"[Cost]  :red[${format_number(buy_quantity * price)}]")
                 
                 if st.button(f"Buy {symbol}", key=f"buy_btn_{stock_id}", type="primary", use_container_width=True, 
                             disabled=True if buy_quantity == 0 or stock_amount < buy_quantity else False, help="Not enough stock available in the market" if stock_amount < buy_quantity else None):
@@ -2041,7 +2112,7 @@ def stocks_view(conn, user_id):
                     time.sleep(2.5)
                     st.rerun()
                 
-                if st.button(f"Buy MAX: :orange[{numerize(buy_max_quantity)}] ~ :green[${numerize(balance)}]", key=f"buy_max_btn_{stock_id}", use_container_width=True):
+                if st.button(f"Buy MAX: :orange[{format_number(buy_max_quantity)}] ~ :green[${format_number(balance)}]", key=f"buy_max_btn_{stock_id}", use_container_width=True):
                     with st.spinner("Purchasing..."):
                         time.sleep(3)
                         buy_stock(conn, user_id, stock_id, buy_max_quantity)
@@ -2052,7 +2123,7 @@ def stocks_view(conn, user_id):
                 sell_quantity = st.number_input(f"Sell {symbol}", min_value=0.0, max_value=float(user_quantity), step=0.25, key=f"sell_{stock_id}")
                 tax = ((sell_quantity * price) / 100) * 0.05
                 net_profit = (sell_quantity * price) - tax
-                st.write(f"[Profit] :green[${numerize(net_profit)}] | :red[${numerize(tax)}] [Capital Tax]")
+                st.write(f"[Profit] :green[${format_number(net_profit)}] | :red[${format_number(tax)}] [Capital Tax]")
 
                 if st.button(f"Sell {symbol}", key=f"sell_btn_{stock_id}", use_container_width=True, 
                             disabled=True if sell_quantity == 0 else False):
@@ -2081,28 +2152,28 @@ def stocks_view(conn, user_id):
         col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8)
         
         col1.write("24h HIGH")
-        col1.write(f"#### :green[${numerize(stock_metrics['high_24h'])}]" if stock_metrics['high_24h'] else "N/A")
+        col1.write(f"#### :green[${format_number(stock_metrics['high_24h'])}]" if stock_metrics['high_24h'] else "N/A")
         
         col2.write("24h LOW")
-        col2.write(f"#### :red[${numerize(stock_metrics['low_24h'])}]" if stock_metrics['low_24h'] else "N/A")
+        col2.write(f"#### :red[${format_number(stock_metrics['low_24h'])}]" if stock_metrics['low_24h'] else "N/A")
         
         col3.write("All Time High")
-        col3.write(f"#### :green[${numerize(stock_metrics['all_time_high'])}]" if stock_metrics['all_time_high'] else "N/A")
+        col3.write(f"#### :green[${format_number(stock_metrics['all_time_high'])}]" if stock_metrics['all_time_high'] else "N/A")
         
         col4.write("All Time Low")
-        col4.write(f"#### :red[${numerize(stock_metrics['all_time_low'])}]" if stock_metrics['all_time_low'] else "N/A")
+        col4.write(f"#### :red[${format_number(stock_metrics['all_time_low'])}]" if stock_metrics['all_time_low'] else "N/A")
         
         col5.write("24h Change")
-        col5.write(f"#### :orange[{numerize(stock_metrics['price_change'], 2)}%]")
+        col5.write(f"#### :orange[{format_number(stock_metrics['price_change'], 2)}%]")
         
         col6.write("24h Volume")
-        col6.write(f"#### :blue[{numerize(stock_volume)}]")
+        col6.write(f"#### :blue[{format_number(stock_volume)}]")
 
         col7.write("Volatility Index")
-        col7.write(f"#### :violet[{numerize(((stock_metrics['all_time_high'] - stock_metrics['all_time_low']) / stock_metrics['all_time_low']) * 100)} σ]")
+        col7.write(f"#### :violet[{format_number(((stock_metrics['all_time_high'] - stock_metrics['all_time_low']) / stock_metrics['all_time_low']) * 100)} σ]")
 
         col8.write("Market Cap")
-        col8.write(f"#### :green[${numerize(stock_amount * price)}]")
+        col8.write(f"#### :green[${format_number(stock_amount * price)}]")
         
         st.text("")
         st.text("")
@@ -2149,16 +2220,6 @@ def stocks_view(conn, user_id):
             stock_data = yf.Ticker(selected_real_stock)
             stock_price = stock_data.history(period="1d")["Close"].iloc[-1]
             
-            stock_history = stock_data.history(period="2d")["Close"]
-
-            if len(stock_history) >= 2:
-                prev_close = stock_history.iloc[0]
-            else:
-                prev_close = stock_price  # If not enough data, assume no change
-
-            price_change = stock_price - prev_close
-            price_change_percent = (price_change / prev_close) * 100 if prev_close > 0 else 0
-
             user_stock = c.execute(
                 "SELECT quantity, avg_buy_price FROM user_stocks WHERE user_id = ? AND stock_id = ?",
                 (user_id, selected_real_stock[0])
@@ -2168,11 +2229,11 @@ def stocks_view(conn, user_id):
             avg_price = user_stock[1] if user_stock else 0
 
             st.write(f"### {selected_real_stock}")
-            st.header(f":green[${numerize(stock_price, 2)}]")
+            st.header(f":green[${format_number(stock_price, 2)}]")
 
             with st.container(border=True):
-                st.write(f"**[HOLDING]** :blue[{user_quantity} {selected_real_stock}] ~ :green[**${numerize(user_quantity * stock_price)}**]")
-                st.write(f"[AVG. Bought At] :green[**${numerize(avg_price)}**]")
+                st.write(f"**[HOLDING]** :blue[{user_quantity} {selected_real_stock}] ~ :green[**${format_number(user_quantity * stock_price)}**]")
+                st.write(f"[AVG. Bought At] :green[**${format_number(avg_price)}**]")
 
                 balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
@@ -2190,7 +2251,7 @@ def stocks_view(conn, user_id):
                     sell_quantity = st.number_input(f"Sell {selected_real_stock}", min_value=0.0, max_value=float(user_quantity), step=0.25)
                     tax = ((sell_quantity * price) / 100) * 0.05
                     net_profit = (sell_quantity * price) - tax
-                    st.write(f"[Profit] :green[${numerize(net_profit)}] | :red[${numerize(tax)}] [Capital Tax]")
+                    st.write(f"[Profit] :green[${format_number(net_profit)}] | :red[${format_number(tax)}] [Capital Tax]")
                     
                     if st.button(f"Sell {selected_real_stock}", use_container_width=True, disabled=True, help="Coming Soon"):
                         with st.spinner("Selling..."):
@@ -2255,28 +2316,28 @@ def portfolio_view(conn, user_id):
 
             with c1:
                 st.write("Holding")
-                st.write(f":blue[{numerize(quantity)}]")
+                st.write(f":blue[{format_number(quantity)}]")
 
             with c2:
                 st.write("AVG Buy P.")
-                st.write(f":red[{numerize(avg_buy_price)}]")
+                st.write(f":red[{format_number(avg_buy_price)}]")
 
             with c3:
                 st.write("Current P.")
-                st.write(f":green[{numerize(current_price)}]")
+                st.write(f":green[{format_number(current_price)}]")
 
             with c4:
                 st.write("Total Worth")
-                st.write(f":green[{numerize(stock_worth)}]")
+                st.write(f":green[{format_number(stock_worth)}]")
 
             with c5:
                 st.write("Gain / Loss")
                 if profit_loss < 0:
-                    st.subheader(f":red[{numerize(profit_loss)}]")
-                    st.caption(f":red[{numerize(profit_loss_percent)}%]")
+                    st.subheader(f":red[{format_number(profit_loss)}]")
+                    st.caption(f":red[{format_number(profit_loss_percent)}%]")
                 else:
-                    st.subheader(f":green[{numerize(profit_loss)}]")
-                    st.caption(f":green[+{numerize(profit_loss_percent)}%]")
+                    st.subheader(f":green[{format_number(profit_loss)}]")
+                    st.caption(f":green[+{format_number(profit_loss_percent)}%]")
             
         if st.button("Quick Sell (ALL)", use_container_width = True, key = stock_id):
             with st.spinner("Processing..."):
@@ -2312,9 +2373,9 @@ def blackmarket_view(conn, user_id):
         with details_col:
             st.write(f"#### **{item_colors[rarity]}[{name}]** • :gray[#{item_number}]")
             st.write(f":gray[{rarity.upper()}]   •   {description}")
-            st.write(f":green[${numerize(price)}]  •  By: :blue[@{seller_username}]")
+            st.write(f":green[${format_number(price)}]  •  By: :blue[@{seller_username}]")
             
-            if st.button(f"Buy for :green[${numerize(price)}]", key=f"buy_{item_id}", use_container_width=True, 
+            if st.button(f"Buy for :green[${format_number(price)}]", key=f"buy_{item_id}", use_container_width=True, 
                          disabled=True if balance < price else False):
                 with st.spinner(f"Purchasing {name}..."):
                     buy_blackmarket_item(conn, user_id, item_id, item_number, seller_id, price)
@@ -2384,7 +2445,7 @@ def repay_loan(conn, user_id, amount):
     c.execute("UPDATE users SET loan = ?, balance = ? WHERE user_id = ?", (new_loan, new_balance, user_id))
     conn.commit()
     
-    st.toast(f"✅ Loan repaid. Remaining debt: ${numerize(new_loan)}.")
+    st.toast(f"✅ Loan repaid. Remaining debt: ${format_number(new_loan)}.")
     time.sleep(2.5)
     st.session_state.repay = 0.0
 
@@ -2422,10 +2483,10 @@ def bank_view(conn, user_id):
         st.text("")
 
         c1, c2, c3 = st.columns([2, 1, 2])
-        c2.subheader(f":green[${numerize(gov_funds)}]")
+        c2.subheader(f":green[${format_number(gov_funds)}]")
         st.caption(f":green[${format_currency(gov_funds)}]")
         st.divider()
-        st.subheader(f"Inflation: :red[{numerize(inflation_rate * -100)}%]")
+        st.subheader(f"Inflation: :red[{format_number(inflation_rate * -100)}%]")
 
         if not df.empty:
             df["Date"] = pd.to_datetime(df["Date"])
@@ -2441,10 +2502,10 @@ def bank_view(conn, user_id):
 
             interest_rate = max(0.001, inflation_rate + 0.01)
 
-            st.write(f"📊 **[Inflation]** :red[{numerize(inflation_rate * -100)}%]")
-            st.write(f"💳 **[Loan Interest]** :red[{numerize(interest_rate * 100)}% / day]")
-            st.write(f"💰 **[Balance]** :green[${numerize(balance)}]")
-            st.write(f"💳 **[Loan Debt]** :red[${numerize(loan)}]")
+            st.write(f"📊 **[Inflation]** :red[{format_number(inflation_rate * -100)}%]")
+            st.write(f"💳 **[Loan Interest]** :red[{format_number(interest_rate * 100)}% / day]")
+            st.write(f"💰 **[Balance]** :green[${format_number(balance)}]")
+            st.write(f"💳 **[Loan Debt]** :red[${format_number(loan)}]")
 
             if loan > 0 and due_date:
                 due_date_obj = datetime.datetime.strptime(due_date, "%Y-%m-%d").date()
@@ -2457,10 +2518,10 @@ def bank_view(conn, user_id):
         
         st.session_state.amt = balance
         st.divider()
-        st.warning(f"[Max Borrow] :green[${format_currency(st.session_state.amt)}] $||$ :green[{numerize(st.session_state.amt)}]")
+        st.warning(f"[Max Borrow] :green[${format_currency(st.session_state.amt)}] $||$ :green[{format_number(st.session_state.amt)}]")
         st.subheader("Borrow Loan")
         borrow_amount = st.number_input("A", label_visibility="collapsed", min_value=100.0, max_value=float(st.session_state.amt), step=100.0)
-        if st.button(f"Borrow :red[${numerize(borrow_amount)}]", use_container_width=True):
+        if st.button(f"Borrow :red[${format_number(borrow_amount)}]", use_container_width=True):
             with st.spinner("Processing borrow"):
                 time.sleep(3)
                 borrow_money(conn, user_id, borrow_amount, interest_rate)
@@ -2475,7 +2536,7 @@ def bank_view(conn, user_id):
             st.session_state.repay = loan
             st.rerun()
 
-        if st.button(f"Repay :green[${numerize(st.session_state.repay)}]", use_container_width=True, disabled=True if st.session_state.repay == 0 else False):
+        if st.button(f"Repay :green[${format_number(st.session_state.repay)}]", use_container_width=True, disabled=True if st.session_state.repay == 0 else False):
             with st.spinner("Processing loan..."):
                 time.sleep(3)
                 repay_loan(conn, user_id, st.session_state.repay)
@@ -2497,7 +2558,7 @@ def investments_view(conn, user_id):
     if "invest_value" not in st.session_state:
         st.session_state.invest_value = 0
 
-    st.subheader(f"💰 Balance: **:green[${numerize(balance)}]**")
+    st.subheader(f"💰 Balance: **:green[${format_number(balance)}]**")
 
     companies = c.execute("SELECT company_id, company_name, risk_level FROM investment_companies").fetchall()
 
@@ -2519,7 +2580,7 @@ def investments_view(conn, user_id):
 
     st.divider()
     st.subheader(f"💼 {selected_company['name']}", divider="rainbow")
-    st.subheader(f"**Risk:** :red[{numerize(selected_company['risk_level'] * 100)}%]")
+    st.subheader(f"**Risk:** :red[{format_number(selected_company['risk_level'] * 100)}%]")
 
     c1, c2, c3, c4 = st.columns(4)
     if c1.button("%25", use_container_width = True):
@@ -2540,7 +2601,7 @@ def investments_view(conn, user_id):
         key=f"investment_{selected_company['id']}",
     )
 
-    if st.button(f"**Invest :green[${numerize(investment_amount)}] Now**", use_container_width=True, type="primary", disabled=True if investment_amount == 0 else False):
+    if st.button(f"**Invest :green[${format_number(investment_amount)}] Now**", use_container_width=True, type="primary", disabled=True if investment_amount == 0 else False):
         active_investments_count = c.execute("""
         SELECT COUNT(*) FROM investments WHERE user_id = ? AND status = 'pending'
         """, (user_id,)).fetchone()[0]
@@ -2572,7 +2633,7 @@ def investments_view(conn, user_id):
                 ))
                 conn.commit()
                 time.sleep(4)
-            st.toast(f"Investment of :green[${numerize(investment_amount)}] in {selected_company['name']} has initiated! Ends on {end_date}.")
+            st.toast(f"Investment of :green[${format_number(investment_amount)}] in {selected_company['name']} has initiated! Ends on {end_date}.")
             time.sleep(2)
             st.session_state.balance = balance - investment_amount
             st.rerun()
@@ -2587,7 +2648,7 @@ def investments_view(conn, user_id):
     if active_investments:
         for company, amount, risk, start, end in active_investments:
             with st.container(border=True):
-                st.write(f"**{company}** - :gray[[Invested]] :green[${numerize(amount)}] $|$ :gray[[Risk]] :red[{float(risk) * 100}%] $|$ :gray[[Ends]] :blue[{end}]")
+                st.write(f"**{company}** - :gray[[Invested]] :green[${format_number(amount)}] $|$ :gray[[Risk]] :red[{float(risk) * 100}%] $|$ :gray[[Ends]] :blue[{end}]")
     else:
         st.info("No active investments!")
 
@@ -2602,9 +2663,9 @@ def investments_view(conn, user_id):
         for company, amount, rate, status in completed_investments:
             outcome = "Profit" if rate > 0 else "Loss"
             if rate > 0:
-                st.write(f"**{company}** - {outcome}: :green[${numerize(rate)}] ({status.upper()})")
+                st.write(f"**{company}** - {outcome}: :green[${format_number(rate)}] ({status.upper()})")
             else:
-                st.write(f"**{company}** - {outcome}: :red[${numerize(rate)}] ({status.upper()})")
+                st.write(f"**{company}** - {outcome}: :red[${format_number(rate)}] ({status.upper()})")
     else:
 
         st.info("No completed investments yet.")
@@ -2624,8 +2685,8 @@ def real_estate_marketplace_view(conn, user_id):
     df["LAT"] = pd.to_numeric(df["LAT"], errors="coerce")
     df["LON"] = pd.to_numeric(df["LON"], errors="coerce")
 
-    df["Formatted Price"] = df["Price"].apply(lambda x: numerize(x))
-    df["Formatted Rent"] = df["Rent Income"].apply(lambda x: numerize(x))
+    df["Formatted Price"] = df["Price"].apply(lambda x: format_number(x))
+    df["Formatted Rent"] = df["Rent Income"].apply(lambda x: format_number(x))
 
     df["Color"] = df.apply(lambda row: 
         [0, 255, 0] if row["User ID"] == user_id else 
@@ -2686,10 +2747,10 @@ def real_estate_marketplace_view(conn, user_id):
 
             st.text("")
             c1, c2 = st.columns(2)
-            c1.write(f":blue[COST] :red[${numerize(row['Price'])}]")
-            c2.write(f":blue[RENT] :green[${numerize(row['Rent Income'])} / day]")
+            c1.write(f":blue[COST] :red[${format_number(row['Price'])}]")
+            c2.write(f":blue[RENT] :green[${format_number(row['Rent Income'])} / day]")
             c1.write(f":blue[Region] :grey[{row['Region']}]")
-            c2.write(f":blue[Demand Factor] :green[{numerize(row['Demand Factor'])}]")
+            c2.write(f":blue[Demand Factor] :green[{format_number(row['Demand Factor'])}]")
 
             st.text("")
             if row["User ID"] == user_id:
@@ -2768,9 +2829,9 @@ def prop_details_dialog(conn, user_id, prop_id):
             st.text("")
             col1, col2 = st.columns(2)
             col1.write(f":gray[Property Price]")
-            col1.write(f":red[${numerize(data[0])}]")
+            col1.write(f":red[${format_number(data[0])}]")
             col2.write(f":gray[Rent Income]")
-            col2.write(f":green[${numerize(data[1])} / Day]")
+            col2.write(f":green[${format_number(data[1])} / Day]")
             col1.text("")
             col1.text("")
             col1.write(f":gray[Region]")
@@ -2778,7 +2839,7 @@ def prop_details_dialog(conn, user_id, prop_id):
             col2.text("")
             col2.text("")
             col2.write(f":gray[Demand Factor]")
-            col2.write(f":orange[{numerize(data[4] * 100)}%]")
+            col2.write(f":orange[{format_number(data[4] * 100)}%]")
 
         for _ in range(5):
             st.text("")
@@ -3433,7 +3494,7 @@ def main(conn):
         
         with st.sidebar:
             balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (st.session_state.user_id,)).fetchone()[0]
-            st.sidebar.write(f"Vault   |   :green[${numerize(round(balance))}]")
+            st.sidebar.write(f"Vault   |   :green[${format_number(balance)}]")
             st.sidebar.header(" ", divider="rainbow")
 
         t1, t2 = st.sidebar.tabs(["🌐 Global", "💠 Personal"])
