@@ -486,9 +486,9 @@ def check_and_update_investments(conn, user_id):
             conn.commit()
 
             if success:
-                st.toast(f"✅ Your investment in {company_name} has completed successfully! You earned :green[${format_number(profit)}].")
+                st.toast(f"✅ Your investment in {company_name} has completed successfully! You earned :green[${numerize(profit)}].")
             else:
-                st.toast(f"❌ Your investment in {company_name} failed. You lost :red[${format_number(amount)}].")
+                st.toast(f"❌ Your investment in {company_name} failed. You lost :red[${numerize(amount)}].")
 
     conn.commit()
 
@@ -504,7 +504,7 @@ def collect_rent(conn, user_id):
     if total_rent > 0:
         c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (total_rent, user_id))
         conn.commit()
-        st.toast(f"💰 Collected :green[${format_number(total_rent)}] in rent income!")
+        st.toast(f"💰 Collected :green[${numerize(total_rent)}] in rent income!")
 
 def update_property_prices(conn):
     c = conn.cursor()
@@ -767,7 +767,7 @@ def withdraw_dialog(conn, user_id):
     if "withdraw_value" not in st.session_state:
         st.session_state.withdraw_value = 0.00
 
-    st.header(f"Balance -> :green[${format_number(current_balance, 2)}]", divider="rainbow")
+    st.header(f"Balance -> :green[${numerize(current_balance, 2)}]", divider="rainbow")
     st.text("")
 
     c1, c2, c3, c4 = st.columns(4)
@@ -784,9 +784,9 @@ def withdraw_dialog(conn, user_id):
     st.divider()
     tax = (amount / 100) * 0.5
     net = amount - tax
-    st.write(f"Net Withdraw -> :green[{format_number(net, 2)}] $|$ :red[${format_number(tax, 2)} Tax*]")
+    st.write(f"Net Withdraw -> :green[{numerize(net, 2)}] $|$ :red[${numerize(tax, 2)} Tax*]")
     c1, c2 = st.columns(2)
-    c1.write(f"Remaining Balance -> :green[${format_number((current_balance - amount), 2)}]")
+    c1.write(f"Remaining Balance -> :green[${numerize((current_balance - amount), 2)}]")
     if (current_balance - amount) < 0:
         c2.write("**:red[Insufficent]**")
     
@@ -819,7 +819,7 @@ def transfer_dialog(conn, user_id):
     st.header(" ", divider = "rainbow")
 
     current_balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
-    st.header(f"Current Balance -> :green[${format_number(current_balance)}]")
+    st.header(f"Current Balance -> :green[${numerize(current_balance)}]")
     st.divider()
     receiver_username = st.selectbox("Recipient Username", options = all_users)
     amount = st.number_input("Amount", min_value = 0.0, step=0.25)
@@ -827,7 +827,7 @@ def transfer_dialog(conn, user_id):
     net = amount - tax
     st.divider()
 
-    st.write(f"Net Transfer -> :green[${format_number(net, 2)}] $|$ :red[${format_number(tax, 2)} Tax]")
+    st.write(f"Net Transfer -> :green[${numerize(net, 2)}] $|$ :red[${numerize(tax, 2)} Tax]")
     st.caption("*Tax is not applied untill receiver accepts the transaction.")
     
     if st.button("Initiate Transfer", type = "primary", use_container_width = True, disabled = True if amount == 0.00 else False):
@@ -877,9 +877,9 @@ def deposit_to_savings_dialog(conn, user_id):
     current_savings = c.execute("SELECT balance FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
     main_balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
-    st.header(f"Savings -> :green[${format_number(current_savings, 2)}]", divider = "rainbow")
+    st.header(f"Savings -> :green[${numerize(current_savings, 2)}]", divider = "rainbow")
     st.write("#### Deposit Source")
-    st.session_state.deposit_source = st.radio("A", label_visibility = "collapsed", options = [f"Main Account   •   :green[${format_number(main_balance, 2)}]"])
+    st.session_state.deposit_source = st.radio("A", label_visibility = "collapsed", options = [f"Main Account   •   :green[${numerize(main_balance, 2)}]"])
 
     max_value = main_balance 
 
@@ -902,8 +902,8 @@ def deposit_to_savings_dialog(conn, user_id):
     net = amount - tax
 
     st.divider()
-    st.write(f"Net Deposit -> :green[${format_number(net, )}]   $|$   :red[${format_number(tax, 2)} Tax]")
-    st.write(f"New Savings -> :green[${format_number((current_savings + net), 2)}]")
+    st.write(f"Net Deposit -> :green[${numerize(net, )}]   $|$   :red[${numerize(tax, 2)} Tax]")
+    st.write(f"New Savings -> :green[${numerize((current_savings + net), 2)}]")
     if st.button("Confirm Deposition", type="primary", use_container_width = True, disabled = True if amount <= 0.00 else False):
         if check_cooldown(conn, user_id):
             if amount <= 0:
@@ -920,7 +920,7 @@ def deposit_to_savings_dialog(conn, user_id):
             update_last_transaction_time(conn, user_id)
             with st.spinner("Processing..."):
                 time.sleep(1)
-            st.success(f"Successfully transferred ${format_number(net, 2)} from vault to savings.")
+            st.success(f"Successfully transferred ${numerize(net, 2)} from vault to savings.")
             time.sleep(1)
             st.rerun()
 
@@ -936,7 +936,7 @@ def withdraw_from_savings_dialog(conn, user_id):
 
     current_savings = c.execute("SELECT balance FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
     
-    st.header(f"Savings -> :green[${format_number((current_savings), 2)}]", divider = "rainbow")
+    st.header(f"Savings -> :green[${numerize((current_savings), 2)}]", divider = "rainbow")
     
     c1, c2, c3, c4 = st.columns(4)
 
@@ -954,8 +954,8 @@ def withdraw_from_savings_dialog(conn, user_id):
     net = amount - tax
 
     st.divider()
-    st.write(f"Net Withdrawal -> :green[${format_number(net, 2)}] $|$ :red[${format_number(tax, 2)} Tax]")
-    st.write(f"Remaining Savings -> :green[${format_number((current_savings - amount), 2)}]")
+    st.write(f"Net Withdrawal -> :green[${numerize(net, 2)}] $|$ :red[${numerize(tax, 2)} Tax]")
+    st.write(f"Remaining Savings -> :green[${numerize((current_savings - amount), 2)}]")
 
     if st.button("Withdraw to Vault", type = "primary", use_container_width = True, disabled = True if amount <= 0.00 else False):
         if check_cooldown(conn, user_id):
@@ -969,7 +969,7 @@ def withdraw_from_savings_dialog(conn, user_id):
             update_last_transaction_time(conn, user_id)
             with st.spinner("Processing..."):
                 time.sleep(random.uniform(1, 2))
-            st.success(f"Successfully withdrawn ${format_number(net, 2)} to vault.")
+            st.success(f"Successfully withdrawn ${numerize(net, 2)} to vault.")
             time.sleep(1.5)
             st.session_state.withdraw_from_savings_value = 0.0
             st.rerun()
@@ -990,17 +990,17 @@ def item_options(conn, user_id, item_id):
         c1.image(image=item_data[5], use_container_width=True)
 
         c2.write(f"**:gray[[EFFECT]]** {item_data[1]}.")
-        c2.write(f"**:gray[[PRICE]]** :green[${format_number(item_data[3], 2)}]")
+        c2.write(f"**:gray[[PRICE]]** :green[${numerize(item_data[3], 2)}]")
         c2.write(f"**:gray[[STOCK]]** :green[{item_data[4]}]")
 
     st.divider()
-    st.write(f"Balance -> :green[${format_number(balance, 2)}]   **•**   :red[INSUFFICENT]" if balance < item_data[3] else f"Balance   **•**   :green[${format_number(balance, 2)}]")
+    st.write(f"Balance -> :green[${numerize(balance, 2)}]   **•**   :red[INSUFFICENT]" if balance < item_data[3] else f"Balance   **•**   :green[${numerize(balance, 2)}]")
     if item_id in owned_item_ids:
         st.warning("You already own this item.")
     c1, c2 = st.columns(2)
     if c1.button("Cancel", use_container_width = True):
         st.rerun()
-    if c2.button(f"**Pay :green[${format_number(item_data[3], 2)}]**", type = "primary", use_container_width = True, disabled = True if balance < item_data[3] or item_id in owned_item_ids else False):
+    if c2.button(f"**Pay :green[${numerize(item_data[3], 2)}]**", type = "primary", use_container_width = True, disabled = True if balance < item_data[3] or item_id in owned_item_ids else False):
         buy_item(conn, user_id, item_id)
     st.caption(f":gray[ID   {item_id}]")
 
@@ -1138,7 +1138,7 @@ def leaderboard(c):
 
     def format_leaderboard(data):
         return [
-            {"Rank": idx + 1, "Name": user[1] if user[1] else user[0], "Balance": f"${format_number(user[2], 2)}"}
+            {"Rank": idx + 1, "Name": user[1] if user[1] else user[0], "Balance": f"${numerize(user[2], 2)}"}
             for idx, user in enumerate(data)
         ]
 
@@ -1252,7 +1252,7 @@ def marketplace_view(conn, user_id):
         with details_col:
             st.write(f"#### **{item_colors[item[3]]}[{item[1]}]**")
             st.write(f":gray[{item[3].upper()}]   •   {item[2]}")
-            st.write(f":green[${format_number(item[4], 2)}]  •  :orange[{item[5]} Left]")
+            st.write(f":green[${numerize(item[4], 2)}]  •  :orange[{item[5]} Left]")
 
             if st.button(f"🔧 Options", key=f"buy_{item[0]}", use_container_width=True):
                 item_options(conn, user_id, item[0])
@@ -1407,7 +1407,7 @@ def manage_pending_transfers(conn, receiver_id):
         tax = (amount / 100) * 0.5
         net = amount - tax
 
-        st.write(f"💸   |   **{sender_username}** wants to transfer :green[${format_number(amount, 2)}]. You will receive :green[${format_number(net, 2)}]. :red[(%0.5 tax.)]")
+        st.write(f"💸   |   **{sender_username}** wants to transfer :green[${numerize(amount, 2)}]. You will receive :green[${numerize(net, 2)}]. :red[(%0.5 tax.)]")
         c1, c2 = st.columns(2)
 
         if c1.button(f"Accept", type = "primary", use_container_width = True, key = transaction_id):
@@ -1441,7 +1441,7 @@ def main_account_view(conn, user_id):
     current_balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
     st.header("Main Account (Vault)", divider = "rainbow")
-    st.subheader(f"Balance -> :green[${format_number(current_balance, 2)}]")
+    st.subheader(f"Balance -> :green[${numerize(current_balance, 2)}]")
     st.text("")
     st.text("")
 
@@ -1499,7 +1499,7 @@ def savings_view(conn, user_id):
             st.rerun()
     else:
         savings_balance = c.execute("SELECT balance FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
-        st.subheader(f"Savings -> :green[${format_number(savings_balance, 2)}]")
+        st.subheader(f"Savings -> :green[${numerize(savings_balance, 2)}]")
         st.text("")
         st.text("")
 
@@ -1565,12 +1565,12 @@ def dashboard(conn, user_id):
 
     with c1:
         st.write("Vault")
-        st.subheader(f":green[${format_number(balance, 2)}]")
+        st.subheader(f":green[${numerize(balance, 2)}]")
 
     with c2:
         st.write("Savings")
         if has_savings:
-            st.subheader(f":green[${format_number(savings_balance, 2)}]")
+            st.subheader(f":green[${numerize(savings_balance, 2)}]")
         else:
             st.subheader(f":red[Not owned]")
 
@@ -1810,7 +1810,7 @@ def buy_stock(conn, user_id, stock_id, quantity):
     c.execute("UPDATE stocks SET stock_amount = stock_amount - ? WHERE stock_id = ?", (quantity, stock_id))
     
     conn.commit()
-    st.toast(f"Purchased :blue[{format_number(quantity)}] shares for :green[${format_number(cost, 2)}]")
+    st.toast(f"Purchased :blue[{numerize(quantity)}] shares for :green[${numerize(cost, 2)}]")
 
 def sell_stock(conn, user_id, stock_id, quantity):
 
@@ -1840,7 +1840,7 @@ def sell_stock(conn, user_id, stock_id, quantity):
     c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (net_profit, user_id))
 
     conn.commit()
-    st.toast(f"Sold :blue[{format_number(quantity)}] shares for :green[${format_number(net_profit, 2)}]") 
+    st.toast(f"Sold :blue[{numerize(quantity)}] shares for :green[${numerize(net_profit, 2)}]") 
 
 def stocks_view(conn, user_id):
     c = conn.cursor()
@@ -2022,7 +2022,7 @@ def stocks_view(conn, user_id):
                 avg_price = 0
 
             with st.container(border=True):
-                st.write(f"**[HOLDING]** :blue[{numerize(user_quantity, 2)} {symbol}] ~ :green[${format_number(user_quantity * price, 2)}]")
+                st.write(f"**[HOLDING]** :blue[{numerize(user_quantity, 2)} {symbol}] ~ :green[${numerize(user_quantity * price, 2)}]")
                 st.write(f"[AVG. Bought At] :green[${numerize(avg_price, 2)}]")
 
                 st.write(f"[Available] :orange[{numerize(stock_amount, 2)} {symbol}]")                                
