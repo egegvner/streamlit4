@@ -1509,6 +1509,7 @@ def savings_view(conn, user_id):
                           (user_id, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
                 conn.commit()
                 time.sleep(3)
+                st.balloons()
             st.rerun()
     else:
         savings_balance = c.execute("SELECT balance FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
