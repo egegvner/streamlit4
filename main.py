@@ -1948,20 +1948,17 @@ def stocks_view(conn, user_id):
             percentage_change = 0
             change_color = ":orange[0.00%] :gray[(24h)"
 
-        c1, c2, c3 = st.columns([2, 10, 10])
+        c1, c2 = st.columns(2)
+            
+        cols = st.columns(len(stocks))  # Create a column for each stock
+
+        for i in range(len(stocks)):
+            with cols[i]:  # Place the button inside the respective column
+                if st.button(label=f"{stocks[i][2]}", key=stocks[i][0], use_container_width=True):
+                    st.session_state.selected_game_stock = stocks[i][0]
+                    st.rerun()
 
         with c1:
-            st.text("")
-            st.text("")
-            with st.container(border=False, height=500):
-                cot = st.container(border=False, height=500)
-                with cot:
-                    for i in range(len(stocks)):
-                        if st.button(label = f"{stocks[i][2]}", key=stocks[i][0], use_container_width=True):
-                            st.session_state.selected_game_stock = stocks[i][0]
-                            st.rerun()
-
-        with c2:
             if len(history) > 1:
                 df = pd.DataFrame(history, columns=["Timestamp", "Price"])
                 df["Timestamp"] = pd.to_datetime(df["Timestamp"])
@@ -2027,7 +2024,7 @@ def stocks_view(conn, user_id):
             if cl2.button("Set Range", use_container_width=True):
                 st.rerun()
 
-        with c3:
+        with c2:
             st.subheader(f"{name} ({symbol})")
             st.header(f":green[${numerize(price)}] \n {change_color}]")
             user_stock = c.execute("SELECT quantity, avg_buy_price FROM user_stocks WHERE user_id = ? AND stock_id = ?", 
