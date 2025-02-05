@@ -1948,8 +1948,6 @@ def stocks_view(conn, user_id):
             percentage_change = 0
             change_color = ":orange[0.00%] :gray[(24h)"
 
-        c1, c2 = st.columns(2)
-            
         cols = st.columns(len(stocks))  # Create a column for each stock
 
         for i in range(len(stocks)):
@@ -1957,6 +1955,8 @@ def stocks_view(conn, user_id):
                 if st.button(label=f"{stocks[i][2]}", key=stocks[i][0], use_container_width=True):
                     st.session_state.selected_game_stock = stocks[i][0]
                     st.rerun()
+        
+        c1, c2 = st.columns(2)
 
         with c1:
             if len(history) > 1:
