@@ -42,8 +42,7 @@ ph = argon2.PasswordHasher(
 )
 
 def round_num(n, decimal=2):
-    n=Decimal(n)
-    return n.to_integral() if n == n.to_integral() else round(n.normalize(), decimal)
+    return round(n, decimal)
 
 def numerize(n, decimal=2):
     sufixes = [ "", "K", "M", "B", "T", "Qa", "Qu", "S", "Oc", "No", 
@@ -3437,7 +3436,7 @@ def main(conn):
         
         with st.sidebar:
             balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (st.session_state.user_id,)).fetchone()[0]
-            st.sidebar.write(f"Vault   |   :green[${numerize(balance, 1)}]")
+            st.sidebar.write(f"Vault   |   :green[${numerize(round(balance))}]")
             st.sidebar.header(" ", divider="rainbow")
 
         t1, t2 = st.sidebar.tabs(["🌐 Global", "💠 Personal"])
