@@ -14,6 +14,7 @@ import pydeck as pdk
 import plotly.graph_objects as go
 import math
 import yfinance as yf
+import json
 from streamlit_lightweight_charts import renderLightweightCharts
 import streamlit as st
 
@@ -521,6 +522,29 @@ def update_property_prices(conn):
         c.execute("UPDATE real_estate SET price = ?, rent_income = ? WHERE property_id = ?", 
                   (new_price, new_rent, property_id))
     
+    conn.commit()
+
+def load_real_estates_from_json(conn, json_file):
+    c = conn.cursor()
+    with open(json_file, "r", encoding="utf-8") as file:
+        real_estates = json.load(file)
+
+    for estate in real_estates:
+        c.execute("SELECT property_id FROM real_estate WHERE property_id = ?", (estate["property_id"],))
+        existing_property = c.fetchone()
+
+        if existing_property is None:
+            c.execute("""
+                INSERT INTO real_estate (property_id, region, type, price, rent_income, demand_factor, image_url, latitude, longitude)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (estate["property_id"], estate["region"], estate["type"], estate["price"], estate["rent_income"], estate["demand_factor"], estate["image_url"], estate["latitude"], estate["longitude"]))
+        else:
+            c.execute("""
+                UPDATE real_estate
+                SET region = ?, type = ?, price = ?, rent_income = ?, demand_factor = ?, image_url = ?, latitude = ?, longitude = ?
+                WHERE property_id = ?
+            """, (estate["region"], estate["type"], estate["price"], estate["rent_income"], estate["demand_factor"], estate["image_url"], estate["latitude"], estate["longitude"], estate["property_id"]))
+
     conn.commit()
 
 def register_user(conn, username, password, email = None, visible_name = None):
@@ -2690,7 +2714,7 @@ def real_estate_marketplace_view(conn, user_id):
 
     df["Color"] = df.apply(lambda row: 
         [0, 255, 0] if row["User ID"] == user_id else 
-        ([255, 0, 0] if row["Sold"] else [0, 255, 255]), axis=1
+        ([255, 0, 0] if row["Sold"] else [255, 255, 255]), axis=1
     )
 
     df["Color"] = df["Color"].astype(object)
@@ -2704,7 +2728,7 @@ def real_estate_marketplace_view(conn, user_id):
                 get_position=["LON", "LAT"],  
                 get_color="Color",
                 pickable=True,
-                pointSize = 5,
+                pointSize = 2,
             ),
         ],
         initial_view_state=pdk.ViewState(
@@ -3673,5 +3697,8 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
 
 if __name__ == "__main__":
     conn = get_db_connection()
+    x = conn.cursor().execute("SELECT COUNT(*) FROM real_estate")
+    if x.fetchone()[0] != 0:
+        load_real_estates_from_json(conn, "/Users/egeguvener/Desktop/Main/Python/NewProjects/BankingWebApp/real_estates.json")
     init_db()
     main(conn)
