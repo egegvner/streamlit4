@@ -604,7 +604,8 @@ def init_db():
                   show_main_balance_on_leaderboard INTEGER DEFAULT 1,
                   show_savings_balance_on_leaderboard INTEGER DEFAULT 1,
                   last_savings_refresh DATETIME NOT NULL,
-                  last_quota_reset DATETIME DEFAULT CURRENT_TIMESTAMP
+                  last_quota_reset DATETIME DEFAULT CURRENT_TIMESTAMP,
+                  last_username_change DATETIME DEFAULT CURRENT_TIMESTAMP
                   );''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS transactions (
@@ -969,9 +970,8 @@ def withdraw_from_savings_dialog(conn, user_id):
     st.divider()
     st.write(f"Net Withdrawal -> :green[${format_number(net, 2)}] $|$ :red[${format_number(tax, 2)} Tax]")
     st.write(f"Remaining Savings -> :green[${format_number((current_savings - amount), 2)}]")
-    c1, c2 = st.columns(2)
 
-    if c2.button("Withdraw to Vault", type = "primary", use_container_width = True, disabled = True if amount <= 0.00 else False):
+    if st.button("Withdraw to Vault", type = "primary", use_container_width = True, disabled = True if amount <= 0.00 else False):
         if check_cooldown(conn, user_id):
             c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (net, user_id))
             c.execute("UPDATE savings SET balance = balance - ? WHERE user_id = ?", (amount, user_id))
@@ -1358,7 +1358,7 @@ def inventory_view(conn, user_id):
                 with col2:
                     st.subheader(f"{region} - {prop_type}")
                     cw1, cw2 = st.columns(2)
-                    cw1.write(f":gray[Rent] :green[${format_number(rent_income)} / day]")
+                    cw1.write(f":gray[Rent] :green[${numerize(rent_income)} / day]")
                     cw1.write(f":gray[Purchased] :blue[{purchase_date}]")
                     if last_collected:
                         current_time = datetime.datetime.now()
@@ -1367,11 +1367,11 @@ def inventory_view(conn, user_id):
                         hours, remainder = divmod(time_left.total_seconds(), 3600)
                         minutes, _ = divmod(remainder, 60)
                         cw2.write(f":gray[Last Collected] :blue[{last_collected.strftime('%Y-%m-%d %H:%M:%S')}]")
-                        cw2.write(f":gray[Ready In] :green[{int(hours)}] :blue[Hours,] :green[{int(minutes)}] :blue[Minutes]")
+                        cw2.write(f":gray[Ready In] :green[{int(hours)}] :gray[Hours,] :green[{int(minutes)}] :gray[Minutes]")
 
                         with st.container(border=True):
                             if time_left.total_seconds() < 0:
-                                st.success(f"[Accumulated Rent] :green[${format_number(rent_income)}]")
+                                st.success(f"[Accumulated Rent] :green[${numerize(rent_income)}]")
                             else:
                                 st.success(f"[Accumulated Rent] :green[$0]")
                     
@@ -1391,8 +1391,8 @@ def inventory_view(conn, user_id):
                             c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (rent_income, user_id))
                             c.execute("UPDATE user_properties SET last_collected = ? WHERE property_id = ?", (now.strftime("%Y-%m-%d %H:%M:%S"), prop_id))
                             conn.commit()
-                        st.success(f"💰 Collected :green[${format_number(rent_income)}] in rent income!")
-                        time.sleep(1)
+                            st.toast(f"🎉 Collected :green[${numerize(rent_income)}]!")
+                            time.sleep(1)
                         st.rerun()
 
 def manage_pending_transfers(conn, receiver_id):
@@ -1469,30 +1469,26 @@ def main_account_view(conn, user_id):
 
     st.divider()
     
-    deposits, withdrawals, incoming, outgoing = (
-        c.execute("SELECT deposits, withdraws, incoming_transfers, outgoing_transfers FROM users WHERE user_id = ?", (user_id,)).fetchone()
+    incoming, outgoing = (
+        c.execute("SELECT incoming_transfers, outgoing_transfers FROM users WHERE user_id = ?", (user_id,)).fetchone()
     )
     
-    total_transactions = deposits + withdrawals + incoming + outgoing
+    total_transactions = incoming + outgoing
     recent_metrics = recent_transactions_metrics(c, user_id)
    
     st.header("Last 24 Hours", divider = "rainbow")
     
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Deposits (24h)", recent_metrics["Top Ups"]["count"], f"${recent_metrics['Top Ups']['total']:.2f}")
-    c2.metric("Withdrawals (24h)", recent_metrics["Withdrawals"]["count"], f"${recent_metrics['Withdrawals']['total']:.2f}")
-    c3.metric("Incoming Transfers (24h)", recent_metrics["Incoming Transfers"]["count"], f"${recent_metrics['Incoming Transfers']['total']:.2f}")
-    c4.metric("Outgoing Transfers (24h)", recent_metrics["Outgoing Transfers"]["count"], f"${recent_metrics['Outgoing Transfers']['total']:.2f}")
+    c1, c2 = st.columns(2)
+    c1.metric("Incoming Transfers (24h)", recent_metrics["Incoming Transfers"]["count"], f"${recent_metrics['Incoming Transfers']['total']:.2f}")
+    c2.metric("Outgoing Transfers (24h)", recent_metrics["Outgoing Transfers"]["count"], f"${recent_metrics['Outgoing Transfers']['total']:.2f}")
     
     st.text("")
     st.text("")
     st.header("Lifetime Metrics", divider = "rainbow")
 
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Top Ups", deposits)
-    c2.metric("Withdrawals", withdrawals)
-    c3.metric("Incoming Transfers", incoming)
-    c4.metric("Outgoing Transfers", outgoing)
+    c1, c2 = st.columns(2)
+    c1.metric("Incoming Transfers", incoming)
+    c2.metric("Outgoing Transfers", outgoing)
     st.write(f"Total Transactions   |   :green[{total_transactions}]")
 
 def savings_view(conn, user_id):
@@ -1882,9 +1878,6 @@ def stocks_view(conn, user_id):
 
     if "hours" not in st.session_state:
         st.session_state.hours = 24
-    
-    if "g_type" not in st.session_state:
-        st.session_state.g_type = "Candlestick"
 
     if "selected_real_stock" not in st.session_state:
         st.session_state.selected_real_stock = "AAPL"
@@ -1915,7 +1908,7 @@ def stocks_view(conn, user_id):
             else:
                 price_color = "white"
 
-            stock_ticker_html += f" <span style='color: white;'>{symbol}</span> <span style='color: {price_color};'>${numerize(current_price)}</span> <span style='color: darkgray'> | </span>"
+            stock_ticker_html += f" <span style='color: white;'>{symbol}</span> <span style='color: {price_color};'>${numerize(current_price, 2)}</span> <span style='color: darkgray'> | </span>"
 
         stock_ticker_html += "</marquee></div>"
 
@@ -1959,83 +1952,71 @@ def stocks_view(conn, user_id):
         with c1:
             st.text("")
             st.text("")
-            with st.container(border=False, height=600):
-                cot = st.container(border=False, height=600)
+            with st.container(border=False, height=500):
+                cot = st.container(border=False, height=500)
                 with cot:
                     for i in range(len(stocks)):
                         if st.button(label = f"{stocks[i][2]}", key=stocks[i][0], use_container_width=True):
                             st.session_state.selected_game_stock = stocks[i][0]
                             st.rerun()
 
-        with c2:
+        with c:
             if len(history) > 1:
-                if st.session_state.g_type == "Candlestick":
-                    df = pd.DataFrame(history, columns=["Timestamp", "Price"])
-                    df["Timestamp"] = pd.to_datetime(df["Timestamp"])
-                    df.set_index("Timestamp", inplace=True)
+                df = pd.DataFrame(history, columns=["Timestamp", "Price"])
+                df["Timestamp"] = pd.to_datetime(df["Timestamp"])
+                df.set_index("Timestamp", inplace=True)
 
-                    # Resample data to get OHLC (open, high, low, close)
-                    df_resampled = df.resample('H').ohlc()['Price'].dropna()
+                df_resampled = df.resample('H').ohlc()['Price'].dropna()
 
-                    # Convert DataFrame to list of candlestick data
-                    candlestick_data = [
-                        {
-                            "time": int(timestamp.timestamp()),  # Convert to Unix timestamp
-                            "open": row["open"],
-                            "high": row["high"],
-                            "low": row["low"],
-                            "close": row["close"]
-                        }
-                        for timestamp, row in df_resampled.iterrows()
-                    ]
-
-                    # Define chart options
-                    chartOptions = {
-                        "layout": {
-                            "textColor": 'rgba(180, 180, 180, 1)',
-                            "background": {
-                                "type": 'solid',
-                                "color": 'rgba(15, 17, 22, 1)'
-                            }
-                        },
-                        "grid": {
-                            "vertLines": {"color": "rgba(30, 30, 30, 0.7)"},
-                            "horzLines": {"color": "rgba(30, 30, 30, 0.7)"}
-                        },
-                        "crosshair": {"mode": 0},
-                        "watermark": {
-                            "visible": True,
-                            "fontSize": 70,
-                            "horzAlign": 'center',
-                            "vertAlign": 'center',
-                            "color": 'rgba(50, 50, 50, 0.5)',
-                            "text": 'Genova',  # Stock symbol as watermark
-                        }
+                candlestick_data = [
+                    {
+                        "time": int(timestamp.timestamp()),  # Convert to Unix timestamp
+                        "open": row["open"],
+                        "high": row["high"],
+                        "low": row["low"],
+                        "close": row["close"]
                     }
+                    for timestamp, row in df_resampled.iterrows()
+                ]
 
-                    # Define candlestick series
-                    seriesCandlestickChart = [{
-                        "type": 'Candlestick',
-                        "data": candlestick_data,
-                        "options": {
-                            "upColor": '#26a69a',
-                            "downColor": '#ef5350',
-                            "borderVisible": False,
-                            "wickUpColor": '#26a69a',
-                            "wickDownColor": '#ef5350'
+                chartOptions = {
+                    "layout": {
+                        "textColor": 'rgba(180, 180, 180, 1)',
+                        "background": {
+                            "type": 'solid',
+                            "color": 'rgba(15, 17, 22, 1)'
                         }
-                    }]
+                    },
+                    "grid": {
+                        "vertLines": {"color": "rgba(30, 30, 30, 0.7)"},
+                        "horzLines": {"color": "rgba(30, 30, 30, 0.7)"}
+                    },
+                    "crosshair": {"mode": 0},
+                    "watermark": {
+                        "visible": True,
+                        "fontSize": 70,
+                        "horzAlign": 'center',
+                        "vertAlign": 'center',
+                        "color": 'rgba(50, 50, 50, 0.5)',
+                        "text": 'Genova',  # Stock symbol as watermark
+                    }
+                }
 
-                    renderLightweightCharts([
-                        {"chart": chartOptions, "series": seriesCandlestickChart}
-                    ], 'candlestick')
+                seriesCandlestickChart = [{
+                    "type": 'Candlestick',
+                    "data": candlestick_data,
+                    "options": {
+                        "upColor": '#26a69a',
+                        "downColor": '#ef5350',
+                        "borderVisible": False,
+                        "wickUpColor": '#26a69a',
+                        "wickDownColor": '#ef5350'
+                    }
+                }]
 
-                else:
-                    df = pd.DataFrame(history, columns=["Timestamp", "Price"])
-                    df['Timestamp'] = pd.to_datetime(df['Timestamp'])
-                    df.set_index('Timestamp', inplace=True)
-
-                    st.line_chart(df, color=st.session_state.graph_color)
+                renderLightweightCharts([
+                    {"chart": chartOptions, "series": seriesCandlestickChart}
+                ], 'candlestick')
 
             else:
                 st.info("Stock history will be available after 60 seconds of stock creation.")
@@ -2043,11 +2024,6 @@ def stocks_view(conn, user_id):
             cl1, cl2 = st.columns(2)
             st.session_state.hours = cl1.select_slider("Time Range (Hours)", options=[1, 5, 10, 24, 48, 72, 96, 120, 144, 168])
             if cl2.button("Set Range", use_container_width=True):
-                st.rerun()
-            
-            cm1, cm2 = st.columns(2)
-            st.session_state.g_type = cm1.selectbox(label="fe", label_visibility="collapsed", options=["Candlestick", "Line Chart"])
-            if cm2.button("Set Graph Type", use_container_width=True):
                 st.rerun()
 
         with c3:
@@ -2811,9 +2787,9 @@ def prop_details_dialog(conn, user_id, prop_id):
             st.text("")
             col1, col2 = st.columns(2)
             col1.write(f":gray[Property Price]")
-            col1.write(f":red[${format_number(data[0])}]")
+            col1.write(f":red[${numerize(data[0])}]")
             col2.write(f":gray[Rent Income]")
-            col2.write(f":green[${format_number(data[1])} / Day]")
+            col2.write(f":green[${numerize(data[1])} / Day]")
             col1.text("")
             col1.text("")
             col1.write(f":gray[Region]")
@@ -2821,7 +2797,7 @@ def prop_details_dialog(conn, user_id, prop_id):
             col2.text("")
             col2.text("")
             col2.write(f":gray[Demand Factor]")
-            col2.write(f":orange[{format_number(data[4] * 100)}%]")
+            col2.write(f":orange[{numerize(data[4] * 100)}%]")
 
         for _ in range(5):
             st.text("")
@@ -2829,9 +2805,9 @@ def prop_details_dialog(conn, user_id, prop_id):
         if st.button("Confirm Buy Property", type="primary", use_container_width=True, disabled=balance < data[0]):
             with st.spinner("Purchasing property..."):
                 buy_property(conn, user_id, prop_id)
-                time.sleep(4)
-            st.success("Congrats! You have bought a property!")
-            time.sleep(2)
+                time.sleep(2)
+            st.success("Success! You have bought a property!")
+            time.sleep(1.5)
             st.rerun()
 
         c1, c2, c3 = st.columns([1, 1, 1])
@@ -3184,8 +3160,8 @@ def admin_panel(conn):
     st.text("")
     st.write(":red[Editing data from the dataframes below without proper permission will trigger a legal punishment by law.]")
     with st.spinner("Loading User Data"):
-        userData = c.execute("SELECT user_id, username, level, visible_name, password, balance, has_savings_account, suspension, deposits, withdraws, incoming_transfers, outgoing_transfers, total_transactions, last_transaction_time, email, last_daily_reward_claimed, login_streak FROM users").fetchall()
-    df = pd.DataFrame(userData, columns = ["User ID", "Username", "Level", "Visible Name", "Pass", "Balance", "Has Savings Account", "Suspension", "Deposits", "Withdraws", "Transfers Received", "Transfers Sent", "Total Transactions", "Last Transaction Time", "Email", "Last Daily Reward Claimed", "Login Streak"])
+        userData = c.execute("SELECT user_id, username, level, visible_name, password, balance, has_savings_account, suspension, incoming_transfers, outgoing_transfers, total_transactions, last_transaction_time, email, last_daily_reward_claimed, login_streak, last_username_change FROM users").fetchall()
+    df = pd.DataFrame(userData, columns = ["User ID", "Username", "Level", "Visible Name", "Pass", "Balance", "Has Savings Account", "Suspension", "Transfers Received", "Transfers Sent", "Total Transfers", "Last Transaction Time", "Email", "Last Daily Reward Claimed", "Login Streak", "Last Username Change"])
     edited_df = st.data_editor(df, key = "users_table", num_rows = "fixed", use_container_width = True, hide_index = False)
 
     for _ in range(4):
@@ -3193,7 +3169,7 @@ def admin_panel(conn):
 
     if st.button("Update Data", use_container_width = True, type = "secondary"):
         for _, row in edited_df.iterrows():
-            c.execute("UPDATE OR IGNORE users SET username = ?, level = ?, visible_name = ?, password = ?, balance = ?, has_savings_account = ?, suspension = ?, deposits = ?, withdraws = ?, incoming_transfers = ?, outgoing_transfers = ?, total_transactions = ?, last_transaction_time = ?, email = ?, last_daily_reward_claimed = ?, login_streak = ? WHERE user_id = ?", (row["Username"], row["Level"], row["Visible Name"], row["Pass"], row["Balance"], row["Has Savings Account"], row["Suspension"], row["Deposits"], row["Withdraws"], row["Transfers Received"], row["Transfers Sent"], row["Total Transactions"], row["Last Transaction Time"], row["Email"], row["Last Daily Reward Claimed"], row["Login Streak"], row["User ID"]))
+            c.execute("UPDATE OR IGNORE users SET username = ?, level = ?, visible_name = ?, password = ?, balance = ?, has_savings_account = ?, suspension = ?, incoming_transfers = ?, outgoing_transfers = ?, total_transactions = ?, last_transaction_time = ?, email = ?, last_daily_reward_claimed = ?, login_streak = ?, last_username_change = ? WHERE user_id = ?", (row["Username"], row["Level"], row["Visible Name"], row["Pass"], row["Balance"], row["Has Savings Account"], row["Suspension"], row["Transfers Received"], row["Transfers Sent"], row["Total Transfers"], row["Last Transaction Time"], row["Email"], row["Last Daily Reward Claimed"], row["Login Streak"], row["User ID"]))
         conn.commit()
         st.rerun()
 
@@ -3258,10 +3234,10 @@ def admin_panel(conn):
     user = st.selectbox("Select User", [u[0] for u in c.execute("SELECT username FROM users").fetchall()], key="inv3")
     if user:
         user_id = c.execute("SELECT user_id FROM users WHERE username = ?", (user,)).fetchone()[0]
-        user_properties = c.execute("SELECT * FROM user_properties WHERE user_id = ? ORDER BY purchase_date DESC", (user_id,)).fetchall()
+        user_properties = c.execute("SELECT property_id, purchase_date, rent_income FROM user_properties WHERE user_id = ? ORDER BY purchase_date DESC", (user_id,)).fetchall()
 
         if user_properties:
-            df = pd.DataFrame(user_properties, columns = ["User ID", "Property ID", "Purchase Date", "Rent Income"])
+            df = pd.DataFrame(user_properties, columns = ["Property ID", "Purchase Date", "Rent Income"])
             edited_df = st.data_editor(df, key = "user_inventory_table2", num_rows = "fixed", use_container_width = True, hide_index = False)
             
             if st.button("Update User Properties", use_container_width = True):
@@ -3339,7 +3315,7 @@ def settings(conn, username):
     time_since_change = (datetime.datetime.now() - last_change).total_seconds() if last_change else None
     disable_button = (time_since_change is not None and time_since_change < 7 * 24 * 3600) or balance < 10000
     st.write(f"Current Username: `{current_username}`")
-    st.write(f"Next change available at :orange[{(last_change + datetime.timedelta(days=7)).strftime('Next %A, %d %B')}]")
+    st.write(f"Next change available at :blue[{(last_change + datetime.timedelta(days=7)).strftime('%A, %d %B')}]")
     new_username = st.text_input("s", label_visibility="collapsed", placeholder="New username")
     if st.button("Update Username for :green[$10K]", use_container_width=True, disabled=True if disable_button or new_username == "" else False):
         with st.spinner("Updating..."):
@@ -3378,18 +3354,6 @@ def settings(conn, username):
     st.button("Ege Güvener • © 2024", type = "tertiary", use_container_width = True, disabled = True)
 
 def main(conn):
-    st.markdown(
-    """
-    <style>
-    .css-1jc7ptx, .e1ewe7hr3, .viewerBadge_container__1QSob,
-    .styles_viewerBadge__1yB5_, .viewerBadge_link__1S137,
-    .viewerBadge_text__1JaDK {
-        display: none;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
 
     if 'current_menu' not in st.session_state:
         st.session_state.current_menu = "Deposit"
@@ -3670,6 +3634,8 @@ if __name__ == "__main__":
     add_column_if_not_exists(conn, "stocks", "open_price", "REAL")
     add_column_if_not_exists(conn, "stocks", "close_price", "REAL")
     add_column_if_not_exists(conn, "user_properties", "last_collected", "NULL")
-
+    add_column_if_not_exists(conn, "users", "last_username_change", "TIMESTAMP")
+    conn.cursor().execute("UPDATE users SET last_username_change = CURRENT_TIMESTAMP")
+    conn.commit()
     init_db()
     main(conn)
