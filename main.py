@@ -3437,7 +3437,7 @@ def main(conn):
         
         with st.sidebar:
             balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (st.session_state.user_id,)).fetchone()[0]
-            st.sidebar.write(f"Vault   |   :green[${numerize(balance)}]")
+            st.sidebar.write(f"Vault   |   :green[${numerize(balance, 1)}]")
             st.sidebar.header(" ", divider="rainbow")
 
         t1, t2 = st.sidebar.tabs(["🌐 Global", "💠 Personal"])
