@@ -42,20 +42,8 @@ ph = argon2.PasswordHasher(
 )
 
 def format_number(num, decimals=2):
-    """
-    Converts a large number into a more human-readable format.
-    
-    Parameters:
-    - num (int or float): The number to be formatted.
-    - decimals (int): The number of decimal places (maximum allowed is 2).
-    
-    Returns:
-    - A string representing the formatted number with the appropriate suffix.
-    """
-    # Ensure decimals does not exceed 2
     decimals = min(decimals, 2)
 
-    # Suffix list ordered from largest to smallest
     suffixes = [
         (1e33, 'D'),   # Decillions
         (1e30, 'N'),   # Nonillions
@@ -70,11 +58,9 @@ def format_number(num, decimals=2):
         (1e3, 'K'),    # Thousands
     ]
     
-    # If the number is below 1000 (absolute value), round it
     if abs(num) < 1000:
         return str(round(num))  # Keeps the negative sign if necessary
 
-    # Find the appropriate suffix
     for threshold, suffix in suffixes:
         if abs(num) >= threshold:
             formatted_num = num / threshold
@@ -1877,9 +1863,6 @@ def stocks_view(conn, user_id):
     if "graph_color" not in st.session_state:
         st.session_state.graph_color = (0, 255, 0)
 
-    if "hours" not in st.session_state:
-        st.session_state.hours = 24
-
     if "selected_real_stock" not in st.session_state:
         st.session_state.selected_real_stock = "AAPL"
 
@@ -1934,26 +1917,27 @@ def stocks_view(conn, user_id):
             percentage_change = ((last_price - previous_price) / previous_price) * 100
             
             if last_price > previous_price:
-                change_color = f":green[+{format_number(percentage_change)}%] :gray[({st.session_state.hours}h)".format(percentage_change)
+                change_color = f":green[+{numerize(percentage_change)}%] :gray[(24h)".format(percentage_change)
                 st.session_state.graph_color = (0, 255, 0)
 
             elif last_price < previous_price:
-                change_color = f":red[{format_number(percentage_change)}%] :gray[({st.session_state.hours}h)".format(percentage_change)
+                change_color = f":red[{numerize(percentage_change)}%] :gray[(24h)".format(percentage_change)
                 st.session_state.graph_color = (255, 0, 0)
 
             else:
-                change_color = f":orange[0.00%] :gray[({st.session_state.hours})"
+                change_color = f":orange[0.00%] :gray[(24h)"
                 st.session_state.graph_color = (255, 255, 0)
         else:
             percentage_change = 0
             change_color = ":orange[0.00%] :gray[(24h)"
 
-        cols = st.columns(len(stocks))  # Create a column for each stock
+        cols = st.columns(len(stocks))
 
         for i in range(len(stocks)):
-            with cols[i]:  # Place the button inside the respective column
+            with cols[i]:
                 if st.button(label=f"{stocks[i][2]}", key=stocks[i][0], use_container_width=True):
                     st.session_state.selected_game_stock = stocks[i][0]
+                    st.session_state.range = 24
                     st.rerun()
         
         c1, c2 = st.columns(2)
@@ -1968,7 +1952,7 @@ def stocks_view(conn, user_id):
 
                 candlestick_data = [
                     {
-                        "time": int(timestamp.timestamp()),  # Convert to Unix timestamp
+                        "time": int(timestamp.timestamp()),
                         "open": row["open"],
                         "high": row["high"],
                         "low": row["low"],
@@ -2038,17 +2022,17 @@ def stocks_view(conn, user_id):
                 avg_price = 0
 
             with st.container(border=True):
-                st.write(f"**[HOLDING]** :blue[{format_number(user_quantity, 2)} {symbol}] ~ :green[${format_number(user_quantity * price, 2)}]")
-                st.write(f"[AVG. Bought At] :green[${format_number(avg_price, 2)}]")
+                st.write(f"**[HOLDING]** :blue[{numerize(user_quantity, 2)} {symbol}] ~ :green[${format_number(user_quantity * price, 2)}]")
+                st.write(f"[AVG. Bought At] :green[${numerize(avg_price, 2)}]")
 
-                st.write(f"[Available] :orange[{format_number(stock_amount, 2)} {symbol}]")                                
+                st.write(f"[Available] :orange[{numerize(stock_amount, 2)} {symbol}]")                                
 
             col1, col2 = st.columns(2)
             
             with col1:
                 buy_max_quantity = min(balance / price, stock_amount)
                 buy_quantity = st.number_input(f"Buy {symbol}", min_value=0.0, step=0.25, key=f"buy_{stock_id}")
-                st.write(f"[Cost]  :red[${format_number(buy_quantity * price)}]")
+                st.write(f"[Cost]  :red[${numerize(buy_quantity * price)}]")
                 
                 if st.button(f"Buy {symbol}", key=f"buy_btn_{stock_id}", type="primary", use_container_width=True, 
                             disabled=True if buy_quantity == 0 or stock_amount < buy_quantity else False, help="Not enough stock available in the market" if stock_amount < buy_quantity else None):
@@ -2058,7 +2042,7 @@ def stocks_view(conn, user_id):
                     time.sleep(2.5)
                     st.rerun()
                 
-                if st.button(f"Buy MAX: :orange[{format_number(buy_max_quantity)}] ~ :green[${format_number(balance)}]", key=f"buy_max_btn_{stock_id}", use_container_width=True):
+                if st.button(f"Buy MAX: :orange[{numerize(buy_max_quantity)}] ~ :green[${numerize(balance)}]", key=f"buy_max_btn_{stock_id}", use_container_width=True):
                     with st.spinner("Purchasing..."):
                         time.sleep(3)
                         buy_stock(conn, user_id, stock_id, buy_max_quantity)
@@ -2098,28 +2082,28 @@ def stocks_view(conn, user_id):
         col1, col2, col3, col4, col5, col6, col7, col8 = st.columns(8)
         
         col1.write("24h HIGH")
-        col1.write(f"#### :green[${format_number(stock_metrics['high_24h'])}]" if stock_metrics['high_24h'] else "N/A")
+        col1.write(f"#### :green[${numerize(stock_metrics['high_24h'])}]" if stock_metrics['high_24h'] else "N/A")
         
         col2.write("24h LOW")
-        col2.write(f"#### :red[${format_number(stock_metrics['low_24h'])}]" if stock_metrics['low_24h'] else "N/A")
+        col2.write(f"#### :red[${numerize(stock_metrics['low_24h'])}]" if stock_metrics['low_24h'] else "N/A")
         
         col3.write("All Time High")
-        col3.write(f"#### :green[${format_number(stock_metrics['all_time_high'])}]" if stock_metrics['all_time_high'] else "N/A")
+        col3.write(f"#### :green[${numerize(stock_metrics['all_time_high'])}]" if stock_metrics['all_time_high'] else "N/A")
         
         col4.write("All Time Low")
-        col4.write(f"#### :red[${format_number(stock_metrics['all_time_low'])}]" if stock_metrics['all_time_low'] else "N/A")
+        col4.write(f"#### :red[${numerize(stock_metrics['all_time_low'])}]" if stock_metrics['all_time_low'] else "N/A")
         
         col5.write("24h Change")
-        col5.write(f"#### :orange[{format_number(stock_metrics['price_change'], 2)}%]")
+        col5.write(f"#### :orange[{numerize(stock_metrics['price_change'], 2)}%]")
         
         col6.write("24h Volume")
-        col6.write(f"#### :blue[{format_number(stock_volume)}]")
+        col6.write(f"#### :blue[{numerize(stock_volume)}]")
 
         col7.write("Volatility Index")
-        col7.write(f"#### :violet[{format_number(((stock_metrics['all_time_high'] - stock_metrics['all_time_low']) / stock_metrics['all_time_low']) * 100)} σ]")
+        col7.write(f"#### :violet[{numerize(((stock_metrics['all_time_high'] - stock_metrics['all_time_low']) / stock_metrics['all_time_low']) * 100)} σ]")
 
         col8.write("Market Cap")
-        col8.write(f"#### :green[${format_number(stock_amount * price)}]")
+        col8.write(f"#### :green[${numerize(stock_amount * price)}]")
         
         st.text("")
         st.text("")
@@ -2188,8 +2172,8 @@ def stocks_view(conn, user_id):
             st.header(f":green[${numerize(stock_price, 2)}]")
 
             with st.container(border=True):
-                st.write(f"**[HOLDING]** :blue[{user_quantity} {selected_real_stock}] ~ :green[**${format_number(user_quantity * stock_price)}**]")
-                st.write(f"[AVG. Bought At] :green[**${format_number(avg_price)}**]")
+                st.write(f"**[HOLDING]** :blue[{user_quantity} {selected_real_stock}] ~ :green[**${numerize(user_quantity * stock_price)}**]")
+                st.write(f"[AVG. Bought At] :green[**${numerize(avg_price)}**]")
 
                 balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
@@ -2329,9 +2313,9 @@ def blackmarket_view(conn, user_id):
         with details_col:
             st.write(f"#### **{item_colors[rarity]}[{name}]** • :gray[#{item_number}]")
             st.write(f":gray[{rarity.upper()}]   •   {description}")
-            st.write(f":green[${format_number(price)}]  •  By: :blue[@{seller_username}]")
+            st.write(f":green[${numerize(price)}]  •  By: :blue[@{seller_username}]")
             
-            if st.button(f"Buy for :green[${format_number(price)}]", key=f"buy_{item_id}", use_container_width=True, 
+            if st.button(f"Buy for :green[${numerize(price)}]", key=f"buy_{item_id}", use_container_width=True, 
                          disabled=True if balance < price else False):
                 with st.spinner(f"Purchasing {name}..."):
                     buy_blackmarket_item(conn, user_id, item_id, item_number, seller_id, price)
@@ -2401,7 +2385,7 @@ def repay_loan(conn, user_id, amount):
     c.execute("UPDATE users SET loan = ?, balance = ? WHERE user_id = ?", (new_loan, new_balance, user_id))
     conn.commit()
     
-    st.toast(f"✅ Loan repaid. Remaining debt: ${format_number(new_loan)}.")
+    st.toast(f"✅ Loan repaid. Remaining debt: ${numerize(new_loan)}.")
     time.sleep(2.5)
     st.session_state.repay = 0.0
 
@@ -2439,10 +2423,10 @@ def bank_view(conn, user_id):
         st.text("")
 
         c1, c2, c3 = st.columns([2, 1, 2])
-        c2.subheader(f":green[${format_number(gov_funds)}]")
+        c2.subheader(f":green[${numerize(gov_funds)}]")
         st.caption(f":green[${format_currency(gov_funds)}]")
         st.divider()
-        st.subheader(f"Inflation: :red[{format_number(inflation_rate * -100)}%]")
+        st.subheader(f"Inflation: :red[{numerize(inflation_rate * -100)}%]")
 
         if not df.empty:
             df["Date"] = pd.to_datetime(df["Date"])
@@ -2458,10 +2442,10 @@ def bank_view(conn, user_id):
 
             interest_rate = max(0.001, inflation_rate + 0.01)
 
-            st.write(f"📊 **[Inflation]** :red[{format_number(inflation_rate * -100)}%]")
-            st.write(f"💳 **[Loan Interest]** :red[{format_number(interest_rate * 100)}% / day]")
-            st.write(f"💰 **[Balance]** :green[${format_number(balance)}]")
-            st.write(f"💳 **[Loan Debt]** :red[${format_number(loan)}]")
+            st.write(f"📊 **[Inflation]** :red[{numerize(inflation_rate * -100)}%]")
+            st.write(f"💳 **[Loan Interest]** :red[{numerize(interest_rate * 100)}% / day]")
+            st.write(f"💰 **[Balance]** :green[${numerize(balance)}]")
+            st.write(f"💳 **[Loan Debt]** :red[${numerize(loan)}]")
 
             if loan > 0 and due_date:
                 due_date_obj = datetime.datetime.strptime(due_date, "%Y-%m-%d").date()
@@ -2474,10 +2458,10 @@ def bank_view(conn, user_id):
         
         st.session_state.amt = balance
         st.divider()
-        st.warning(f"[Max Borrow] :green[${format_currency(st.session_state.amt)}] $||$ :green[{format_number(st.session_state.amt)}]")
+        st.warning(f"[Max Borrow] :green[${format_currency(st.session_state.amt)}] $||$ :green[{numerize(st.session_state.amt)}]")
         st.subheader("Borrow Loan")
         borrow_amount = st.number_input("A", label_visibility="collapsed", min_value=100.0, max_value=float(st.session_state.amt), step=100.0)
-        if st.button(f"Borrow :red[${format_number(borrow_amount)}]", use_container_width=True):
+        if st.button(f"Borrow :red[${numerize(borrow_amount)}]", use_container_width=True):
             with st.spinner("Processing borrow"):
                 time.sleep(3)
                 borrow_money(conn, user_id, borrow_amount, interest_rate)
@@ -2492,7 +2476,7 @@ def bank_view(conn, user_id):
             st.session_state.repay = loan
             st.rerun()
 
-        if st.button(f"Repay :green[${format_number(st.session_state.repay)}]", use_container_width=True, disabled=True if st.session_state.repay == 0 else False):
+        if st.button(f"Repay :green[${numerize(st.session_state.repay)}]", use_container_width=True, disabled=True if st.session_state.repay == 0 else False):
             with st.spinner("Processing loan..."):
                 time.sleep(3)
                 repay_loan(conn, user_id, st.session_state.repay)
@@ -2514,7 +2498,7 @@ def investments_view(conn, user_id):
     if "invest_value" not in st.session_state:
         st.session_state.invest_value = 0
 
-    st.subheader(f"💰 Balance: **:green[${format_number(balance)}]**")
+    st.subheader(f"💰 Balance: **:green[${numerize(balance)}]**")
 
     companies = c.execute("SELECT company_id, company_name, risk_level FROM investment_companies").fetchall()
 
@@ -2536,7 +2520,7 @@ def investments_view(conn, user_id):
 
     st.divider()
     st.subheader(f"💼 {selected_company['name']}", divider="rainbow")
-    st.subheader(f"**Risk:** :red[{format_number(selected_company['risk_level'] * 100)}%]")
+    st.subheader(f"**Risk:** :red[{numerize(selected_company['risk_level'] * 100)}%]")
 
     c1, c2, c3, c4 = st.columns(4)
     if c1.button("%25", use_container_width = True):
@@ -2557,7 +2541,7 @@ def investments_view(conn, user_id):
         key=f"investment_{selected_company['id']}",
     )
 
-    if st.button(f"**Invest :green[${format_number(investment_amount)}] Now**", use_container_width=True, type="primary", disabled=True if investment_amount == 0 else False):
+    if st.button(f"**Invest :green[${numerize(investment_amount)}] Now**", use_container_width=True, type="primary", disabled=True if investment_amount == 0 else False):
         active_investments_count = c.execute("""
         SELECT COUNT(*) FROM investments WHERE user_id = ? AND status = 'pending'
         """, (user_id,)).fetchone()[0]
@@ -2589,7 +2573,7 @@ def investments_view(conn, user_id):
                 ))
                 conn.commit()
                 time.sleep(4)
-            st.toast(f"Investment of :green[${format_number(investment_amount)}] in {selected_company['name']} has initiated! Ends on {end_date}.")
+            st.toast(f"Investment of :green[${numerize(investment_amount)}] in {selected_company['name']} has initiated! Ends on {end_date}.")
             time.sleep(2)
             st.session_state.balance = balance - investment_amount
             st.rerun()
@@ -2604,7 +2588,7 @@ def investments_view(conn, user_id):
     if active_investments:
         for company, amount, risk, start, end in active_investments:
             with st.container(border=True):
-                st.write(f"**{company}** - :gray[[Invested]] :green[${format_number(amount)}] $|$ :gray[[Risk]] :red[{float(risk) * 100}%] $|$ :gray[[Ends]] :blue[{end}]")
+                st.write(f"**{company}** - :gray[[Invested]] :green[${numerize(amount)}] $|$ :gray[[Risk]] :red[{float(risk) * 100}%] $|$ :gray[[Ends]] :blue[{end}]")
     else:
         st.info("No active investments!")
 
@@ -2619,9 +2603,9 @@ def investments_view(conn, user_id):
         for company, amount, rate, status in completed_investments:
             outcome = "Profit" if rate > 0 else "Loss"
             if rate > 0:
-                st.write(f"**{company}** - {outcome}: :green[${format_number(rate)}] ({status.upper()})")
+                st.write(f"**{company}** - {outcome}: :green[${numerize(rate)}] ({status.upper()})")
             else:
-                st.write(f"**{company}** - {outcome}: :red[${format_number(rate)}] ({status.upper()})")
+                st.write(f"**{company}** - {outcome}: :red[${numerize(rate)}] ({status.upper()})")
     else:
 
         st.info("No completed investments yet.")
@@ -2641,8 +2625,8 @@ def real_estate_marketplace_view(conn, user_id):
     df["LAT"] = pd.to_numeric(df["LAT"], errors="coerce")
     df["LON"] = pd.to_numeric(df["LON"], errors="coerce")
 
-    df["Formatted Price"] = df["Price"].apply(lambda x: format_number(x))
-    df["Formatted Rent"] = df["Rent Income"].apply(lambda x: format_number(x))
+    df["Formatted Price"] = df["Price"].apply(lambda x: numerize(x))
+    df["Formatted Rent"] = df["Rent Income"].apply(lambda x: numerize(x))
 
     df["Color"] = df.apply(lambda row: 
         [0, 255, 0] if row["User ID"] == user_id else 
@@ -2703,10 +2687,10 @@ def real_estate_marketplace_view(conn, user_id):
 
             st.text("")
             c1, c2 = st.columns(2)
-            c1.write(f":blue[COST] :red[${format_number(row['Price'])}]")
-            c2.write(f":blue[RENT] :green[${format_number(row['Rent Income'])} / day]")
+            c1.write(f":blue[COST] :red[${numerize(row['Price'])}]")
+            c2.write(f":blue[RENT] :green[${numerize(row['Rent Income'])} / day]")
             c1.write(f":blue[Region] :grey[{row['Region']}]")
-            c2.write(f":blue[Demand Factor] :green[{format_number(row['Demand Factor'])}]")
+            c2.write(f":blue[Demand Factor] :green[{numerize(row['Demand Factor'])}]")
 
             st.text("")
             if row["User ID"] == user_id:
