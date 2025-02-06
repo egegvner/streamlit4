@@ -758,7 +758,6 @@ def init_db():
 
     c.execute('''CREATE TABLE IF NOT EXISTS real_estate (
             property_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER DEFAULT NONE,
             region TEXT NOT NULL,
             type TEXT NOT NULL,
             price REAL NOT NULL,
@@ -1360,7 +1359,7 @@ def inventory_view(conn, user_id):
             
             last_collected = datetime.datetime.strptime(last_collected, "%Y-%m-%d %H:%M:%S") if last_collected else None
             now = datetime.datetime.now()
-            can_collect = last_collected is None or (now - last_collected).total_seconds() >= 86400  # 24 hours
+            can_collect = last_collected is None or (now - last_collected).total_seconds() >= 86400
 
             with st.container(border=True):
                 col1, col2 = st.columns([1, 3])
@@ -1380,6 +1379,9 @@ def inventory_view(conn, user_id):
                         time_left = datetime.timedelta(hours=24) - elapsed_time
                         hours, remainder = divmod(time_left.total_seconds(), 3600)
                         minutes, _ = divmod(remainder, 60)
+                        if hours < 0:
+                            hours = 0
+                            minutes = 0
                         cw2.write(f":gray[Last Collected] :blue[{last_collected.strftime('%Y-%m-%d %H:%M:%S')}]")
                         cw2.write(f":gray[Ready In] :green[{int(hours)}] :gray[Hours,] :green[{int(minutes)}] :gray[Minutes]")
 
@@ -2696,14 +2698,18 @@ def investments_view(conn, user_id):
 
 def real_estate_marketplace_view(conn, user_id):
     c = conn.cursor()
-    
+
+    if "selected_property" not in st.session_state:
+        st.session_state.selected_property = None
+
+    username = c.execute("SELECT username FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     properties = c.execute("""
-    SELECT property_id, user_id, region, type, price, rent_income, demand_factor, latitude, longitude, image_url, sold, username 
+    SELECT property_id, region, type, price, rent_income, demand_factor, latitude, longitude, image_url, sold, username 
     FROM real_estate
     """).fetchall()
     
     df = pd.DataFrame(properties, columns=[
-        "Property ID", "User ID", "Region", "Type", "Price", "Rent Income", "Demand Factor", "LAT", "LON", "Image URL", "Sold", "user"
+        "Property ID", "Region", "Type", "Price", "Rent Income", "Demand Factor", "LAT", "LON", "Image URL", "Sold", "Username"
     ])
 
     df["LAT"] = pd.to_numeric(df["LAT"], errors="coerce")
@@ -2713,7 +2719,7 @@ def real_estate_marketplace_view(conn, user_id):
     df["Formatted Rent"] = df["Rent Income"].apply(lambda x: format_number(x))
 
     df["Color"] = df.apply(lambda row: 
-        [0, 255, 0] if row["User ID"] == user_id else 
+        [0, 255, 0] if row["Username"] == username else 
         ([255, 0, 0] if row["Sold"] else [255, 255, 255]), axis=1
     )
 
@@ -2728,64 +2734,106 @@ def real_estate_marketplace_view(conn, user_id):
                 get_position=["LON", "LAT"],  
                 get_color="Color",
                 pickable=True,
-                pointSize = 2,
+                pointSize=2,
             ),
         ],
         initial_view_state=pdk.ViewState(
             latitude=float(df["LAT"].mean()),  
             longitude=float(df["LON"].mean()),
-            zoom=1,
-            pitch = 50,
-            bearing=0
+            zoom=2,
+            pitch=50,
         ),
         tooltip={
             "html": """
                 <b>Property Details</b><br/><hr>
-                <span style="color: gray;">Title</span> <span style="color: teal;">{Type}</span><br/>
-                <span style="color: gray;">Region</span> <span style="color: teal;">{Region}</span><br/>
+                <span style="color: gray;">Title</span> <span style="color: white;">{Type}</span><br/>
+                <span style="color: gray;">Region</span> <span style="color: white;">{Region}</span><br/>
                 <span style="color: gray;">Price</span> <span style="color: red;">${Formatted Price}</span><br/>
                 <span style="color: gray;">Rent</span> <span style="color: lime;">${Formatted Rent} / day</span><br/>
-                <span style="color: gray;">Owner</span> <span style="color: white;">{user}</span>
+                <span style="color: gray;">Owner</span> <span style="color: white;">{Username}</span>
             """,
             "style": {
                 "backgroundColor": "black",
-                "color": "white"
+                "color": "gray"
             }
         }
     ))
 
-    st.header("Property List", divider="rainbow")
-    for idx, row in df.iterrows():
-        image_col, details_col = st.columns([1, 3])
-        with image_col:
-            if row["Image URL"]:
-                st.image(row["Image URL"], use_container_width=True)
+    # Categorizing properties based on type
+    property_categories = {
+        "AIRPORTS": [],
+        "PORTS": [],
+        "THEATRES": [],
+        "CINEMAS": [],
+        "MUSEUMS": [],
+        "PARKS": []
+    }
 
-        with details_col:
-            if row["User ID"] == user_id:
-                st.subheader(f"{row['Type']} :green[ - Owned]", divider="rainbow")
-            elif row["Sold"]:
-                st.subheader(f"{row['Type']} :red[ - Sold]", divider="rainbow")
+    for _, row in df.iterrows():
+        title = row["Type"].lower()
+        if "airport" in title:
+            property_categories["AIRPORTS"].append(row)
+        elif "port" in title:
+            property_categories["PORTS"].append(row)
+        elif "theatre" in title:
+            property_categories["THEATRES"].append(row)
+        elif "cinema" in title:
+            property_categories["CINEMAS"].append(row)
+        elif "museum" in title:
+            property_categories["MUSEUMS"].append(row)
+        elif "park" in title:
+            property_categories["PARKS"].append(row)
+
+    tabs = st.tabs(["✈️ AIRPORTS ✈️", "⚓️ PORTS ⚓️", "🎭 THEATRES 🎭", "🎥 CINEMAS 🎥", "📜 MUSEUMS 📜", "🌲 PARKS 🌲"])
+    tab_names = ["AIRPORTS", "PORTS", "THEATRES", "CINEMAS", "MUSEUMS", "PARKS"]
+
+    for tab, category in zip(tabs, tab_names):
+        with tab:
+            cw1, cw2 = st.columns([10, 1])
+            search_query = cw1.text_input(f"",label_visibility="collapsed", key=f"search_{category}", placeholder=f"Search {category.lower()}")
+
+            search_button = cw2.button(f"", icon=":material/search:", key=f"search_btn_{category}", use_container_width=True, type="primary")
+
+            properties_in_category = property_categories[category]
+            if search_button and search_query.strip():
+                properties_in_category = [
+                    row for row in properties_in_category if search_query.lower() in row["Type"].lower()
+                ]
+
+            if not properties_in_category:
+                st.info(f"No matching {category.lower()} found.")
             else:
-                st.subheader(f"{row['Type']}", divider="rainbow")
+                for row in properties_in_category:
+                    image_col, details_col = st.columns([1, 3])
+                    with image_col:
+                        if row["Image URL"]:
+                            st.image(row["Image URL"], use_container_width=True)
 
-            st.text("")
-            c1, c2 = st.columns(2)
-            c1.write(f":blue[COST] :red[${format_number(row['Price'])}]")
-            c2.write(f":blue[RENT] :green[${format_number(row['Rent Income'])} / day]")
-            c1.write(f":blue[Region] :grey[{row['Region']}]")
-            c2.write(f":blue[Demand Factor] :green[{format_number(row['Demand Factor'])}]")
+                    with details_col:
+                        if row["Username"] == username:
+                            st.subheader(f"{row['Type']} :green[ - Owned]", divider="rainbow")
+                        elif row["Sold"]:
+                            st.subheader(f"{row['Type']} :red[ - Sold]", divider="rainbow")
+                        else:
+                            st.subheader(f"{row['Type']}", divider="rainbow")
 
-            st.text("")
-            if row["User ID"] == user_id:
-                st.success("You own this property.")
-            elif row["Sold"] == 0:
-                if st.button(f"Property Options", key=f"buy_{row['Property ID']}", use_container_width=True):
-                    prop_details_dialog(conn, user_id, row["Property ID"])
-            else:
-                st.warning("This property has already been sold.")
+                        st.text("")
+                        c1, c2 = st.columns(2)
+                        c1.write(f":blue[COST] :red[${format_number(row['Price'])}]")
+                        c2.write(f":blue[RENT] :green[${format_number(row['Rent Income'])} / day]")
+                        c1.write(f":blue[Region] :grey[{row['Region']}]")
+                        c2.write(f":blue[Demand Factor] :green[{format_number(row['Demand Factor'])}]")
 
-        st.divider()
+                        st.text("")
+                        if row["Username"] == username:
+                            st.success("You own this property.")
+                        elif row["Sold"] == 0:
+                            if st.button(f"Property Options", key=f"buy_{row['Property ID']}", use_container_width=True):
+                                prop_details_dialog(conn, user_id, row["Property ID"])
+                        else:
+                            st.warning("This property has already been sold.")
+
+                    st.divider()
 
 @st.dialog("Property Details", width="large")
 def prop_details_dialog(conn, user_id, prop_id):
@@ -3145,12 +3193,14 @@ def admin_panel(conn):
 
     st.header("Manage Real Estates", divider = "rainbow")
     with st.spinner("Loading PrimeEstates™..."):
-        estate_data = c.execute("SELECT property_id, region, type, price, rent_income, demand_factor, image_url, latitude, longitude, sold, username, user_id FROM real_estate").fetchall()
-    df = pd.DataFrame(estate_data, columns = ["Estate ID", "Region", "Title", "Price", "Rent Income", "Demand Factor", "Image Path", "Latitude", "Longitude", "Sold", "Username", "User ID"])
+        estate_data = c.execute("SELECT property_id, region, type, price, rent_income, demand_factor, image_url, latitude, longitude, sold, username FROM real_estate").fetchall()
+    df = pd.DataFrame(estate_data, columns = ["Estate ID", "Region", "Title", "Price", "Rent Income", "Demand Factor", "Image Path", "Latitude", "Longitude", "Sold", "Username"])
     edited_df = st.data_editor(df, key = "estate_table", num_rows = "fixed", use_container_width = True, hide_index = True)
     if st.button("Update Estates", use_container_width = True):
         for _, row in edited_df.iterrows():
-            c.execute("UPDATE OR IGNORE real_estate SET region = ?, type = ?, price = ?, rent_income = ?, demand_factor = ?, image_url = ?, latitude = ?, longitude = ?, sold = ?, username = ?, user_id = ? WHERE property_id = ?", (row["Region"], row["Title"], row["Price"], row["Rent Income"], row["Demand Factor"], row["Image Path"], row["Latitude"], row["Longitude"], row["Sold"], row["Username"], row["User ID"], row["Estate ID"]))
+            c.execute("UPDATE OR IGNORE real_estate SET region = ?, type = ?, price = ?, rent_income = ?, demand_factor = ?, image_url = ?, latitude = ?, longitude = ?, sold = ?, username = ? WHERE property_id = ?", (row["Region"], row["Title"], row["Price"], row["Rent Income"], row["Demand Factor"], row["Image Path"], row["Latitude"], row["Longitude"], row["Sold"], row["Username"], row["Estate ID"]))
+            user_id = c.execute("SELECT user_id FROM users WHERE username = ?", (row["Username"],)).fetchone()[0]
+            c.execute("INSERT OR IGNORE INTO user_properties (user_id, property_id, purchase_date, rent_income) VALUES (?, ?, ?, ?)", (user_id, row["Estate ID"], datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), row["Rent Income"]))
         conn.commit()
         st.rerun()
 
@@ -3699,6 +3749,6 @@ if __name__ == "__main__":
     conn = get_db_connection()
     x = conn.cursor().execute("SELECT COUNT(*) FROM real_estate")
     if x.fetchone()[0] != 0:
-        load_real_estates_from_json(conn, "./real_estates.json")
+        load_real_estates_from_json(conn, "NewProjects/BankingWebApp/real_estates.json")
     init_db()
     main(conn)
