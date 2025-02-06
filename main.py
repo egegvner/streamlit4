@@ -3699,6 +3699,6 @@ if __name__ == "__main__":
     conn = get_db_connection()
     x = conn.cursor().execute("SELECT COUNT(*) FROM real_estate")
     if x.fetchone()[0] != 0:
-        load_real_estates_from_json(conn, "/Users/egeguvener/Desktop/Main/Python/NewProjects/BankingWebApp/real_estates.json")
+        load_real_estates_from_json(conn, "./real_estates.json")
     init_db()
     main(conn)
