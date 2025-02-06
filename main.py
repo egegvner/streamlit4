@@ -3423,8 +3423,8 @@ def admin_panel(conn):
         else:
             st.write(f"No property found for {user}.")
 
-    shutil.copy("genova.db", "genova.db")
-    st.download_button("Download Database", open("genova.db", "rb"), "genova.db")
+    shutil.copy("genova.db", "genova_copy.db")
+    st.download_button("Download Database", open("genova.db", "rb"), "genova_copy.db")
     
 def settings(conn, username):
     c = conn.cursor()
