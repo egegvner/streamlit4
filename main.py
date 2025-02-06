@@ -1037,13 +1037,16 @@ def gift_prop_dialog(conn, user_id, prop_id):
     all_users = [user[0] for user in c.execute("SELECT username FROM users WHERE username != ?", (st.session_state.username,)).fetchall()]
     chosen = st.selectbox("", label_visibility="collapsed", options=all_users, index=random.randint(0, len(all_users)))
     chosen_id = c.execute("SELECT user_id FROM users WHERE username = ?", (chosen,)).fetchone()[0]
-    if st.button("Confirm Gift Property"):
+    if st.button("Confirm Gift Property", use_container_width=True, type="primary"):
         with st.spinner("Sending gift..."):
             rent_i = c.execute("SELECT rent_income FROM real_estate WHERE property_id = ?", (prop_id,)).fetchone()[0]
             c.execute("DELETE FROM user_properties WHERE property_id = ? AND user_id = ?", (prop_id, user_id))
             c.execute("INSERT INTO user_properties (user_id, property_id, purchase_date, rent_income) VALUES (?, ?, ?, ?)", (chosen_id, prop_id, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), rent_i))
             c.execute("UPDATE real_estate SET username = ? WHERE property_id = ?", (chosen, prop_id))
-
+        st.success("Gift was sent successfully!")
+        time.sleep(2)
+        st.rerun()
+        
 @st.dialog("Privacy Policy", width="large")
 def privacy_policy_dialog():
     st.header("", divider="rainbow")
