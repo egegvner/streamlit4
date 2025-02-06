@@ -2784,22 +2784,41 @@ def real_estate_marketplace_view(conn, user_id):
         elif "park" in title:
             property_categories["PARKS"].append(row)
 
-    tabs = st.tabs(["✈️ AIRPORTS ✈️", "⚓️ PORTS ⚓️", "🎭 THEATRES 🎭", "🎥 CINEMAS 🎥", "📜 MUSEUMS 📜", "🌲 PARKS 🌲"])
-    tab_names = ["AIRPORTS", "PORTS", "THEATRES", "CINEMAS", "MUSEUMS", "PARKS"]
-
+    tabs = st.tabs(["✈️ AIRPORTS ✈️", "⚓️ PORTS ⚓️", "🎭 THEATRES 🎭", "🎥 CINEMAS 🎥", "📜 MUSEUMS 📜", "🌲 PARKS 🌲", "⚜️ MISCELLANEOUS ⚜️"])
+    tab_names = ["AIRPORTS", "PORTS", "THEATRES", "CINEMAS", "MUSEUMS", "PARKS", "MISCELLANEOUS"]
+    
+    property_categories = {category: [] for category in tab_names}
+    
+    for _, row in df.iterrows():
+        title = row["Type"].lower()
+        if "airport" in title:
+            property_categories["AIRPORTS"].append(row)
+        elif "port" in title:
+            property_categories["PORTS"].append(row)
+        elif "theatre" in title:
+            property_categories["THEATRES"].append(row)
+        elif "cinema" in title:
+            property_categories["CINEMAS"].append(row)
+        elif "museum" in title:
+            property_categories["MUSEUMS"].append(row)
+        elif "park" in title:
+            property_categories["PARKS"].append(row)
+        else:
+            property_categories["MISCELLANEOUS"].append(row)  # Properties without a matching keyword
+    
     for tab, category in zip(tabs, tab_names):
         with tab:
             cw1, cw2 = st.columns([10, 1])
-            search_query = cw1.text_input(f"",label_visibility="collapsed", key=f"search_{category}", placeholder=f"Search {category.lower()}")
-
-            search_button = cw2.button(f"", icon=":material/search:", key=f"search_btn_{category}", use_container_width=True, type="primary")
-
+            search_query = cw1.text_input(f"", label_visibility="collapsed", key=f"search_{category}", placeholder=f"Search {category.lower()}")
+    
+            search_button = cw2.button("", icon = ":material/search:", key=f"search_btn_{category}", use_container_width=True, type="primary")
+    
             properties_in_category = property_categories[category]
             if search_button and search_query.strip():
                 properties_in_category = [
                     row for row in properties_in_category if search_query.lower() in row["Type"].lower()
                 ]
-
+    
             if not properties_in_category:
                 st.info(f"No matching {category.lower()} found.")
             else:
@@ -2808,7 +2827,7 @@ def real_estate_marketplace_view(conn, user_id):
                     with image_col:
                         if row["Image URL"]:
                             st.image(row["Image URL"], use_container_width=True)
-
+    
                     with details_col:
                         if row["Username"] == username:
                             st.subheader(f"{row['Type']} :green[ - Owned]", divider="rainbow")
@@ -2816,14 +2835,14 @@ def real_estate_marketplace_view(conn, user_id):
                             st.subheader(f"{row['Type']} :red[ - Sold]", divider="rainbow")
                         else:
                             st.subheader(f"{row['Type']}", divider="rainbow")
-
+    
                         st.text("")
                         c1, c2 = st.columns(2)
                         c1.write(f":blue[COST] :red[${format_number(row['Price'])}]")
                         c2.write(f":blue[RENT] :green[${format_number(row['Rent Income'])} / day]")
                         c1.write(f":blue[Region] :grey[{row['Region']}]")
                         c2.write(f":blue[Demand Factor] :green[{format_number(row['Demand Factor'])}]")
-
+    
                         st.text("")
                         if row["Username"] == username:
                             st.success("You own this property.")
@@ -2832,7 +2851,7 @@ def real_estate_marketplace_view(conn, user_id):
                                 prop_details_dialog(conn, user_id, row["Property ID"])
                         else:
                             st.warning("This property has already been sold.")
-
+    
                     st.divider()
 
 @st.dialog("Property Details", width="large")
