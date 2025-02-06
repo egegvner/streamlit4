@@ -3218,8 +3218,6 @@ def admin_panel(conn):
     if st.button("Update Estates", use_container_width = True):
         for _, row in edited_df.iterrows():
             c.execute("UPDATE OR IGNORE real_estate SET region = ?, type = ?, price = ?, rent_income = ?, demand_factor = ?, image_url = ?, latitude = ?, longitude = ?, sold = ?, username = ? WHERE property_id = ?", (row["Region"], row["Title"], row["Price"], row["Rent Income"], row["Demand Factor"], row["Image Path"], row["Latitude"], row["Longitude"], row["Sold"], row["Username"], row["Estate ID"]))
-            user_id = c.execute("SELECT user_id FROM users WHERE username = ?", (row["Username"],)).fetchone()[0]
-            c.execute("INSERT OR IGNORE INTO user_properties (user_id, property_id, purchase_date, rent_income) VALUES (?, ?, ?, ?)", (user_id, row["Estate ID"], datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), row["Rent Income"]))
         conn.commit()
         st.rerun()
 
