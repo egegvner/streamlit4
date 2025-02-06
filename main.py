@@ -1031,6 +1031,19 @@ def item_options(conn, user_id, item_id):
         buy_item(conn, user_id, item_id)
     st.caption(f":gray[ID   {item_id}]")
 
+@st.dialog("Gift Property")
+def gift_prop_dialog(conn, user_id, prop_id):
+    c = conn.cursor()
+    all_users = [user[0] for user in c.execute("SELECT username FROM users WHERE username != ?", (st.session_state.username,)).fetchall()]
+    chosen = st.selectbox("", label_visibility="collapsed", options=all_users, index=random.randint(0, len(all_users)))
+    chosen_id = c.execute("SELECT user_id FROM users WHERE username = ?", (chosen,)).fetchone()[0]
+    if st.button("Confirm Gift Property"):
+        with st.spinner("Sending gift..."):
+            rent_i = c.execute("SELECT rent_income FROM real_estate WHERE property_id = ?", (prop_id,)).fetchone()[0]
+            c.execute("DELETE FROM user_properties WHERE property_id = ? AND user_id = ?", (prop_id, user_id))
+            c.execute("INSERT INTO user_properties (user_id, property_id, purchase_date, rent_income) VALUES (?, ?, ?, ?)", (chosen_id, prop_id, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), rent_i))
+            c.execute("UPDATE real_estate SET username = ? WHERE property_id = ?", (chosen, prop_id))
+
 @st.dialog("Privacy Policy", width="large")
 def privacy_policy_dialog():
     st.header("", divider="rainbow")
@@ -1391,7 +1404,7 @@ def inventory_view(conn, user_id):
                             else:
                                 st.success(f"[Accumulated Rent] :green[$0]")
                     
-                    c1, c2 = st.columns(2)
+                    c1, c2, c3 = st.columns(3)
 
                     if c1.button("Sell To Bank", key=f"sell_{prop_id}", use_container_width=True):
                         with st.spinner("Selling..."):
@@ -1402,7 +1415,10 @@ def inventory_view(conn, user_id):
                         st.success("Sold property to the bank for free.")
                         st.rerun()
 
-                    if c2.button("**Collect Rent**", type="primary", key=f"rent_{prop_id}", use_container_width=True, disabled=not can_collect, help="Rent for this property has already been collected today." if not can_collect else None):
+                    if c2.button("Gift", key=f"gift_{prop_id}", use_container_width=True):
+                        gift_prop_dialog(conn, user_id, prop_id)
+
+                    if c3.button("**Collect Rent**", type="primary", key=f"rent_{prop_id}", use_container_width=True, disabled=not can_collect, help="Rent for this property has already been collected today." if not can_collect else None):
                         with st.spinner("Collecting Rent..."):
                             c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (rent_income, user_id))
                             c.execute("UPDATE user_properties SET last_collected = ? WHERE property_id = ?", (now.strftime("%Y-%m-%d %H:%M:%S"), prop_id))
@@ -2759,7 +2775,6 @@ def real_estate_marketplace_view(conn, user_id):
         }
     ))
 
-    # Categorizing properties based on type
     property_categories = {
         "AIRPORTS": [],
         "PORTS": [],
