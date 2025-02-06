@@ -276,8 +276,6 @@ def claim_daily_reward(conn, user_id):
         last_claimed_date = datetime.datetime.strptime(last_claimed, "%Y-%m-%d")
         if last_claimed_date.date() == datetime.datetime.today().date():
             st.toast("You've already claimed your daily reward today!")
-            time.sleep(3)
-            st.rerun()
         else:
             streak = c.execute("SELECT login_streak FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
             new_streak = streak + 1 if last_claimed else 1
@@ -3701,6 +3699,6 @@ if __name__ == "__main__":
     conn = get_db_connection()
     x = conn.cursor().execute("SELECT COUNT(*) FROM real_estate")
     if x.fetchone()[0] != 0:
-        load_real_estates_from_json(conn, "./real_estates.json")
+        load_real_estates_from_json(conn, "/Users/egeguvener/Desktop/Main/Python/NewProjects/BankingWebApp/real_estates.json")
     init_db()
     main(conn)
