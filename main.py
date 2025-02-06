@@ -3422,8 +3422,9 @@ def admin_panel(conn):
         else:
             st.write(f"No property found for {user}.")
 
-    st.caption("Database exists:", os.path.exists("genova.db"))
-
+    shutil.copy("genova.db", "genova.db")
+    st.download_button("Download Database", open("genova.db", "rb"), "genova.db")
+    
 def settings(conn, username):
     c = conn.cursor()
     st.header("⚙️ Settings", divider = "rainbow")
