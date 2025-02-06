@@ -15,6 +15,7 @@ import plotly.graph_objects as go
 import math
 import yfinance as yf
 import json
+import os
 from streamlit_lightweight_charts import renderLightweightCharts
 import streamlit as st
 
@@ -3420,6 +3421,8 @@ def admin_panel(conn):
                 st.rerun()
         else:
             st.write(f"No property found for {user}.")
+
+    st.caption("Database exists:", os.path.exists("genova.db"))
 
 def settings(conn, username):
     c = conn.cursor()
