@@ -16,6 +16,7 @@ import math
 import yfinance as yf
 import json
 import os
+import shutil
 from streamlit_lightweight_charts import renderLightweightCharts
 import streamlit as st
 
