@@ -1910,10 +1910,10 @@ def stocks_view(conn, user_id):
         st.session_state.graph_color = (0, 255, 0)
 
     if "resample" not in st.session_state:
-        st.session_state.resample = 24
+        st.session_state.resample = 3
 
     if "hours" not in st.session_state:
-        st.session_state.hours = 24
+        st.session_state.hours = 168
 
     if "selected_real_stock" not in st.session_state:
         st.session_state.selected_real_stock = "AAPL"
@@ -3736,7 +3736,8 @@ def main(conn):
             chat_view(conn)
         
         elif st.session_state.current_menu == "Stocks":
-            st.session_state.range = 24
+            st.session_state.resample = 3
+            st.session_state.hours = 168
             stocks_view(conn, st.session_state.user_id)
         
         elif st.session_state.current_menu == "Holdings":
