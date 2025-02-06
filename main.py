@@ -2717,7 +2717,12 @@ def investments_view(conn, user_id):
 
 def real_estate_marketplace_view(conn, user_id):
     c = conn.cursor()
-
+    
+    with st.spinner("Fetching everything..."):
+        x = c.execute("SELECT COUNT(*) FROM real_estate")
+        if x.fetchone()[0] != 0:
+            load_real_estates_from_json(conn, "./real_estates.json")
+        
     if "selected_property" not in st.session_state:
         st.session_state.selected_property = None
 
@@ -3782,8 +3787,5 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
 
 if __name__ == "__main__":
     conn = get_db_connection()
-    x = conn.cursor().execute("SELECT COUNT(*) FROM real_estate")
-    if x.fetchone()[0] != 0:
-        load_real_estates_from_json(conn, "./real_estates.json")
     init_db()
     main(conn)
