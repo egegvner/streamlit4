@@ -391,6 +391,43 @@ def get_stock_metrics(conn, stock_id):
         "delta_all_time_low": delta_all_time_low
     }
 
+def distribute_dividends(conn):
+    c = conn.cursor()
+    now = datetime.datetime.now()
+    one_week_ago = now - datetime.timedelta(days=7)
+
+    user_stocks = c.execute("""
+        SELECT us.user_id, us.stock_id, us.quantity, s.price, s.dividend_rate, us.purchase_date
+        FROM user_stocks us
+        JOIN stocks s ON us.stock_id = s.stock_id
+        WHERE s.dividend_rate > 0 AND us.purchase_date <= ?
+    """, (one_week_ago.strftime("%Y-%m-%d %H:%M:%S"),)).fetchall()
+
+    dividends_paid = {}
+
+    for user_id, stock_id, quantity, price, dividend_rate, purchase_date in user_stocks:
+        dividend = round(quantity * price * dividend_rate, 2)
+
+        if user_id not in dividends_paid:
+            dividends_paid[user_id] = 0
+        dividends_paid[user_id] += dividend
+
+        c.execute("""
+            INSERT INTO transactions (user_id, type, amount, stock_id, status, timestamp)
+            VALUES (?, 'Dividend Payout', ?, ?, 'Completed', ?)
+        """, (user_id, dividend, stock_id, now.strftime("%Y-%m-%d %H:%M:%S")))
+
+    logged_in_user = st.session_state.user_id
+
+    for user_id, total_dividend in dividends_paid.items():
+        c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (total_dividend, user_id))
+
+        if user_id == logged_in_user:
+            st.toast(f"💰 Dividend Payout: Received :green[${total_dividend}]")
+
+    conn.commit()
+
+
 def update_inflation(conn):
     c = conn.cursor()
     
@@ -697,7 +734,8 @@ def init_db(conn):
                 stock_amount INTEGER NOT NULL,
                 last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 open_price REAL,
-                close_price REAL
+                close_price REAL,
+                dividend_rate REAL DEFAULT 0.0
                 );''')
     
     c.execute('''CREATE TABLE IF NOT EXISTS user_stocks (
@@ -706,6 +744,7 @@ def init_db(conn):
                 stock_id INTEGER NOT NULL,
                 quantity REAL NOT NULL,
                 avg_buy_price REAL NOT NULL,
+                purchase_date DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(user_id),
                 FOREIGN KEY (stock_id) REFERENCES stocks(stock_id)
                 );''')
@@ -1640,6 +1679,22 @@ def dashboard(conn, user_id):
     c = conn.cursor()
     check_and_update_investments(conn, user_id)
 
+    now = datetime.datetime.now()
+    days_ahead = (6 - now.weekday()) % 7  # Days until next Sunday (0 = Monday, 6 = Sunday)
+    if days_ahead == 0:  # If today is Sunday, return time left until next Sunday
+        days_ahead = 7
+    
+    next_sunday = now + datetime.timedelta(days=days_ahead)
+    next_sunday_midnight = next_sunday.replace(hour=0, minute=0, second=0, microsecond=0)
+    time_left = next_sunday_midnight - now
+
+    days = time_left.days
+    hours, remainder = divmod(time_left.seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    if not days and not hours and not minutes:
+        pass
+    distribute_dividends(conn)
+
     st.header(f"Welcome, {st.session_state.username}!", divider="rainbow")
     st.subheader("Daily Reward")
     if st.button("🎁     Claim Reward     🎁", use_container_width = True):
@@ -1941,9 +1996,9 @@ def stocks_view(conn, user_id):
     c = conn.cursor()
     
     update_stock_prices(conn)
-    st_autorefresh(interval=20000, key="stock_autorefresh")
+    st_autorefresh(interval=30000, key="stock_autorefresh")
 
-    stocks = c.execute("SELECT stock_id, name, symbol, price, stock_amount FROM stocks").fetchall()
+    stocks = c.execute("SELECT stock_id, name, symbol, price, stock_amount, dividend_rate FROM stocks").fetchall()
     balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
     if "selected_game_stock" not in st.session_state:
@@ -1955,12 +2010,12 @@ def stocks_view(conn, user_id):
     if "graph_color" not in st.session_state:
         st.session_state.graph_color = (0, 255, 0)
 
-    if "resample" not in st.session_state:
-        st.session_state.resample = 3
-
     if "hours" not in st.session_state:
         st.session_state.hours = 168
 
+    if "resample" not in st.session_state:
+        st.session_state.resample = 1
+    
     if "selected_real_stock" not in st.session_state:
         st.session_state.selected_real_stock = "AAPL"
 
@@ -1977,7 +2032,7 @@ def stocks_view(conn, user_id):
         start_time = now - datetime.timedelta(hours=24)
         start_time_str = start_time.strftime("%Y-%m-%d %H:%M:%S")
 
-        for stock_id, name, symbol, current_price, amt in stocks:
+        for stock_id, name, symbol, current_price, amt, dividend in stocks:
             price_24h_ago = c.execute("""
                 SELECT price FROM stock_history 
                 WHERE stock_id = ? AND timestamp <= ? 
@@ -1997,7 +2052,7 @@ def stocks_view(conn, user_id):
         st.markdown(stock_ticker_html, unsafe_allow_html=True)
         
         selected_stock = next(s for s in stocks if s[0] == st.session_state.selected_game_stock)
-        stock_id, name, symbol, price, stock_amount = selected_stock
+        stock_id, name, symbol, price, stock_amount, dividend = selected_stock
 
         now = datetime.datetime.now()
         start_time = now - datetime.timedelta(hours=st.session_state.hours)  # Change time period as needed
@@ -2029,12 +2084,6 @@ def stocks_view(conn, user_id):
             percentage_change = 0
             change_color = ":orange[0.00%] :gray[(7d)]"
 
-        history = c.execute("""
-            SELECT timestamp, price FROM stock_history 
-            WHERE stock_id = ? AND timestamp >= ?
-            ORDER BY timestamp ASC
-        """, (stock_id, start_time_str)).fetchall()
-
         if len(history) > 1:
             last_price = history[-1][1]
             previous_price = history[-2][1]
@@ -2061,10 +2110,9 @@ def stocks_view(conn, user_id):
             with cols[i]:
                 if st.button(label=f"{stocks[i][2]}", key=stocks[i][0], use_container_width=True):
                     st.session_state.selected_game_stock = stocks[i][0]
-                    st.session_state.range = 24
                     st.rerun()
         
-        c1, c2 = st.columns([2, 1.5])
+        c1, c2 = st.columns([2.5, 1.5])
 
         with c1:
             if len(history) > 1:
@@ -2130,17 +2178,17 @@ def stocks_view(conn, user_id):
             q1, q2, q3, q4, q5, q6, q7, q8 = st.columns(8)
 
             if q1.button("1h", type="tertiary", use_container_width=True):
-                st.session_state.resample = 1
+                st.session_state.resample = 0.1
                 st.session_state.hours = 1
                 st.rerun()
 
             if q2.button("3h", type="tertiary", use_container_width=True):
-                st.session_state.resample = 1
+                st.session_state.resample = 0.2
                 st.session_state.hours = 3
                 st.rerun()
 
             if q3.button("5h", type="tertiary", use_container_width=True):
-                st.session_state.resample = 1
+                st.session_state.resample = 0.4
                 st.session_state.hours = 5
                 st.rerun()
 
@@ -2150,17 +2198,17 @@ def stocks_view(conn, user_id):
                 st.rerun()
 
             if q5.button("1d", type="tertiary", use_container_width=True):
-                st.session_state.resample = 0.6
+                st.session_state.resample = 0.8
                 st.session_state.hours = 24
                 st.rerun()
 
             if q6.button("7d", type="tertiary", use_container_width=True):
-                st.session_state.resample = 3
+                st.session_state.resample = 1
                 st.session_state.hours = 168
                 st.rerun()
 
             if q7.button("15d", type="tertiary", use_container_width=True):
-                st.session_state.resample = 4
+                st.session_state.resample = 1
                 st.session_state.hours = 360
                 st.rerun()
 
@@ -2168,6 +2216,21 @@ def stocks_view(conn, user_id):
                 st.session_state.resample = 1
                 st.session_state.hours = 720
                 st.rerun()
+            
+            now = datetime.datetime.now()
+            days_ahead = (6 - now.weekday()) % 7  # Days until next Sunday (0 = Monday, 6 = Sunday)
+            if days_ahead == 0:  # If today is Sunday, return time left until next Sunday
+                days_ahead = 7
+            
+            next_sunday = now + datetime.timedelta(days=days_ahead)
+            next_sunday_midnight = next_sunday.replace(hour=0, minute=0, second=0, microsecond=0)
+            time_left = next_sunday_midnight - now
+
+            days = time_left.days
+            hours, remainder = divmod(time_left.seconds, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            with st.container(border=True):
+                st.write(f"Next Divided Payout In :orange[{days}] Day, :orange[{hours}] Hours, :orange[{minutes}] Minutes.")
 
         with c2:
             st.subheader(f"{name} ({symbol})")
@@ -2185,8 +2248,9 @@ def stocks_view(conn, user_id):
             with st.container(border=True):
                 st.write(f"**[HOLDING]** :blue[{format_number(user_quantity, 2)} {symbol}] ~ :green[${format_number(user_quantity * price, 2)}]")
                 st.write(f"[AVG. Bought At] :green[${format_number(avg_price, 2)}]")
-
-                st.write(f"[Available] :orange[{format_number(stock_amount, 2)} {symbol}]")                                
+                ca1, ca2 = st.columns(2)
+                ca1.write(f"[Available] :orange[{format_number(stock_amount, 2)} {symbol}]")                                
+                ca2.write(f"[Dividend Rate] :orange[{dividend * 100}%]")                                
 
             col1, col2 = st.columns(2)
             
@@ -2350,26 +2414,9 @@ def stocks_view(conn, user_id):
                         st.rerun()
 
         with cc3:
-            stock_history2 = stock_data.history(period="3mo", interval = "1d")
-
-            if not stock_history2.empty:
-                fig = go.Figure(data=[go.Candlestick(
-                    x=stock_history2.index,
-                    open=stock_history2["Open"],
-                    high=stock_history2["High"],
-                    low=stock_history2["Low"],
-                    close=stock_history2["Close"],
-                )])
-
-                fig.update_layout(
-                    title=f"Candlestick Chart - {selected_real_stock}",
-                    xaxis_title="Date",
-                    yaxis_title="Price (USD)",
-                    xaxis_rangeslider_visible=False,  # Hide the range slider
-                    template="plotly_dark",  # Use a dark theme
-                )
-            else:
-                st.warning("No stock data available for the selected period.")
+            for _ in range(3):
+                st.text("")
+            st.caption("Graph coming soon")
 
 def portfolio_view(conn, user_id):
     c = conn.cursor()
@@ -3133,14 +3180,15 @@ def admin_panel(conn):
             stock_symbol = st.text_input("Ab", label_visibility = "collapsed", placeholder = "Symbol")
             starting_price = st.text_input("Ab", label_visibility = "collapsed", placeholder = "Starting Price")
             stock_amount = st.text_input("Ab", label_visibility = "collapsed", placeholder = "Stock Amount")
-            change_rate = st.text_input("Ab", label_visibility = "collapsed", placeholder = "Change Rate (i.e 0.5 means ±0.5% in each  update)")
+            change_rate = st.text_input("Ab", label_visibility = "collapsed", placeholder = "Change Rate (i.e. 0.5 means ±0.5% in each  update)")
+            dividend_rate = st.number_input("Ab", label_visibility = "collapsed", placeholder = "Dividend Rate (i.e. 0.5 means 50% of worth of each shares held)")
 
             st.divider()
             
             if st.form_submit_button("Add to QubitTrades™", use_container_width = True):
                 existing_stock_ids = c.execute("SELECT stock_id FROM stocks").fetchall()
                 if item_id not in existing_stock_ids:
-                    c.execute("INSERT INTO stocks (stock_id, name, symbol, starting_price, price, stock_amount, change_rate) VALUES (?, ?, ?, ?, ?, ?, ?)", (stock_id, stock_name, stock_symbol, starting_price, starting_price, stock_amount, change_rate))
+                    c.execute("INSERT INTO stocks (stock_id, name, symbol, starting_price, price, stock_amount, change_rate, dividend_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (stock_id, stock_name, stock_symbol, starting_price, starting_price, stock_amount, change_rate, dividend_rate))
                     conn.commit()
                     st.rerun()
                 else:
@@ -3148,13 +3196,13 @@ def admin_panel(conn):
 
     st.header("Manage Stocks", divider = "rainbow")
     with st.spinner("Loading QubitTrades™..."):
-        stock_data = c.execute("SELECT stock_id, name, symbol, starting_price, price, stock_amount, change_rate, last_updated FROM stocks").fetchall()
+        stock_data = c.execute("SELECT stock_id, name, symbol, starting_price, price, stock_amount, change_rate, last_updated, dividend_rate FROM stocks").fetchall()
    
-    df = pd.DataFrame(stock_data, columns = ["Stock ID", "Stock Name", "Symbol", "Starting Price", "Current Price", "Stock Amount", "Change Rate", "Last Updated"])
+    df = pd.DataFrame(stock_data, columns = ["Stock ID", "Stock Name", "Symbol", "Starting Price", "Current Price", "Stock Amount", "Change Rate", "Last Updated", "Dividend Rate"])
     edited_df = st.data_editor(df, key = "stock_table", num_rows = "fixed", use_container_width = True, hide_index = True)
     if st.button("Update Stocks", use_container_width = True):
         for _, row in edited_df.iterrows():
-            c.execute("UPDATE OR IGNORE stocks SET name = ?, symbol = ?, price = ?, stock_amount = ?, change_rate = ?, last_updated = ? WHERE stock_id = ?", (row["Stock Name"], row["Symbol"], row["Current Price"], row["Stock Amount"], row["Change Rate"], row["Last Updated"], row["Stock ID"]))
+            c.execute("UPDATE OR IGNORE stocks SET name = ?, symbol = ?, price = ?, stock_amount = ?, change_rate = ?, last_updated = ?, dividend_rate = ? WHERE stock_id = ?", (row["Stock Name"], row["Symbol"], row["Current Price"], row["Stock Amount"], row["Change Rate"], row["Last Updated"], row["Dividend Rate"], row["Stock ID"]))
         conn.commit()
         st.rerun()
 
@@ -3771,8 +3819,6 @@ def main(conn):
             chat_view(conn)
         
         elif st.session_state.current_menu == "Stocks":
-            st.session_state.resample = 3
-            st.session_state.hours = 168
             stocks_view(conn, st.session_state.user_id)
         
         elif st.session_state.current_menu == "Holdings":
@@ -3821,47 +3867,11 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
     else:
         pass
 
-def filter_airports_and_ports(conn):
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT * FROM real_estate")
-    properties = cursor.fetchall()
-    
-    columns = [col[0] for col in cursor.description]
-
-    unique_airports = {}
-    unique_ports = {}
-
-    filtered_properties = []
-    for prop in properties:
-        prop_dict = dict(zip(columns, prop))
-        country = prop_dict["region"]
-
-        if "Airport" in prop_dict["type"]:
-            if country not in unique_airports:
-                unique_airports[country] = prop_dict
-        elif "Port" in prop_dict["type"]:
-            if country not in unique_ports:
-                unique_ports[country] = prop_dict
-        else:
-            filtered_properties.append(prop_dict)  # Keep all other properties
-
-    filtered_properties.extend(unique_airports.values())
-    filtered_properties.extend(unique_ports.values())
-
-    cursor.execute("DELETE FROM real_estate")
-
-    for prop in filtered_properties:
-        columns_str = ", ".join(prop.keys())
-        placeholders = ", ".join(["?" for _ in prop])
-        values = tuple(prop.values())
-
-        cursor.execute(f"INSERT INTO real_estate ({columns_str}) VALUES ({placeholders})", values)
-
-    conn.commit()
-
 if __name__ == "__main__":
     conn = get_db_connection()
     init_db(conn)
     add_column_if_not_exists(conn, "user_properties", "level", "INTEGER DEFAULT 1")
+    add_column_if_not_exists(conn, "stocks", "dividend_rate", "REAL DEFAULT 0.0")
+    add_column_if_not_exists(conn, "user_stocks", "purchase_date", "DATETIME DEFAULT NULL")
+    conn.cursor().execute("UPDATE user_stocks SET purchase_date = CURRENT_TIMESTAMP")
     main(conn)
