@@ -108,5 +108,115 @@
       "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/airports_xx5nfh.png",
       "latitude": -23.4356,
       "longitude": -46.4731
+    },
+    {
+      "property_id": 600001001,
+      "region": "France",
+      "type": "Eiffel Tower",
+      "price": 150000000000,
+      "rent_income": 1500000000,
+      "demand_factor": 0.98,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738931555/landmarks_bffadv.png",
+      "latitude": 48.8584,
+      "longitude": 2.2945
+    },
+    {
+      "property_id": 600001002,
+      "region": "United States",
+      "type": "Statue of Liberty",
+      "price": 200000000000,
+      "rent_income": 2000000000,
+      "demand_factor": 0.97,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738931555/landmarks_bffadv.png",
+      "latitude": 40.6892,
+      "longitude": -74.0445
+    },
+    {
+      "property_id": 600001003,
+      "region": "China",
+      "type": "Great Wall of China",
+      "price": 900000000000,
+      "rent_income": 9000000000,
+      "demand_factor": 0.99,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738931555/landmarks_bffadv.png",
+      "latitude": 40.4319,
+      "longitude": 116.5704
+    },
+    {
+      "property_id": 600001004,
+      "region": "India",
+      "type": "Taj Mahal",
+      "price": 300000000000,
+      "rent_income": 3000000000,
+      "demand_factor": 0.96,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738931555/landmarks_bffadv.png",
+      "latitude": 27.1751,
+      "longitude": 78.0421
+    },
+    {
+      "property_id": 600001005,
+      "region": "Brazil",
+      "type": "Christ the Redeemer",
+      "price": 250000000000,
+      "rent_income": 2500000000,
+      "demand_factor": 0.95,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738931555/landmarks_bffadv.png",
+      "latitude": -22.9519,
+      "longitude": -43.2105
+    },
+    {
+      "property_id": 600001006,
+      "region": "Italy",
+      "type": "Colosseum",
+      "price": 180000000000,
+      "rent_income": 1800000000,
+      "demand_factor": 0.94,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738931555/landmarks_bffadv.png",
+      "latitude": 41.8902,
+      "longitude": 12.4922
+    },
+    {
+      "property_id": 600001007,
+      "region": "Egypt",
+      "type": "Great Pyramid of Giza",
+      "price": 500000000000,
+      "rent_income": 5000000000,
+      "demand_factor": 0.98,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738931555/landmarks_bffadv.png",
+      "latitude": 29.9792,
+      "longitude": 31.1342
+    },
+    {
+      "property_id": 600001008,
+      "region": "United Kingdom",
+      "type": "Big Ben",
+      "price": 120000000000,
+      "rent_income": 1200000000,
+      "demand_factor": 0.93,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738931555/landmarks_bffadv.png",
+      "latitude": 51.5007,
+      "longitude": -0.1246
+    },
+    {
+      "property_id": 600001009,
+      "region": "Russia",
+      "type": "Saint Basil's Cathedral",
+      "price": 140000000000,
+      "rent_income": 1400000000,
+      "demand_factor": 0.92,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738931555/landmarks_bffadv.png",
+      "latitude": 55.7525,
+      "longitude": 37.6231
+    },
+    {
+      "property_id": 600001010,
+      "region": "Japan",
+      "type": "Mount Fuji",
+      "price": 1000000000000,
+      "rent_income": 10000000000,
+      "demand_factor": 1.00,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738931555/landmarks_bffadv.png",
+      "latitude": 35.3606,
+      "longitude": 138.7274
     }
 ]
