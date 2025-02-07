@@ -3427,7 +3427,6 @@ def admin_panel(conn):
 
     if temp and st.button("Upload DB File", use_container_width=True):
         db_path = "genova.db"
-        conn.close()
 
         if os.path.exists(db_path):
             os.remove(db_path)
