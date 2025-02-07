@@ -1253,20 +1253,24 @@ def upgrade_prop_dialog(conn, user_id, prop_id):
     st.text("")
     st.text("")
 
-    c1, c2 = st.columns(2)
-    with c1:
-        with st.container(border=True, ):
-            st.caption(":orange[CURRENT]")
-            st.title(f"**Level** :blue[{user_prop[0]}]")
-            st.subheader(f"RENT -> **:green[${format_number(user_prop[1])}]** / day")
-    with c2:
-        with st.container(border=True, ):
-            st.caption(":orange[NEXT]")
-            st.title(f"**Level** :blue[{user_prop[0] + 1}]")
-            st.subheader(f"RENT -> **:green[${format_number(user_prop[1] * 1.5)}]** / day")
+    if user_prop[0] == 10:
+        with st.container(border=True):
+            st.title("LEVEL :orange[10 (MAX)]")
+    else:
+        c1, c2 = st.columns(2)    
+        with c1:
+            with st.container(border=True, ):
+                st.caption(":orange[CURRENT]")
+                st.title(f"**Level** :blue[{user_prop[0]}]")
+                st.subheader(f"RENT -> **:green[${format_number(user_prop[1])}]** / day")
+        with c2:
+            with st.container(border=True, ):
+                st.caption(":orange[NEXT]")
+                st.title(f"**Level** :blue[{user_prop[0] + 1}]")
+                st.subheader(f"RENT -> **:green[${format_number(user_prop[1] * 1.5)}]** / day")
     
-    st.title(f"**COST**  :red[${format_number(user_prop[0] * user_prop[1] * 10)}]")
-    if st.button("**Confirm Upgrade**", type="primary", use_container_width=True, disabled=True if balance < (user_prop[0] * user_prop[1] * 10) else False):
+    st.title(f"**COST**  :red[${format_number(user_prop[0] * user_prop[1] * 10)}]" if user_prop[0] != 10 else ":red[$∞]")
+    if st.button("**Confirm Upgrade**", type="primary", use_container_width=True, disabled=True if balance < (user_prop[0] * user_prop[1] * 10) or user_prop[0] == 10 else False):
         with st.spinner("🔨 Processing upgrade..."):
             c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (user_prop[0] * user_prop[1] * 10, user_id))
             c.execute("UPDATE user_properties SET rent_income = ?, level = level + 1 WHERE property_id = ?", (user_prop[1] * 1.5, prop_id))
