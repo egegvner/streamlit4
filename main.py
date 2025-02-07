@@ -3410,20 +3410,6 @@ def admin_panel(conn):
         else:
             st.write(f"No property found for {user}.")
 
-    temp = st.file_uploader("Select a DB file", type="db", accept_multiple_files=False)
-
-    if temp and st.button("Upload DB File", use_container_width=True):
-        db_path = "genova.db"
-
-        if os.path.exists(db_path):
-            os.remove(db_path)
-
-        with open(db_path, "wb") as f:
-            f.write(temp.getbuffer())
-
-        conn = get_db_connection(db_path)
-        st.rerun()
-
     if os.path.exists("genova.db"):
         shutil.copy("genova.db", "genova_copy.db")
 
@@ -3795,6 +3781,4 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
 if __name__ == "__main__":
     conn = get_db_connection("genova.db")
     init_db(conn)
-    conn.cursor().execute("DELETE FROM real_estate WHERE image_url = ?", ("https://res.cloudinary.com/triplet/image/upload/v1738650001/parks_tzzfae.png",))
-    conn.commit()
     main(conn)
