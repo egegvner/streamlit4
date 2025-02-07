@@ -81,8 +81,8 @@ def write_stream(s, delay = 0, random_delay = False):
             time.sleep(delay)
 
 @st.cache_resource
-def get_db_connection():
-    return sqlite3.connect("genova.db", check_same_thread = False)
+def get_db_connection(path: str):
+    return sqlite3.connect(path, check_same_thread = False)
 
 item_colors = {
         "Common":":gray",
@@ -94,9 +94,9 @@ item_colors = {
     }
 
 def format_currency(amount):
-    if isinstance(amount, str):  # Convert if input is a string
-        amount = amount.replace(",", "")  # Remove commas for conversion
-        amount = float(amount)  # Convert to float
+    if isinstance(amount, str):
+        amount = amount.replace(",", "")
+        amount = float(amount)
     return "{:,.2f}".format(amount)
 
 # def format_currency(amount):
@@ -3423,8 +3423,25 @@ def admin_panel(conn):
         else:
             st.write(f"No property found for {user}.")
 
-    shutil.copy("genova.db", "genova_copy.db")
-    st.download_button("Download Database", open("genova.db", "rb"), "genova_copy.db")
+    temp = st.file_uploader("Select a DB file", type="db", accept_multiple_files=False)
+
+    if temp and st.button("Upload DB File", use_container_width=True):
+        db_path = "genova.db"
+        conn.close()
+
+        if os.path.exists(db_path):
+            os.remove(db_path)
+
+        with open(db_path, "wb") as f:
+            f.write(temp.getbuffer())
+
+        conn = get_db_connection(db_path)
+        st.rerun()
+
+    if os.path.exists("genova.db"):
+        shutil.copy("genova.db", "genova_copy.db")
+
+        st.download_button("Download Database", open("genova_copy.db", "rb"), "genova_copy.db", use_container_width=True)
     
 def settings(conn, username):
     c = conn.cursor()
@@ -3792,6 +3809,6 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
         pass
 
 if __name__ == "__main__":
-    conn = get_db_connection()
+    conn = get_db_connection("./genova.db")
     init_db()
     main(conn)
