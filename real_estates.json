@@ -110,6 +110,116 @@
       "longitude": -46.4731
     },
     {
+      "property_id": 700001001,
+      "region": "United States",
+      "type": "Port of Los Angeles",
+      "price": 8000000000,
+      "rent_income": 80000000,
+      "demand_factor": 0.98,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
+      "latitude": 33.7405,
+      "longitude": -118.2655
+    },
+    {
+      "property_id": 700001002,
+      "region": "China",
+      "type": "Port of Shanghai",
+      "price": 12000000000,
+      "rent_income": 120000000,
+      "demand_factor": 1.00,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
+      "latitude": 31.2304,
+      "longitude": 121.4737
+    },
+    {
+      "property_id": 700001003,
+      "region": "Netherlands",
+      "type": "Port of Rotterdam",
+      "price": 9000000000,
+      "rent_income": 90000000,
+      "demand_factor": 0.96,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
+      "latitude": 51.9225,
+      "longitude": 4.4792
+    },
+    {
+      "property_id": 700001004,
+      "region": "Singapore",
+      "type": "Port of Singapore",
+      "price": 11000000000,
+      "rent_income": 110000000,
+      "demand_factor": 0.99,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
+      "latitude": 1.2644,
+      "longitude": 103.8406
+    },
+    {
+      "property_id": 700001005,
+      "region": "Germany",
+      "type": "Port of Hamburg",
+      "price": 7500000000,
+      "rent_income": 75000000,
+      "demand_factor": 0.94,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
+      "latitude": 53.5461,
+      "longitude": 9.9662
+    },
+    {
+      "property_id": 700001006,
+      "region": "Brazil",
+      "type": "Port of Santos",
+      "price": 6000000000,
+      "rent_income": 60000000,
+      "demand_factor": 0.93,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
+      "latitude": -23.9631,
+      "longitude": -46.3333
+    },
+    {
+      "property_id": 700001007,
+      "region": "United Arab Emirates",
+      "type": "Port of Jebel Ali",
+      "price": 9500000000,
+      "rent_income": 95000000,
+      "demand_factor": 0.97,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
+      "latitude": 25.0144,
+      "longitude": 55.0622
+    },
+    {
+      "property_id": 700001008,
+      "region": "South Korea",
+      "type": "Port of Busan",
+      "price": 8800000000,
+      "rent_income": 88000000,
+      "demand_factor": 0.96,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
+      "latitude": 35.1046,
+      "longitude": 129.0317
+    },
+    {
+      "property_id": 700001009,
+      "region": "United Kingdom",
+      "type": "Port of Felixstowe",
+      "price": 7000000000,
+      "rent_income": 70000000,
+      "demand_factor": 0.92,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
+      "latitude": 51.9607,
+      "longitude": 1.3114
+    },
+    {
+      "property_id": 700001010,
+      "region": "Australia",
+      "type": "Port of Melbourne",
+      "price": 6800000000,
+      "rent_income": 68000000,
+      "demand_factor": 0.91,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
+      "latitude": -37.8413,
+      "longitude": 144.9439
+    },
+    {
       "property_id": 600001001,
       "region": "France",
       "type": "Eiffel Tower",
