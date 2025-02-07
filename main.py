@@ -2797,7 +2797,6 @@ def real_estate_marketplace_view(conn, user_id):
             property_categories["AIRPORTS"].append(row)
         elif "port" in title:
             property_categories["PORTS"].append(row)
-            property_categories["CINEMAS"].append(row)
         elif "museum" in title:
             property_categories["MUSEUMS"].append(row)
         elif "park" in title:
