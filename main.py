@@ -1419,7 +1419,7 @@ def inventory_view(conn, user_id):
                     st.subheader(f"{region} - {prop_type}")
                     cw1, cw2 = st.columns(2)
                     cw1.write(f":gray[Rent] :green[${format_number(rent_income)} / day]")
-                    cw1.write(f":gray[Purchased] :blue[{str((datetime.datetime.strptime(purchase_date[:-3], '%Y-%m-%d %H:%M'))).split(":00")[0]}]")
+                    cw1.write(f":gray[Purchased] :blue[{str((datetime.datetime.strptime(purchase_date[:-3], '%Y-%m-%d %H:%M'))).split(':00')[0]}]")
                     
                     if last_collected:
                         current_time = datetime.datetime.now()
