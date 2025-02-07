@@ -1,5 +1,247 @@
 [
     {
+        "property_id": 376814477,
+        "region": "United Kingdom",
+        "type": "Hyde Park",
+        "price": 23560000000,
+        "rent_income": 235600000.0,
+        "demand_factor": 0.02,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738649603/parks_2_e7nvny.png",
+        "latitude": 51.507333,
+        "longitude": -0.164306
+    },
+    {
+        "property_id": 280004001,
+        "region": "United States",
+        "type": "The Metropolitan Museum of Art",
+        "price": 500000000,
+        "rent_income": 15000000,
+        "demand_factor": 0.94,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
+        "latitude": 40.7794,
+        "longitude": -73.9632
+    },
+    {
+        "property_id": 280004002,
+        "region": "Mexico",
+        "type": "National Museum of Anthropology",
+        "price": 200000000,
+        "rent_income": 6000000,
+        "demand_factor": 0.85,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
+        "latitude": 19.4261,
+        "longitude": -99.1747
+    },
+    {
+        "property_id": 280004003,
+        "region": "Brazil",
+        "type": "Museum do Amanh\u00e3",
+        "price": 300000000,
+        "rent_income": 9000000,
+        "demand_factor": 0.88,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
+        "latitude": -22.9068,
+        "longitude": -43.1802
+    },
+    {
+        "property_id": 280004004,
+        "region": "United States",
+        "type": "Smithsonian National Museum of Natural History",
+        "price": 450000000,
+        "rent_income": 13500000,
+        "demand_factor": 0.92,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
+        "latitude": 38.8913,
+        "longitude": -77.026
+    },
+    {
+        "property_id": 280004005,
+        "region": "Argentina",
+        "type": "Museum Nacional de Bellas Artes",
+        "price": 150000000,
+        "rent_income": 4500000,
+        "demand_factor": 0.83,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
+        "latitude": -34.5884,
+        "longitude": -58.4173
+    },
+    {
+        "property_id": 280004006,
+        "region": "Canada",
+        "type": "Royal Ontario Museum",
+        "price": 350000000,
+        "rent_income": 10500000,
+        "demand_factor": 0.9,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
+        "latitude": 43.6677,
+        "longitude": -79.3948
+    },
+    {
+        "property_id": 280004007,
+        "region": "Chile",
+        "type": "Museum Nacional de Historia Natural",
+        "price": 180000000,
+        "rent_income": 5400000,
+        "demand_factor": 0.86,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
+        "latitude": -33.469,
+        "longitude": -70.6455
+    },
+    {
+        "property_id": 280005001,
+        "region": "France",
+        "type": "Louvre Museum",
+        "price": 600000000,
+        "rent_income": 18000000,
+        "demand_factor": 0.96,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
+        "latitude": 48.8606,
+        "longitude": 2.3376
+    },
+    {
+        "property_id": 280005002,
+        "region": "United Kingdom",
+        "type": "British Museum",
+        "price": 550000000,
+        "rent_income": 16500000,
+        "demand_factor": 0.93,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
+        "latitude": 51.5194,
+        "longitude": -0.127
+    },
+    {
+        "property_id": 280005003,
+        "region": "Italy",
+        "type": "Vatican Museum",
+        "price": 520000000,
+        "rent_income": 15600000,
+        "demand_factor": 0.95,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
+        "latitude": 41.906,
+        "longitude": 12.4534
+    },
+    {
+        "property_id": 280005004,
+        "region": "Germany",
+        "type": "Pergamon Museum",
+        "price": 480000000,
+        "rent_income": 14400000,
+        "demand_factor": 0.92,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
+        "latitude": 52.5212,
+        "longitude": 13.3977
+    },
+    {
+        "property_id": 280005005,
+        "region": "Egypt",
+        "type": "Egyptian Museum",
+        "price": 300000000,
+        "rent_income": 9000000,
+        "demand_factor": 0.89,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
+        "latitude": 30.0473,
+        "longitude": 31.2336
+    },
+    {
+        "property_id": 280005006,
+        "region": "South Africa",
+        "type": "Iziko South African Museum",
+        "price": 180000000,
+        "rent_income": 5400000,
+        "demand_factor": 0.85,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
+        "latitude": -33.9258,
+        "longitude": 18.4232
+    },
+    {
+        "property_id": 280005007,
+        "region": "Morocco",
+        "type": "Mohammed VI d'Art Moderne et Contemporain Museum",
+        "price": 220000000,
+        "rent_income": 6600000,
+        "demand_factor": 0.87,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
+        "latitude": 34.0223,
+        "longitude": -6.8362
+    },
+    {
+        "property_id": 280006001,
+        "region": "China",
+        "type": "The Palace Museum",
+        "price": 600000000,
+        "rent_income": 18000000,
+        "demand_factor": 0.94,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
+        "latitude": 39.9163,
+        "longitude": 116.3972
+    },
+    {
+        "property_id": 280006002,
+        "region": "India",
+        "type": "Indian Museum",
+        "price": 250000000,
+        "rent_income": 7500000,
+        "demand_factor": 0.89,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
+        "latitude": 22.5647,
+        "longitude": 88.3639
+    },
+    {
+        "property_id": 280006003,
+        "region": "Japan",
+        "type": "Tokyo National Museum",
+        "price": 450000000,
+        "rent_income": 13500000,
+        "demand_factor": 0.91,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
+        "latitude": 35.7138,
+        "longitude": 139.7778
+    },
+    {
+        "property_id": 280006004,
+        "region": "Australia",
+        "type": "Australian Museum",
+        "price": 300000000,
+        "rent_income": 9000000,
+        "demand_factor": 0.88,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
+        "latitude": -33.8688,
+        "longitude": 151.2093
+    },
+    {
+        "property_id": 280006005,
+        "region": "South Korea",
+        "type": "National Museum of Korea",
+        "price": 380000000,
+        "rent_income": 11400000,
+        "demand_factor": 0.92,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
+        "latitude": 37.5326,
+        "longitude": 126.9994
+    },
+    {
+        "property_id": 280006006,
+        "region": "Egypt",
+        "type": "Grand Egyptian Museum",
+        "price": 520000000,
+        "rent_income": 15600000,
+        "demand_factor": 0.93,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
+        "latitude": 29.9802,
+        "longitude": 31.13
+    },
+    {
+        "property_id": 280006007,
+        "region": "Indonesia",
+        "type": "National Museum of Indonesia",
+        "price": 180000000,
+        "rent_income": 5400000,
+        "demand_factor": 0.86,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
+        "latitude": -6.1754,
+        "longitude": 106.8283
+    },
+    {
         "property_id": 120792388,
         "region": "Singapore",
         "type": "Singapore Changi Intl' Airport",
@@ -33,17 +275,6 @@
         "longitude": -111.159618
     },
     {
-        "property_id": 203140981,
-        "region": "China",
-        "type": "Port of Shenzhen",
-        "price": 16000000000,
-        "rent_income": 160000000.0,
-        "demand_factor": 0.45,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
-        "latitude": 22.5431,
-        "longitude": 114.0579
-    },
-    {
         "property_id": 277700469,
         "region": "Qatar",
         "type": "Hamad Intl. Airport",
@@ -55,17 +286,6 @@
         "longitude": 51.604224
     },
     {
-        "property_id": 282807722,
-        "region": "United Kingdom",
-        "type": "Port of Southampton",
-        "price": 12000000000,
-        "rent_income": 120000000.0,
-        "demand_factor": 0.1,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
-        "latitude": 50.909433,
-        "longitude": -1.43581
-    },
-    {
         "property_id": 293603041,
         "region": "France",
         "type": "Charles de Gaulle Airport",
@@ -75,28 +295,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
         "latitude": 49.0097,
         "longitude": 2.5479
-    },
-    {
-        "property_id": 309225582,
-        "region": "South Korea",
-        "type": "Port of Busan",
-        "price": 14000000000,
-        "rent_income": 140000000.0,
-        "demand_factor": 0.4,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
-        "latitude": 35.1796,
-        "longitude": 129.0756
-    },
-    {
-        "property_id": 376814477,
-        "region": "United Kingdom",
-        "type": "Hyde Park",
-        "price": 23560000000,
-        "rent_income": 235600000.0,
-        "demand_factor": 0.02,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738649603/parks_2_e7nvny.png",
-        "latitude": 51.507333,
-        "longitude": -0.164306
     },
     {
         "property_id": 406220771,
@@ -121,39 +319,6 @@
         "longitude": 58.278564
     },
     {
-        "property_id": 457785042,
-        "region": "China",
-        "type": "Port of Shanghai",
-        "price": 20000000000,
-        "rent_income": 200000000.0,
-        "demand_factor": 0.55,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
-        "latitude": 31.2304,
-        "longitude": 121.4737
-    },
-    {
-        "property_id": 475316033,
-        "region": "China",
-        "type": "Port of Tianjin",
-        "price": 13000000000,
-        "rent_income": 130000000.0,
-        "demand_factor": 0.38,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
-        "latitude": 38.976,
-        "longitude": 117.2
-    },
-    {
-        "property_id": 503409745,
-        "region": "United States",
-        "type": "Denver Intl. Airport",
-        "price": 4800000000,
-        "rent_income": 48000000.0,
-        "demand_factor": 0.32,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 39.85859,
-        "longitude": -104.673693
-    },
-    {
         "property_id": 517163026,
         "region": "China",
         "type": "Beijing Daxing Intl. Airport",
@@ -165,39 +330,6 @@
         "longitude": 116.410802
     },
     {
-        "property_id": 523644222,
-        "region": "United States",
-        "type": "Boston Logan Intl Airport",
-        "price": 18000000000,
-        "rent_income": 180000000.0,
-        "demand_factor": 0.18,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 42.365712,
-        "longitude": -71.015796
-    },
-    {
-        "property_id": 557893022,
-        "region": "United States",
-        "type": "Newark Liberty Intl Airport",
-        "price": 14000000000,
-        "rent_income": 140000000.0,
-        "demand_factor": 0.17,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 40.689873,
-        "longitude": -74.179735
-    },
-    {
-        "property_id": 561427295,
-        "region": "United States",
-        "type": "Dallas Fort Worth Intl. Airport",
-        "price": 15000000000,
-        "rent_income": 150000000.0,
-        "demand_factor": 0.45,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 32.89794,
-        "longitude": -97.040416
-    },
-    {
         "property_id": 622344323,
         "region": "Australia",
         "type": "Sydney Kingsford Smith Airport",
@@ -207,28 +339,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
         "latitude": -33.9399,
         "longitude": 151.1753
-    },
-    {
-        "property_id": 632176232,
-        "region": "China",
-        "type": "Beijing Capital Intl. Airport",
-        "price": 19500000000,
-        "rent_income": 195000000.0,
-        "demand_factor": 0.3,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 40.065716,
-        "longitude": 116.607492
-    },
-    {
-        "property_id": 659411077,
-        "region": "China",
-        "type": "Port of Ningbo-Zhoushan",
-        "price": 17000000000,
-        "rent_income": 170000000.0,
-        "demand_factor": 0.48,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
-        "latitude": 29.8683,
-        "longitude": 122.28
     },
     {
         "property_id": 659745638,
@@ -253,17 +363,6 @@
         "longitude": 8.5622
     },
     {
-        "property_id": 726768487,
-        "region": "China",
-        "type": "Port of Qingdao",
-        "price": 15000000000,
-        "rent_income": 150000000.0,
-        "demand_factor": 0.43,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
-        "latitude": 36.0671,
-        "longitude": 120.3826
-    },
-    {
         "property_id": 741204281,
         "region": "Hong Kong",
         "type": "Hongkong Intl. Airport",
@@ -273,17 +372,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
         "latitude": 22.3132202,
         "longitude": 113.9139451
-    },
-    {
-        "property_id": 760999482,
-        "region": "United States",
-        "type": "Hartsfield-Jackson Atlanta Intl' Airport",
-        "price": 14999999999.98,
-        "rent_income": 149999999.9998,
-        "demand_factor": 0.5,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 33.6407,
-        "longitude": -84.4279
     },
     {
         "property_id": 778693020,
@@ -306,72 +394,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
         "latitude": -3.367391,
         "longitude": 36.625232
-    },
-    {
-        "property_id": 909430225,
-        "region": "United States",
-        "type": "Los Angeles Intl. Airport",
-        "price": 14000000000,
-        "rent_income": 140000000.0,
-        "demand_factor": 0.68,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 33.942237,
-        "longitude": -118.422209
-    },
-    {
-        "property_id": 947235893,
-        "region": "China",
-        "type": "Port of Guangzhou",
-        "price": 12000000000,
-        "rent_income": 120000000.0,
-        "demand_factor": 0.35,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
-        "latitude": 22.637432,
-        "longitude": 113.675664
-    },
-    {
-        "property_id": 955812946,
-        "region": "United States",
-        "type": "Chicago O'Hare Intl Airport",
-        "price": 17000000000,
-        "rent_income": 170000000.0,
-        "demand_factor": 0.2,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 41.977838,
-        "longitude": -87.907633
-    },
-    {
-        "property_id": 957655027,
-        "region": "Hong Kong",
-        "type": "Port of Hong Kong",
-        "price": 11000000000,
-        "rent_income": 110000000.0,
-        "demand_factor": 0.3,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
-        "latitude": 22.333083,
-        "longitude": 114.129348
-    },
-    {
-        "property_id": 978566693,
-        "region": "Singapore",
-        "type": "Port of Singapore",
-        "price": 18000000000,
-        "rent_income": 180000000.0,
-        "demand_factor": 0.5,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
-        "latitude": 1.248866,
-        "longitude": 103.615629
-    },
-    {
-        "property_id": 982733858,
-        "region": "United States",
-        "type": "San Francisco Intl. Airport",
-        "price": 9000000000,
-        "rent_income": 90000000.0,
-        "demand_factor": 0.3,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 37.616512,
-        "longitude": -122.38581
     },
     {
         "property_id": 216453782,
@@ -405,50 +427,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
         "latitude": 43.6777,
         "longitude": -79.6248
-    },
-    {
-        "property_id": 153466992,
-        "region": "Canada",
-        "type": "Vancouver Intl. Airport",
-        "price": 13000000000,
-        "rent_income": 130000000.0,
-        "demand_factor": 0.68,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 49.1947,
-        "longitude": -123.1811
-    },
-    {
-        "property_id": 120792393,
-        "region": "Canada",
-        "type": "Montreal-Pierre Elliott Trudeau Intl. Airport",
-        "price": 10000000000,
-        "rent_income": 100000000.0,
-        "demand_factor": 0.66,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 45.4705,
-        "longitude": -73.7403
-    },
-    {
-        "property_id": 153466993,
-        "region": "Canada",
-        "type": "Calgary Intl. Airport",
-        "price": 8000000000,
-        "rent_income": 80000000.0,
-        "demand_factor": 0.63,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 51.13,
-        "longitude": -114.011
-    },
-    {
-        "property_id": 120792394,
-        "region": "Canada",
-        "type": "Ottawa Macdonald\u2013Cartier Intl. Airport",
-        "price": 6000000000,
-        "rent_income": 60000000.0,
-        "demand_factor": 0.6,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 45.3225,
-        "longitude": -75.6695
     },
     {
         "property_id": 120792395,
@@ -506,17 +484,6 @@
         "longitude": 77.709
     },
     {
-        "property_id": 120792400,
-        "region": "India",
-        "type": "Chennai Intl. Airport",
-        "price": 6000000000,
-        "rent_income": 60000000.0,
-        "demand_factor": 0.68,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 12.989,
-        "longitude": 80.1595
-    },
-    {
         "property_id": 153466998,
         "region": "Russia",
         "type": "Domodedovo Intl. Airport",
@@ -526,61 +493,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
         "latitude": 55.4086,
         "longitude": 37.9064
-    },
-    {
-        "property_id": 120792406,
-        "region": "Russia",
-        "type": "Yakutsk Airport",
-        "price": 4500000000,
-        "rent_income": 45000000.0,
-        "demand_factor": 0.58,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 62.05,
-        "longitude": 129.7167
-    },
-    {
-        "property_id": 153467002,
-        "region": "Russia",
-        "type": "Vladivostok International Airport",
-        "price": 5300000000,
-        "rent_income": 53000000.0,
-        "demand_factor": 0.63,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 43.3986,
-        "longitude": 132.1797
-    },
-    {
-        "property_id": 120792407,
-        "region": "Australia",
-        "type": "Sydney Kingsford Smith Airport",
-        "price": 18000000000,
-        "rent_income": 180000000.0,
-        "demand_factor": 0.78,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": -33.9399,
-        "longitude": 151.1753
-    },
-    {
-        "property_id": 153467003,
-        "region": "Australia",
-        "type": "Melbourne Tullamarine Airport",
-        "price": 15000000000,
-        "rent_income": 150000000.0,
-        "demand_factor": 0.75,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": -37.6699,
-        "longitude": 144.8417
-    },
-    {
-        "property_id": 120792408,
-        "region": "Australia",
-        "type": "Brisbane Airport",
-        "price": 12000000000,
-        "rent_income": 120000000.0,
-        "demand_factor": 0.72,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": -27.3847,
-        "longitude": 153.1175
     },
     {
         "property_id": 120792410,
@@ -660,28 +572,6 @@
         "longitude": 174.7919
     },
     {
-        "property_id": 153467008,
-        "region": "New Zealand",
-        "type": "Christchurch International Airport",
-        "price": 6500000000,
-        "rent_income": 65000000.0,
-        "demand_factor": 0.7,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": -43.4891,
-        "longitude": 172.5322
-    },
-    {
-        "property_id": 120792415,
-        "region": "Egypt",
-        "type": "Cairo International Airport",
-        "price": 12500000000,
-        "rent_income": 125000000.0,
-        "demand_factor": 0.8,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 30.1219,
-        "longitude": 31.4053
-    },
-    {
         "property_id": 153467010,
         "region": "Tunisia",
         "type": "Tunis-Carthage International Airport",
@@ -691,28 +581,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
         "latitude": 36.8519,
         "longitude": 10.2272
-    },
-    {
-        "property_id": 153467012,
-        "region": "France",
-        "type": "Nice C\u00f4te d'Azur Airport",
-        "price": 7000000000,
-        "rent_income": 70000000.0,
-        "demand_factor": 0.75,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 43.6651,
-        "longitude": 7.2166
-    },
-    {
-        "property_id": 120792419,
-        "region": "France",
-        "type": "Lyon\u2013Saint-Exup\u00e9ry Airport",
-        "price": 6000000000,
-        "rent_income": 60000000.0,
-        "demand_factor": 0.7,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 45.7256,
-        "longitude": 5.0814
     },
     {
         "property_id": 120792420,
@@ -735,17 +603,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
         "latitude": 48.3538,
         "longitude": 11.7861
-    },
-    {
-        "property_id": 120792423,
-        "region": "Germany",
-        "type": "Berlin Brandenburg Airport",
-        "price": 7000000000,
-        "rent_income": 70000000.0,
-        "demand_factor": 0.74,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 52.3667,
-        "longitude": 13.5033
     },
     {
         "property_id": 120792424,
@@ -801,17 +658,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
         "latitude": 47.45,
         "longitude": 8.5619
-    },
-    {
-        "property_id": 153467019,
-        "region": "Switzerland",
-        "type": "Geneva Airport",
-        "price": 8500000000,
-        "rent_income": 85000000.0,
-        "demand_factor": 0.75,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 46.2381,
-        "longitude": 6.1084
     },
     {
         "property_id": 120792434,
@@ -935,28 +781,6 @@
         "longitude": -56.0273
     },
     {
-        "property_id": 120792451,
-        "region": "Brazil",
-        "type": "Fortaleza\u2013Pinto Martins International Airport",
-        "price": 4200000000,
-        "rent_income": 42000000.0,
-        "demand_factor": 0.71,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": -3.7761,
-        "longitude": -38.5321
-    },
-    {
-        "property_id": 153467033,
-        "region": "Argentina",
-        "type": "C\u00f3rdoba International Airport",
-        "price": 3000000000,
-        "rent_income": 30000000.0,
-        "demand_factor": 0.66,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": -31.3228,
-        "longitude": -64.2125
-    },
-    {
         "property_id": 120792452,
         "region": "Mexico",
         "type": "Mexico City International Airport",
@@ -988,39 +812,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
         "latitude": 13.4403,
         "longitude": -89.0569
-    },
-    {
-        "property_id": 120792457,
-        "region": "South Africa",
-        "type": "O.R. Tambo International Airport",
-        "price": 9000000000,
-        "rent_income": 90000000.0,
-        "demand_factor": 0.78,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": -26.1392,
-        "longitude": 28.2468
-    },
-    {
-        "property_id": 153467040,
-        "region": "Egypt",
-        "type": "Cairo International Airport",
-        "price": 9500000000,
-        "rent_income": 95000000.0,
-        "demand_factor": 0.76,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 30.1219,
-        "longitude": 31.405
-    },
-    {
-        "property_id": 153467043,
-        "region": "Ethiopia",
-        "type": "Addis Ababa Bole International Airport",
-        "price": 4200000000,
-        "rent_income": 42000000.0,
-        "demand_factor": 0.67,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 9.03,
-        "longitude": 38.7747
     },
     {
         "property_id": 120792462,
@@ -1111,15 +902,59 @@
         "longitude": 51.1822
     },
     {
-        "property_id": 153467048,
-        "region": "Uzbekistan",
-        "type": "Samarkand International Airport",
-        "price": 3300000000,
-        "rent_income": 33000000.0,
-        "demand_factor": 0.6,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 39.6492,
-        "longitude": 66.9675
+        "property_id": 203140981,
+        "region": "China",
+        "type": "Port of Shenzhen",
+        "price": 16000000000,
+        "rent_income": 160000000.0,
+        "demand_factor": 0.45,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
+        "latitude": 22.5431,
+        "longitude": 114.0579
+    },
+    {
+        "property_id": 282807722,
+        "region": "United Kingdom",
+        "type": "Port of Southampton",
+        "price": 12000000000,
+        "rent_income": 120000000.0,
+        "demand_factor": 0.1,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
+        "latitude": 50.909433,
+        "longitude": -1.43581
+    },
+    {
+        "property_id": 309225582,
+        "region": "South Korea",
+        "type": "Port of Busan",
+        "price": 14000000000,
+        "rent_income": 140000000.0,
+        "demand_factor": 0.4,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
+        "latitude": 35.1796,
+        "longitude": 129.0756
+    },
+    {
+        "property_id": 957655027,
+        "region": "Hong Kong",
+        "type": "Port of Hong Kong",
+        "price": 11000000000,
+        "rent_income": 110000000.0,
+        "demand_factor": 0.3,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
+        "latitude": 22.333083,
+        "longitude": 114.129348
+    },
+    {
+        "property_id": 978566693,
+        "region": "Singapore",
+        "type": "Port of Singapore",
+        "price": 18000000000,
+        "rent_income": 180000000.0,
+        "demand_factor": 0.5,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
+        "latitude": 1.248866,
+        "longitude": 103.615629
     },
     {
         "property_id": 220001001,
@@ -1130,42 +965,20 @@
         "demand_factor": 0.85,
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": 33.7206,
-        "longitude": -118.2700
-      },
-      {
-        "property_id": 220001002,
-        "region": "United States",
-        "type": "Port of Long Beach",
-        "price": 4500000000,
-        "rent_income": 45000000,
-        "demand_factor": 0.82,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
-        "latitude": 33.7542,
-        "longitude": -118.2167
-      },
-      {
-        "property_id": 220001003,
-        "region": "United States",
-        "type": "Port of New York and New Jersey",
-        "price": 6000000000,
-        "rent_income": 60000000,
-        "demand_factor": 0.88,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
-        "latitude": 40.6829,
-        "longitude": -74.1686
-      },
-      {
+        "longitude": -118.27
+    },
+    {
         "property_id": 220001004,
         "region": "Canada",
         "type": "Port of Vancouver",
         "price": 4000000000,
         "rent_income": 40000000,
-        "demand_factor": 0.80,
+        "demand_factor": 0.8,
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": 49.2906,
-        "longitude": -123.1110
-      },
-      {
+        "longitude": -123.111
+    },
+    {
         "property_id": 220001006,
         "region": "Mexico",
         "type": "Port of Manzanillo",
@@ -1174,64 +987,20 @@
         "demand_factor": 0.78,
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": 19.0553,
-        "longitude": -104.3150
-      },
-      {
-        "property_id": 220001007,
-        "region": "Mexico",
-        "type": "Port of Veracruz",
-        "price": 3200000000,
-        "rent_income": 32000000,
-        "demand_factor": 0.76,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
-        "latitude": 19.2000,
-        "longitude": -96.1333
-      },
-      {
-        "property_id": 220001008,
-        "region": "United States",
-        "type": "Port of Houston",
-        "price": 5500000000,
-        "rent_income": 55000000,
-        "demand_factor": 0.86,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
-        "latitude": 29.7304,
-        "longitude": -95.2632
-      },
-      {
-        "property_id": 220001009,
-        "region": "Canada",
-        "type": "Port of Halifax",
-        "price": 2700000000,
-        "rent_income": 27000000,
-        "demand_factor": 0.70,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
-        "latitude": 44.6414,
-        "longitude": -63.5666
-      },
-      {
-        "property_id": 220001010,
-        "region": "United States",
-        "type": "Port of Savannah",
-        "price": 3500000000,
-        "rent_income": 35000000,
-        "demand_factor": 0.79,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
-        "latitude": 32.0835,
-        "longitude": -81.0998
-      },
-      {
+        "longitude": -104.315
+    },
+    {
         "property_id": 230001001,
         "region": "Netherlands",
         "type": "Port of Rotterdam",
         "price": 7000000000,
         "rent_income": 70000000,
-        "demand_factor": 0.90,
+        "demand_factor": 0.9,
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
-        "latitude": 51.9470,
+        "latitude": 51.947,
         "longitude": 4.1436
-      },
-      {
+    },
+    {
         "property_id": 230001002,
         "region": "Belgium",
         "type": "Port of Antwerp",
@@ -1241,8 +1010,8 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": 51.2637,
         "longitude": 4.3336
-      },
-      {
+    },
+    {
         "property_id": 230001003,
         "region": "Germany",
         "type": "Port of Hamburg",
@@ -1252,19 +1021,8 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": 53.5438,
         "longitude": 9.9841
-      },
-      {
-        "property_id": 230001004,
-        "region": "United Kingdom",
-        "type": "Port of Felixstowe",
-        "price": 4000000000,
-        "rent_income": 40000000,
-        "demand_factor": 0.80,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
-        "latitude": 51.9631,
-        "longitude": 1.3514
-      },
-      {
+    },
+    {
         "property_id": 230001005,
         "region": "France",
         "type": "Port of Le Havre",
@@ -1274,8 +1032,8 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": 49.4765,
         "longitude": 0.1736
-      },
-      {
+    },
+    {
         "property_id": 230001006,
         "region": "Italy",
         "type": "Port of Genoa",
@@ -1285,8 +1043,8 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": 44.4048,
         "longitude": 8.9309
-      },
-      {
+    },
+    {
         "property_id": 230001007,
         "region": "Spain",
         "type": "Port of Algeciras",
@@ -1296,8 +1054,8 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": 36.1267,
         "longitude": -5.4414
-      },
-      {
+    },
+    {
         "property_id": 230001008,
         "region": "Denmark",
         "type": "Port of Aarhus",
@@ -1307,8 +1065,8 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": 56.1517,
         "longitude": 10.2167
-      },
-      {
+    },
+    {
         "property_id": 230001009,
         "region": "Greece",
         "type": "Port of Piraeus",
@@ -1318,8 +1076,8 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": 37.9402,
         "longitude": 23.6441
-      },
-      {
+    },
+    {
         "property_id": 230001010,
         "region": "Russia",
         "type": "Port of Novorossiysk",
@@ -1329,8 +1087,8 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": 44.7235,
         "longitude": 37.7686
-      },
-      {
+    },
+    {
         "property_id": 230002001,
         "region": "South Africa",
         "type": "Port of Durban",
@@ -1340,8 +1098,8 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": -29.8684,
         "longitude": 31.061
-      },
-      {
+    },
+    {
         "property_id": 230002002,
         "region": "Egypt",
         "type": "Port of Alexandria",
@@ -1351,19 +1109,19 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": 31.2047,
         "longitude": 29.9094
-      },
-      {
+    },
+    {
         "property_id": 230002003,
         "region": "Nigeria",
         "type": "Port of Lagos",
         "price": 4000000000,
         "rent_income": 40000000,
-        "demand_factor": 0.80,
+        "demand_factor": 0.8,
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": 6.4363,
         "longitude": 3.3958
-      },
-      {
+    },
+    {
         "property_id": 230002004,
         "region": "Kenya",
         "type": "Port of Mombasa",
@@ -1373,8 +1131,8 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": -4.0473,
         "longitude": 39.6583
-      },
-      {
+    },
+    {
         "property_id": 230002005,
         "region": "Tanzania",
         "type": "Port of Dar es Salaam",
@@ -1384,8 +1142,8 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": -6.8254,
         "longitude": 39.2899
-      },
-      {
+    },
+    {
         "property_id": 230002006,
         "region": "Morocco",
         "type": "Port of Casablanca",
@@ -1395,8 +1153,8 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": 33.5992,
         "longitude": -7.6114
-      },
-      {
+    },
+    {
         "property_id": 230002007,
         "region": "Algeria",
         "type": "Port of Algiers",
@@ -1406,8 +1164,8 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": 36.7831,
         "longitude": 3.0631
-      },
-      {
+    },
+    {
         "property_id": 240003003,
         "region": "Japan",
         "type": "Port of Tokyo",
@@ -1417,8 +1175,8 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": 35.6174,
         "longitude": 139.7857
-      },
-      {
+    },
+    {
         "property_id": 240003005,
         "region": "India",
         "type": "Port of Mumbai",
@@ -1427,9 +1185,9 @@
         "demand_factor": 0.83,
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": 18.9355,
-        "longitude": 72.8400
-      },
-      {
+        "longitude": 72.84
+    },
+    {
         "property_id": 240003009,
         "region": "Australia",
         "type": "Port of Melbourne",
@@ -1439,8 +1197,8 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": -37.8336,
         "longitude": 144.9154
-      },
-      {
+    },
+    {
         "property_id": 240003010,
         "region": "New Zealand",
         "type": "Port of Auckland",
@@ -1450,8 +1208,8 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": -36.8431,
         "longitude": 174.774
-      },
-      {
+    },
+    {
         "property_id": 250004001,
         "region": "Brazil",
         "type": "Port of Santos",
@@ -1461,19 +1219,8 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": -23.9675,
         "longitude": -46.3239
-      },
-      {
-        "property_id": 250004002,
-        "region": "Brazil",
-        "type": "Port of Rio de Janeiro",
-        "price": 5000000000,
-        "rent_income": 50000000,
-        "demand_factor": 0.82,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
-        "latitude": -22.8958,
-        "longitude": -43.1712
-      },
-      {
+    },
+    {
         "property_id": 250004003,
         "region": "Argentina",
         "type": "Port of Buenos Aires",
@@ -1483,8 +1230,8 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": -34.5885,
         "longitude": -58.3651
-      },
-      {
+    },
+    {
         "property_id": 250004005,
         "region": "Chile",
         "type": "Port of San Antonio",
@@ -1494,8 +1241,8 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": -33.6012,
         "longitude": -71.6217
-      },
-      {
+    },
+    {
         "property_id": 250004006,
         "region": "Peru",
         "type": "Port of Callao",
@@ -1503,10 +1250,10 @@
         "rent_income": 60000000,
         "demand_factor": 0.85,
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
-        "latitude": -12.0500,
-        "longitude": -77.1500
-      },
-      {
+        "latitude": -12.05,
+        "longitude": -77.15
+    },
+    {
         "property_id": 250004007,
         "region": "Colombia",
         "type": "Port of Cartagena",
@@ -1516,8 +1263,8 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": 10.3997,
         "longitude": -75.5144
-      },
-      {
+    },
+    {
         "property_id": 250004008,
         "region": "Uruguay",
         "type": "Port of Montevideo",
@@ -1527,247 +1274,16 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": -34.9025,
         "longitude": -56.2068
-      },
-      {
+    },
+    {
         "property_id": 250004009,
         "region": "Ecuador",
         "type": "Port of Guayaquil",
         "price": 4900000000,
         "rent_income": 49000000,
-        "demand_factor": 0.80,
+        "demand_factor": 0.8,
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": -2.1733,
         "longitude": -79.8843
-      },
-      {
-        "property_id": 280004001,
-        "region": "United States",
-        "type": "The Metropolitan Museum of Art",
-        "price": 500000000,
-        "rent_income": 15000000,
-        "demand_factor": 0.94,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
-        "latitude": 40.7794,
-        "longitude": -73.9632
-      },
-      {
-        "property_id": 280004002,
-        "region": "Mexico",
-        "type": "National Museum of Anthropology",
-        "price": 200000000,
-        "rent_income": 6000000,
-        "demand_factor": 0.85,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
-        "latitude": 19.4261,
-        "longitude": -99.1747
-      },
-      {
-        "property_id": 280004003,
-        "region": "Brazil",
-        "type": "Museum do Amanhã",
-        "price": 300000000,
-        "rent_income": 9000000,
-        "demand_factor": 0.88,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
-        "latitude": -22.9068,
-        "longitude": -43.1802
-      },
-      {
-        "property_id": 280004004,
-        "region": "United States",
-        "type": "Smithsonian National Museum of Natural History",
-        "price": 450000000,
-        "rent_income": 13500000,
-        "demand_factor": 0.92,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
-        "latitude": 38.8913,
-        "longitude": -77.0260
-      },
-      {
-        "property_id": 280004005,
-        "region": "Argentina",
-        "type": "Museum Nacional de Bellas Artes",
-        "price": 150000000,
-        "rent_income": 4500000,
-        "demand_factor": 0.83,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
-        "latitude": -34.5884,
-        "longitude": -58.4173
-      },
-      {
-        "property_id": 280004006,
-        "region": "Canada",
-        "type": "Royal Ontario Museum",
-        "price": 350000000,
-        "rent_income": 10500000,
-        "demand_factor": 0.90,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
-        "latitude": 43.6677,
-        "longitude": -79.3948
-      },
-      {
-        "property_id": 280004007,
-        "region": "Chile",
-        "type": "Museum Nacional de Historia Natural",
-        "price": 180000000,
-        "rent_income": 5400000,
-        "demand_factor": 0.86,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
-        "latitude": -33.4690,
-        "longitude": -70.6455
-      },
-      {
-        "property_id": 280005001,
-        "region": "France",
-        "type": "Louvre Museum",
-        "price": 600000000,
-        "rent_income": 18000000,
-        "demand_factor": 0.96,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
-        "latitude": 48.8606,
-        "longitude": 2.3376
-      },
-      {
-        "property_id": 280005002,
-        "region": "United Kingdom",
-        "type": "British Museum",
-        "price": 550000000,
-        "rent_income": 16500000,
-        "demand_factor": 0.93,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
-        "latitude": 51.5194,
-        "longitude": -0.1270
-      },
-      {
-        "property_id": 280005003,
-        "region": "Italy",
-        "type": "Vatican Museum",
-        "price": 520000000,
-        "rent_income": 15600000,
-        "demand_factor": 0.95,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
-        "latitude": 41.9060,
-        "longitude": 12.4534
-      },
-      {
-        "property_id": 280005004,
-        "region": "Germany",
-        "type": "Pergamon Museum",
-        "price": 480000000,
-        "rent_income": 14400000,
-        "demand_factor": 0.92,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
-        "latitude": 52.5212,
-        "longitude": 13.3977
-      },
-      {
-        "property_id": 280005005,
-        "region": "Egypt",
-        "type": "Egyptian Museum",
-        "price": 300000000,
-        "rent_income": 9000000,
-        "demand_factor": 0.89,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
-        "latitude": 30.0473,
-        "longitude": 31.2336
-      },
-      {
-        "property_id": 280005006,
-        "region": "South Africa",
-        "type": "Iziko South African Museum",
-        "price": 180000000,
-        "rent_income": 5400000,
-        "demand_factor": 0.85,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
-        "latitude": -33.9258,
-        "longitude": 18.4232
-      },
-      {
-        "property_id": 280005007,
-        "region": "Morocco",
-        "type": "Mohammed VI d'Art Moderne et Contemporain Museum",
-        "price": 220000000,
-        "rent_income": 6600000,
-        "demand_factor": 0.87,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
-        "latitude": 34.0223,
-        "longitude": -6.8362
-      },
-      {
-        "property_id": 280006001,
-        "region": "China",
-        "type": "The Palace Museum",
-        "price": 600000000,
-        "rent_income": 18000000,
-        "demand_factor": 0.94,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
-        "latitude": 39.9163,
-        "longitude": 116.3972
-      },
-      {
-        "property_id": 280006002,
-        "region": "India",
-        "type": "Indian Museum",
-        "price": 250000000,
-        "rent_income": 7500000,
-        "demand_factor": 0.89,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
-        "latitude": 22.5647,
-        "longitude": 88.3639
-      },
-      {
-        "property_id": 280006003,
-        "region": "Japan",
-        "type": "Tokyo National Museum",
-        "price": 450000000,
-        "rent_income": 13500000,
-        "demand_factor": 0.91,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
-        "latitude": 35.7138,
-        "longitude": 139.7778
-      },
-      {
-        "property_id": 280006004,
-        "region": "Australia",
-        "type": "Australian Museum",
-        "price": 300000000,
-        "rent_income": 9000000,
-        "demand_factor": 0.88,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
-        "latitude": -33.8688,
-        "longitude": 151.2093
-      },
-      {
-        "property_id": 280006005,
-        "region": "South Korea",
-        "type": "National Museum of Korea",
-        "price": 380000000,
-        "rent_income": 11400000,
-        "demand_factor": 0.92,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
-        "latitude": 37.5326,
-        "longitude": 126.9994
-      },
-      {
-        "property_id": 280006006,
-        "region": "Egypt",
-        "type": "Grand Egyptian Museum",
-        "price": 520000000,
-        "rent_income": 15600000,
-        "demand_factor": 0.93,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
-        "latitude": 29.9802,
-        "longitude": 31.1300
-      },
-      {
-        "property_id": 280006007,
-        "region": "Indonesia",
-        "type": "National Museum of Indonesia",
-        "price": 180000000,
-        "rent_income": 5400000,
-        "demand_factor": 0.86,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738840111/museums_nlyvpo.png",
-        "latitude": -6.1754,
-        "longitude": 106.8283
-      }
+    }
 ]
