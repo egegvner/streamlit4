@@ -2760,7 +2760,7 @@ def real_estate_marketplace_view(conn, user_id):
                 get_position=["LON", "LAT"],  
                 get_color="Color",
                 pickable=True,
-                pointSize=2,
+                pointSize=4,
             ),
         ],
         initial_view_state=pdk.ViewState(
