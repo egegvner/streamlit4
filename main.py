@@ -601,10 +601,10 @@ def init_db(conn):
     c.execute('''CREATE TABLE IF NOT EXISTS users (
                   user_id INTEGER PRIMARY KEY NOT NULL,
                   username TEXT NOT NULL UNIQUE,
-                  level INTEGER DEFAULT 0,
+                  level INTEGER DEFAULT 1,
                   visible_name TEXT,
                   password TEXT NOT NULL,
-                  balance REAL DEFAULT 10,
+                  balance REAL DEFAULT 1000,
                   has_savings_account INTEGER DEFAULT 0,
                   suspension INTEGER DEFAULT 0,
                   deposits INTEGER DEFAULT 0,
