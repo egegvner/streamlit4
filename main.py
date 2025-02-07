@@ -1422,9 +1422,9 @@ def inventory_view(conn, user_id):
 
                 with col2:
                     st.subheader(f"{region} - {prop_type}")
-                    cw1, cw2 = st.columns(2)
-                    cw1.write(f":gray[Rent] :green[${format_number(rent_income)} / day]")
-                    cw1.write(f":gray[Purchased] :blue[{str((datetime.datetime.strptime(purchase_date[:-3], '%Y-%m-%d %H:%M'))).split(':00')[0]}]")
+                    cqw1, cqw2 = st.columns(2)
+                    cqw1.write(f":gray[Rent] :green[${format_number(rent_income)} / day]")
+                    cqw1.write(f":gray[Purchased] :blue[{str(datetime.datetime.strptime(purchase_date, '%Y-%m-%d %H:%M:%S') + datetime.timedelta(hours = 8))[:-3]}]")
                     
                     if last_collected:
                         current_time = datetime.datetime.now()
@@ -1435,14 +1435,15 @@ def inventory_view(conn, user_id):
                         if hours < 0:
                             hours = 0
                             minutes = 0
-                        cw2.write(f":gray[Level] :orange[{level}]")
-                        cw2.write(f":gray[Ready In] :green[{int(hours)}] :gray[Hours,] :green[{int(minutes)}] :gray[Minutes]")
+                            
+                    cqw2.write(f":gray[Level] :orange[{level}]")
+                    cqw2.write(f":gray[Ready In] :green[{int(hours)}] :gray[Hours,] :green[{int(minutes)}] :gray[Minutes]")
 
-                        with st.container(border=True):
-                            if time_left.total_seconds() < 0:
-                                st.success(f"[Accumulated Rent] :green[${format_number(rent_income)}]")
-                            else:
-                                st.success(f"[Accumulated Rent] :green[$0]")
+                    with st.container(border=True):
+                        if time_left.total_seconds() < 0:
+                            st.success(f"[Accumulated Rent] :green[${format_number(rent_income)}]")
+                        else:
+                            st.success(f"[Accumulated Rent] :green[$0]")
                     
                     c1, c2, c3, c4 = st.columns(4)
 
