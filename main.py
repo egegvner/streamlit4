@@ -81,8 +81,8 @@ def write_stream(s, delay = 0, random_delay = False):
             time.sleep(delay)
 
 @st.cache_resource
-def get_db_connection(path):
-    return sqlite3.connect(path, check_same_thread = False)
+def get_db_connection():
+    return sqlite3.connect("genova.db", check_same_thread = False)
 
 item_colors = {
         "Common":":gray",
@@ -604,7 +604,7 @@ def init_db(conn):
                   level INTEGER DEFAULT 0,
                   visible_name TEXT,
                   password TEXT NOT NULL,
-                  balance REAL DEFAULT 1000,
+                  balance REAL DEFAULT 10,
                   has_savings_account INTEGER DEFAULT 0,
                   suspension INTEGER DEFAULT 0,
                   deposits INTEGER DEFAULT 0,
@@ -1036,7 +1036,7 @@ def item_options(conn, user_id, item_id):
 def gift_prop_dialog(conn, user_id, prop_id):
     c = conn.cursor()
     all_users = [user[0] for user in c.execute("SELECT username FROM users WHERE username != ?", (st.session_state.username,)).fetchall()]
-    chosen = st.selectbox("", label_visibility="collapsed", options=all_users)
+    chosen = st.selectbox("", label_visibility="collapsed", options=all_users, index=random.randint(0, len(all_users)))
     chosen_id = c.execute("SELECT user_id FROM users WHERE username = ?", (chosen,)).fetchone()[0]
     if st.button("Confirm Gift Property", use_container_width=True, type="primary"):
         with st.spinner("Sending gift..."):
@@ -2100,22 +2100,22 @@ def stocks_view(conn, user_id):
                 st.rerun()
 
             if q4.button("10h", type="tertiary", use_container_width=True):
-                st.session_state.resample = 1
+                st.session_state.resample = 0.8
                 st.session_state.hours = 10
                 st.rerun()
 
             if q5.button("1d", type="tertiary", use_container_width=True):
-                st.session_state.resample = 1
+                st.session_state.resample = 0.6
                 st.session_state.hours = 24
                 st.rerun()
 
             if q6.button("7d", type="tertiary", use_container_width=True):
-                st.session_state.resample = 1
+                st.session_state.resample = 3
                 st.session_state.hours = 168
                 st.rerun()
 
             if q7.button("15d", type="tertiary", use_container_width=True):
-                st.session_state.resample = 1
+                st.session_state.resample = 4
                 st.session_state.hours = 360
                 st.rerun()
 
@@ -3730,6 +3730,8 @@ def main(conn):
             chat_view(conn)
         
         elif st.session_state.current_menu == "Stocks":
+            st.session_state.resample = 3
+            st.session_state.hours = 168
             stocks_view(conn, st.session_state.user_id)
         
         elif st.session_state.current_menu == "Holdings":
@@ -3779,6 +3781,6 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
         pass
 
 if __name__ == "__main__":
-    conn = get_db_connection("genova.db")
+    conn = get_db_connection()
     init_db(conn)
     main(conn)
