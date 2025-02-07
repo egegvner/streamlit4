@@ -595,7 +595,8 @@ def register_user(conn, username, password, email = None, visible_name = None):
         st.error(f"Error: {e}")
         return False
         
-def init_db(conn):
+def init_db():
+    conn = get_db_connection("./genova.db")
     c = conn.cursor()
 
     c.execute('''CREATE TABLE IF NOT EXISTS users (
@@ -3809,5 +3810,5 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
 
 if __name__ == "__main__":
     conn = get_db_connection("./genova.db")
-    init_db(conn)
+    init_db("./genova.db")
     main(conn)
