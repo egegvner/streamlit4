@@ -220,18 +220,12 @@ def recent_transactions_metrics(c, user_id):
     """, (user_id, last_24_hours_str)).fetchall()
 
     metrics = {
-        "Top Ups": {"count": 0, "total": 0},
-        "Withdrawals": {"count": 0, "total": 0},
         "Incoming Transfers": {"count": 0, "total": 0},
         "Outgoing Transfers": {"count": 0, "total": 0},
     }
 
     for trans_type, count, total in transactions:
-        if "top up" in trans_type.lower():
-            metrics["Top Ups"] = {"count": count, "total": total}
-        elif "withdrawal" in trans_type.lower():
-            metrics["Withdrawals"] = {"count": count, "total": total}
-        elif trans_type.lower().startswith("transfer to"):
+        if trans_type.lower().startswith("transfer to"):
             metrics["Outgoing Transfers"] = {"count": count, "total": total}
         elif trans_type.lower().startswith("transfer from"):
             metrics["Incoming Transfers"] = {"count": count, "total": total}
@@ -288,7 +282,7 @@ def claim_daily_reward(conn, user_id):
                     (reward, datetime.datetime.today().strftime("%Y-%m-%d"), new_streak, user_id))
             conn.commit()
             
-            st.toast(f"🎉 You received ${reward} for logging in! (Streak: {new_streak})")
+            st.toast(f"🎉 You received :green[${reward}] for logging in! (Streak: :orange[{new_streak}])")
             time.sleep(3)
     else:
         last_claimed = datetime.datetime(1970, 1, 1)
@@ -308,13 +302,13 @@ def update_stock_prices(conn):
             if last_updated:
                 last_updated = datetime.datetime.strptime(last_updated, "%Y-%m-%d %H:%M:%S")
             else:
-                last_updated = now - datetime.timedelta(seconds=20)
+                last_updated = now - datetime.timedelta(seconds=30)
 
             if open_price is None:
                 open_price = current_price
 
             elapsed_time = (now - last_updated).total_seconds()
-            num_updates = int(elapsed_time // 20)
+            num_updates = int(elapsed_time // 30)
 
             one_month_ago = now - datetime.timedelta(days=30)
             c.execute(
@@ -327,7 +321,7 @@ def update_stock_prices(conn):
                     change_percent = round(random.uniform(-change_rate, change_rate), 2)
                     new_price = max(1, round(current_price * (1 + change_percent / 100), 2))
 
-                    missed_update_time = last_updated + datetime.timedelta(seconds=(i + 1) * 20)
+                    missed_update_time = last_updated + datetime.timedelta(seconds=(i + 1) * 30)
                     if missed_update_time <= now:
                         c.execute(
                             "INSERT INTO stock_history (stock_id, price, timestamp) VALUES (?, ?, ?)",
@@ -778,6 +772,7 @@ def init_db(conn):
             property_id INTEGER,
             purchase_date TEXT NOT NULL,
             rent_income REAL NOT NULL,
+            level INTEGER DEFAULT 1,
             FOREIGN KEY(user_id) REFERENCES users(user_id),
             FOREIGN KEY(property_id) REFERENCES real_estate(property_id)
             );''')
@@ -1246,6 +1241,40 @@ def inventory_item_options(conn, user_id, item_id):
         time.sleep(1)
         st.rerun()
 
+@st.dialog(" ")
+def upgrade_prop_dialog(conn, user_id, prop_id):
+    c = conn.cursor()
+    prop = c.execute("SELECT type FROM real_estate WHERE property_id = ?", (prop_id,)).fetchone()[0]
+    user_prop = c.execute("SELECT level, rent_income from user_properties WHERE user_id = ? AND property_id = ?", (user_id, prop_id)).fetchone()
+    balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+    
+    st.title(f":green[Upgrade] {prop}")
+    st.text("")
+    st.text("")
+
+    c1, c2 = st.columns(2)
+    with c1:
+        with st.container(border=True, ):
+            st.caption(":orange[CURRENT]")
+            st.title(f"**Level** :blue[{user_prop[0]}]")
+            st.subheader(f"RENT -> **:green[${format_number(user_prop[1])}]** / day")
+    with c2:
+        with st.container(border=True, ):
+            st.caption(":orange[NEXT]")
+            st.title(f"**Level** :blue[{user_prop[0] + 1}]")
+            st.subheader(f"RENT -> **:green[${format_number(user_prop[1] * 1.5)}]** / day")
+    
+    st.title(f"**COST**  :red[${format_number(user_prop[0] * user_prop[1] * 10)}]")
+    if st.button("**Confirm Upgrade**", type="primary", use_container_width=True, disabled=True if balance < (user_prop[0] * user_prop[1] * 10) else False):
+        with st.spinner("🔨 Processing upgrade..."):
+            c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (user_prop[0] * user_prop[1] * 10, user_id))
+            c.execute("UPDATE user_properties SET rent_income = ?, level = level + 1 WHERE property_id = ?", (user_prop[1] * 1.5, prop_id))
+            conn.commit()
+            time.sleep(3)
+        st.success(f"Upgraded {prop} to level :orange[{user_prop[0] + 1}]!")
+        time.sleep(1.5)
+        st.rerun()
+
 def buy_item(conn, user_id, item_id):
     c = conn.cursor()
 
@@ -1362,7 +1391,7 @@ def inventory_view(conn, user_id):
         st.header("🏡 My Properties", divider="rainbow")
 
         owned_properties = c.execute("""
-            SELECT up.property_id, re.region, re.type, re.image_url, up.rent_income, up.last_collected, up.purchase_date
+            SELECT up.property_id, re.region, re.type, re.image_url, up.rent_income, up.last_collected, up.purchase_date, up.level
             FROM user_properties up
             JOIN real_estate re ON up.property_id = re.property_id
             WHERE up.user_id = ?
@@ -1373,7 +1402,7 @@ def inventory_view(conn, user_id):
             return
 
         for property in owned_properties:
-            prop_id, region, prop_type, image_url, rent_income, last_collected, purchase_date = property
+            prop_id, region, prop_type, image_url, rent_income, last_collected, purchase_date, level = property
             
             last_collected = datetime.datetime.strptime(last_collected, "%Y-%m-%d %H:%M:%S") if last_collected else None
             now = datetime.datetime.now()
@@ -1390,7 +1419,8 @@ def inventory_view(conn, user_id):
                     st.subheader(f"{region} - {prop_type}")
                     cw1, cw2 = st.columns(2)
                     cw1.write(f":gray[Rent] :green[${format_number(rent_income)} / day]")
-                    cw1.write(f":gray[Purchased] :blue[{purchase_date}]")
+                    cw1.write(f":gray[Purchased] :blue[{str((datetime.datetime.strptime(purchase_date[:-3], "%Y-%m-%d %H:%M"))).split(":00")[0]}]")
+                    
                     if last_collected:
                         current_time = datetime.datetime.now()
                         elapsed_time = current_time - last_collected
@@ -1400,7 +1430,7 @@ def inventory_view(conn, user_id):
                         if hours < 0:
                             hours = 0
                             minutes = 0
-                        cw2.write(f":gray[Last Collected] :blue[{last_collected.strftime('%Y-%m-%d %H:%M:%S')}]")
+                        cw2.write(f":gray[Level] :orange[{level}]")
                         cw2.write(f":gray[Ready In] :green[{int(hours)}] :gray[Hours,] :green[{int(minutes)}] :gray[Minutes]")
 
                         with st.container(border=True):
@@ -1409,9 +1439,9 @@ def inventory_view(conn, user_id):
                             else:
                                 st.success(f"[Accumulated Rent] :green[$0]")
                     
-                    c1, c2, c3 = st.columns(3)
+                    c1, c2, c3, c4 = st.columns(4)
 
-                    if c1.button("Sell To Bank", key=f"sell_{prop_id}", use_container_width=True):
+                    if c1.button("Sell", key=f"sell_{prop_id}", use_container_width=True):
                         with st.spinner("Selling..."):
                             c.execute("DELETE FROM user_properties WHERE property_id = ?", (prop_id,))
                             c.execute("UPDATE real_estate SET sold = 0, is_owned = 0, username = NULL, user_id = 0 WHERE property_id = ?", (prop_id,))
@@ -1423,13 +1453,15 @@ def inventory_view(conn, user_id):
                     if c2.button("Gift", key=f"gift_{prop_id}", use_container_width=True):
                         gift_prop_dialog(conn, user_id, prop_id)
 
-                    if c3.button("**Collect Rent**", type="primary", key=f"rent_{prop_id}", use_container_width=True, disabled=not can_collect, help="Rent for this property has already been collected today." if not can_collect else None):
-                        with st.spinner("Collecting Rent..."):
-                            c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (rent_income, user_id))
-                            c.execute("UPDATE user_properties SET last_collected = ? WHERE property_id = ?", (now.strftime("%Y-%m-%d %H:%M:%S"), prop_id))
-                            conn.commit()
-                            st.toast(f"🎉 Collected :green[${format_number(rent_income)}]!")
-                            time.sleep(1)
+                    if c3.button("Upgrade", key=f"upgrade_{prop_id}", use_container_width=True, type="primary"):
+                        upgrade_prop_dialog(conn, user_id, prop_id)
+
+                    if c4.button("**COLLECT RENT**", type="primary", key=f"rent_{prop_id}", use_container_width=True, disabled=not can_collect, help="Rent for this property has already been collected today." if not can_collect else None):
+                        c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (rent_income, user_id))
+                        c.execute("UPDATE user_properties SET last_collected = ? WHERE property_id = ?", (now.strftime("%Y-%m-%d %H:%M:%S"), prop_id))
+                        conn.commit()
+                        st.toast(f"🎉 Collected :green[${format_number(rent_income)}]!")
+                        time.sleep(1)
                         st.rerun()
 
 def manage_pending_transfers(conn, receiver_id):
@@ -2859,7 +2891,8 @@ def real_estate_marketplace_view(conn, user_id):
                                 prop_details_dialog(conn, user_id, row["Property ID"])
                         else:
                             st.warning("This property has already been sold.")
-    
+
+                        st.caption(":gray[UPGRADABLE]")
                     st.divider()
 
 @st.dialog("Property Details", width="large")
@@ -3818,4 +3851,5 @@ def filter_airports_and_ports(conn):
 if __name__ == "__main__":
     conn = get_db_connection()
     init_db(conn)
+    add_column_if_not_exists(conn, "user_properties", "level", "INTEGER DEFAULT 1")
     main(conn)
