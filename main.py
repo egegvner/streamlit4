@@ -2787,8 +2787,6 @@ def real_estate_marketplace_view(conn, user_id):
     property_categories = {
         "AIRPORTS": [],
         "PORTS": [],
-        "THEATRES": [],
-        "CINEMAS": [],
         "MUSEUMS": [],
         "PARKS": []
     }
@@ -2799,17 +2797,14 @@ def real_estate_marketplace_view(conn, user_id):
             property_categories["AIRPORTS"].append(row)
         elif "port" in title:
             property_categories["PORTS"].append(row)
-        elif "theatre" in title:
-            property_categories["THEATRES"].append(row)
-        elif "cinema" in title:
             property_categories["CINEMAS"].append(row)
         elif "museum" in title:
             property_categories["MUSEUMS"].append(row)
         elif "park" in title:
             property_categories["PARKS"].append(row)
 
-    tabs = st.tabs(["✈️ AIRPORTS ✈️", "⚓️ PORTS ⚓️", "🎭 THEATRES 🎭", "🎥 CINEMAS 🎥", "📜 MUSEUMS 📜", "🌲 PARKS 🌲", "⚜️ MISCELLANEOUS ⚜️"])
-    tab_names = ["AIRPORTS", "PORTS", "THEATRES", "CINEMAS", "MUSEUMS", "PARKS", "MISCELLANEOUS"]
+    tabs = st.tabs(["✈️ AIRPORTS ✈️", "⚓️ PORTS ⚓️", "📜 MUSEUMS 📜", "🌲 PARKS 🌲"])
+    tab_names = ["AIRPORTS", "PORTS", "MUSEUMS", "PARKS"]
     
     property_categories = {category: [] for category in tab_names}
     
@@ -2819,16 +2814,10 @@ def real_estate_marketplace_view(conn, user_id):
             property_categories["AIRPORTS"].append(row)
         elif "port" in title:
             property_categories["PORTS"].append(row)
-        elif "theatre" in title:
-            property_categories["THEATRES"].append(row)
-        elif "cinema" in title:
-            property_categories["CINEMAS"].append(row)
         elif "museum" in title:
             property_categories["MUSEUMS"].append(row)
-        elif "park" in title:
-            property_categories["PARKS"].append(row)
         else:
-            property_categories["MISCELLANEOUS"].append(row)  # Properties without a matching keyword
+            property_categories["PARKS"].append(row)
     
     for tab, category in zip(tabs, tab_names):
         with tab:
