@@ -604,7 +604,7 @@ def init_db(conn):
                   level INTEGER DEFAULT 0,
                   visible_name TEXT,
                   password TEXT NOT NULL,
-                  balance REAL DEFAULT 10,
+                  balance REAL DEFAULT 1000,
                   has_savings_account INTEGER DEFAULT 0,
                   suspension INTEGER DEFAULT 0,
                   deposits INTEGER DEFAULT 0,
