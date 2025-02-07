@@ -2787,8 +2787,7 @@ def real_estate_marketplace_view(conn, user_id):
     property_categories = {
         "AIRPORTS": [],
         "PORTS": [],
-        "MUSEUMS": [],
-        "PARKS": []
+        "LANDMARKS": [],
     }
 
     for _, row in df.iterrows():
@@ -2797,13 +2796,11 @@ def real_estate_marketplace_view(conn, user_id):
             property_categories["AIRPORTS"].append(row)
         elif "port" in title:
             property_categories["PORTS"].append(row)
-        elif "museum" in title:
-            property_categories["MUSEUMS"].append(row)
-        elif "park" in title:
-            property_categories["PARKS"].append(row)
+        else:
+            property_categories["LANDMARKS"].append(row)
 
-    tabs = st.tabs(["✈️ AIRPORTS ✈️", "⚓️ PORTS ⚓️", "📜 MUSEUMS 📜", "🌲 PARKS 🌲"])
-    tab_names = ["AIRPORTS", "PORTS", "MUSEUMS", "PARKS"]
+    tabs = st.tabs(["✈️ AIRPORTS ✈️", "⚓️ PORTS ⚓️", "🪅 LANDMARKS 🪅"])
+    tab_names = ["AIRPORTS", "PORTS", "LANDMARKS"]
     
     property_categories = {category: [] for category in tab_names}
     
@@ -2813,10 +2810,8 @@ def real_estate_marketplace_view(conn, user_id):
             property_categories["AIRPORTS"].append(row)
         elif "port" in title:
             property_categories["PORTS"].append(row)
-        elif "museum" in title:
-            property_categories["MUSEUMS"].append(row)
         else:
-            property_categories["PARKS"].append(row)
+            property_categories["LANDMARKS"].append(row)
     
     for tab, category in zip(tabs, tab_names):
         with tab:
