@@ -385,17 +385,6 @@
         "longitude": -46.4731
     },
     {
-        "property_id": 327897103,
-        "region": "Bogot\u00e1",
-        "type": "El Dorado International Airport",
-        "price": 8500000000,
-        "rent_income": 85000000.0,
-        "demand_factor": 0.58,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 4.7016,
-        "longitude": -74.1469
-    },
-    {
         "property_id": 428297654,
         "region": "Buenos Aires",
         "type": "Ministro Pistarini International Airport (Ezeiza)",
@@ -405,17 +394,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
         "latitude": -34.8223,
         "longitude": -58.5359
-    },
-    {
-        "property_id": 539847102,
-        "region": "Lima",
-        "type": "Jorge Ch\u00e1vez International Airport",
-        "price": 7800000000,
-        "rent_income": 78000000.0,
-        "demand_factor": 0.6,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": -12.0219,
-        "longitude": -77.1147
     },
     {
         "property_id": 653892047,
@@ -539,17 +517,6 @@
         "longitude": -7.5894
     },
     {
-        "property_id": 120792398,
-        "region": "India",
-        "type": "Indira Gandhi Intl. Airport",
-        "price": 13000000000,
-        "rent_income": 130000000.0,
-        "demand_factor": 0.8,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 28.5562,
-        "longitude": 77.1
-    },
-    {
         "property_id": 153466996,
         "region": "India",
         "type": "Chhatrapati Shivaji Intl. Airport",
@@ -570,17 +537,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
         "latitude": 13.1978,
         "longitude": 77.709
-    },
-    {
-        "property_id": 153466997,
-        "region": "India",
-        "type": "Netaji Subhash Chandra Bose Intl. Airport",
-        "price": 7500000000,
-        "rent_income": 75000000.0,
-        "demand_factor": 0.7,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 22.6546,
-        "longitude": 88.4469
     },
     {
         "property_id": 120792400,
@@ -616,61 +572,6 @@
         "longitude": 37.9064
     },
     {
-        "property_id": 120792402,
-        "region": "Russia",
-        "type": "Pulkovo Airport",
-        "price": 9500000000,
-        "rent_income": 95000000.0,
-        "demand_factor": 0.68,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 59.8006,
-        "longitude": 30.2625
-    },
-    {
-        "property_id": 153466999,
-        "region": "Russia",
-        "type": "Vnukovo Intl. Airport",
-        "price": 8500000000,
-        "rent_income": 85000000.0,
-        "demand_factor": 0.66,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 55.593,
-        "longitude": 37.2639
-    },
-    {
-        "property_id": 120792403,
-        "region": "Russia",
-        "type": "Kazan Intl. Airport",
-        "price": 7000000000,
-        "rent_income": 70000000.0,
-        "demand_factor": 0.64,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 55.6086,
-        "longitude": 49.2781
-    },
-    {
-        "property_id": 120792404,
-        "region": "Russia",
-        "type": "Tolmachevo Airport",
-        "price": 6000000000,
-        "rent_income": 60000000.0,
-        "demand_factor": 0.65,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 55.008,
-        "longitude": 82.6503
-    },
-    {
-        "property_id": 153467000,
-        "region": "Russia",
-        "type": "Krasnoyarsk Yemelyanovo Airport",
-        "price": 5200000000,
-        "rent_income": 52000000.0,
-        "demand_factor": 0.6,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 55.0412,
-        "longitude": 92.9556
-    },
-    {
         "property_id": 120792405,
         "region": "Russia",
         "type": "Novosibirsk Tolmachevo Airport",
@@ -680,17 +581,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
         "latitude": 55.008,
         "longitude": 82.6503
-    },
-    {
-        "property_id": 153467001,
-        "region": "Russia",
-        "type": "Irkutsk Airport",
-        "price": 4800000000,
-        "rent_income": 48000000.0,
-        "demand_factor": 0.55,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 52.2856,
-        "longitude": 104.3842
     },
     {
         "property_id": 120792406,
@@ -746,28 +636,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
         "latitude": -27.3847,
         "longitude": 153.1175
-    },
-    {
-        "property_id": 153467004,
-        "region": "Australia",
-        "type": "Perth Airport",
-        "price": 9500000000,
-        "rent_income": 95000000.0,
-        "demand_factor": 0.69,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": -31.9403,
-        "longitude": 115.9672
-    },
-    {
-        "property_id": 120792409,
-        "region": "Australia",
-        "type": "Adelaide Airport",
-        "price": 8500000000,
-        "rent_income": 85000000.0,
-        "demand_factor": 0.65,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": -34.9451,
-        "longitude": 138.531
     },
     {
         "property_id": 120792410,
@@ -858,28 +726,6 @@
         "longitude": 172.5322
     },
     {
-        "property_id": 120792414,
-        "region": "New Zealand",
-        "type": "Wellington International Airport",
-        "price": 5000000000,
-        "rent_income": 50000000.0,
-        "demand_factor": 0.65,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": -41.327,
-        "longitude": 174.805
-    },
-    {
-        "property_id": 153467009,
-        "region": "New Zealand",
-        "type": "Queenstown Airport",
-        "price": 4300000000,
-        "rent_income": 43000000.0,
-        "demand_factor": 0.68,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": -45.0219,
-        "longitude": 168.7399
-    },
-    {
         "property_id": 120792415,
         "region": "Egypt",
         "type": "Cairo International Airport",
@@ -911,28 +757,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
         "latitude": 33.3675,
         "longitude": -7.5898
-    },
-    {
-        "property_id": 153467011,
-        "region": "Algeria",
-        "type": "Houari Boumediene Airport",
-        "price": 5300000000,
-        "rent_income": 53000000.0,
-        "demand_factor": 0.68,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 36.6912,
-        "longitude": 3.2151
-    },
-    {
-        "property_id": 120792417,
-        "region": "Kenya",
-        "type": "Jomo Kenyatta International Airport",
-        "price": 8000000000,
-        "rent_income": 80000000.0,
-        "demand_factor": 0.74,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": -1.319167,
-        "longitude": 36.927778
     },
     {
         "property_id": 153467012,
@@ -968,28 +792,6 @@
         "longitude": -3.5703
     },
     {
-        "property_id": 153467013,
-        "region": "Spain",
-        "type": "Barcelona El Prat Airport",
-        "price": 9000000000,
-        "rent_income": 90000000.0,
-        "demand_factor": 0.76,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 41.2974,
-        "longitude": 2.0785
-    },
-    {
-        "property_id": 120792421,
-        "region": "Spain",
-        "type": "Palma de Mallorca Airport",
-        "price": 5000000000,
-        "rent_income": 50000000.0,
-        "demand_factor": 0.7,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 39.5513,
-        "longitude": 2.7385
-    },
-    {
         "property_id": 153467014,
         "region": "Germany",
         "type": "Munich Airport",
@@ -1023,28 +825,6 @@
         "longitude": 4.4844
     },
     {
-        "property_id": 153467015,
-        "region": "Belgium",
-        "type": "Charleroi Airport",
-        "price": 4000000000,
-        "rent_income": 40000000.0,
-        "demand_factor": 0.68,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 50.4514,
-        "longitude": 4.4533
-    },
-    {
-        "property_id": 120792425,
-        "region": "Belgium",
-        "type": "Antwerp International Airport",
-        "price": 2500000000,
-        "rent_income": 25000000.0,
-        "demand_factor": 0.65,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 51.1894,
-        "longitude": 4.4608
-    },
-    {
         "property_id": 120792426,
         "region": "Sweden",
         "type": "Stockholm Arlanda Airport",
@@ -1054,28 +834,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
         "latitude": 59.6519,
         "longitude": 17.9186
-    },
-    {
-        "property_id": 153467016,
-        "region": "Sweden",
-        "type": "Gothenburg Landvetter Airport",
-        "price": 5500000000,
-        "rent_income": 55000000.0,
-        "demand_factor": 0.71,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 57.6628,
-        "longitude": 12.2931
-    },
-    {
-        "property_id": 120792427,
-        "region": "Sweden",
-        "type": "Malm\u00f6 Airport",
-        "price": 3000000000,
-        "rent_income": 30000000.0,
-        "demand_factor": 0.65,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 55.535,
-        "longitude": 13.37
     },
     {
         "property_id": 120792428,
@@ -1089,28 +847,6 @@
         "longitude": 24.9633
     },
     {
-        "property_id": 153467017,
-        "region": "Finland",
-        "type": "Oulu Airport",
-        "price": 3500000000,
-        "rent_income": 35000000.0,
-        "demand_factor": 0.68,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 64.9197,
-        "longitude": 25.3581
-    },
-    {
-        "property_id": 120792429,
-        "region": "Finland",
-        "type": "Tampere\u2013Pirkkala Airport",
-        "price": 2500000000,
-        "rent_income": 25000000.0,
-        "demand_factor": 0.66,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 61.4147,
-        "longitude": 23.5939
-    },
-    {
         "property_id": 120792430,
         "region": "Ukraine",
         "type": "Boryspil International Airport",
@@ -1120,28 +856,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
         "latitude": 50.3458,
         "longitude": 30.8945
-    },
-    {
-        "property_id": 153467018,
-        "region": "Ukraine",
-        "type": "Lviv Danylo Halytskyi International Airport",
-        "price": 3000000000,
-        "rent_income": 30000000.0,
-        "demand_factor": 0.67,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 49.8192,
-        "longitude": 23.9542
-    },
-    {
-        "property_id": 120792431,
-        "region": "Ukraine",
-        "type": "Odessa International Airport",
-        "price": 3800000000,
-        "rent_income": 38000000.0,
-        "demand_factor": 0.69,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 46.4267,
-        "longitude": 30.6767
     },
     {
         "property_id": 120792432,
@@ -1166,17 +880,6 @@
         "longitude": 6.1084
     },
     {
-        "property_id": 120792433,
-        "region": "Switzerland",
-        "type": "Basel-Mulhouse Airport",
-        "price": 6500000000,
-        "rent_income": 65000000.0,
-        "demand_factor": 0.7,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 47.5903,
-        "longitude": 7.5292
-    },
-    {
         "property_id": 120792434,
         "region": "Bulgaria",
         "type": "Sofia Airport",
@@ -1186,39 +889,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
         "latitude": 42.6925,
         "longitude": 23.4111
-    },
-    {
-        "property_id": 153467020,
-        "region": "Bulgaria",
-        "type": "Varna Airport",
-        "price": 1800000000,
-        "rent_income": 18000000.0,
-        "demand_factor": 0.65,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 43.2322,
-        "longitude": 27.8239
-    },
-    {
-        "property_id": 120792435,
-        "region": "Bulgaria",
-        "type": "Burgas Airport",
-        "price": 2500000000,
-        "rent_income": 25000000.0,
-        "demand_factor": 0.63,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 42.5706,
-        "longitude": 27.5156
-    },
-    {
-        "property_id": 120792436,
-        "region": "Romania",
-        "type": "Henri Coand\u0103 International Airport",
-        "price": 4000000000,
-        "rent_income": 40000000.0,
-        "demand_factor": 0.67,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 44.5742,
-        "longitude": 26.0986
     },
     {
         "property_id": 153467021,
@@ -1232,17 +902,6 @@
         "longitude": 23.6931
     },
     {
-        "property_id": 120792437,
-        "region": "Romania",
-        "type": "Ia\u0219i International Airport",
-        "price": 2500000000,
-        "rent_income": 25000000.0,
-        "demand_factor": 0.64,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 47.1881,
-        "longitude": 27.6108
-    },
-    {
         "property_id": 120792438,
         "region": "Albania",
         "type": "Tirana International Airport",
@@ -1254,28 +913,6 @@
         "longitude": 19.7207
     },
     {
-        "property_id": 153467022,
-        "region": "Albania",
-        "type": "Vlor\u00eb International Airport",
-        "price": 1200000000,
-        "rent_income": 12000000.0,
-        "demand_factor": 0.6,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 40.4644,
-        "longitude": 19.3986
-    },
-    {
-        "property_id": 120792439,
-        "region": "Albania",
-        "type": "Shkod\u00ebr Airport",
-        "price": 1000000000,
-        "rent_income": 10000000.0,
-        "demand_factor": 0.55,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 42.0667,
-        "longitude": 19.5175
-    },
-    {
         "property_id": 120792440,
         "region": "Austria",
         "type": "Vienna International Airport",
@@ -1285,28 +922,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
         "latitude": 48.12,
         "longitude": 16.5667
-    },
-    {
-        "property_id": 153467023,
-        "region": "Austria",
-        "type": "Salzburg Airport",
-        "price": 4500000000,
-        "rent_income": 45000000.0,
-        "demand_factor": 0.68,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 47.7939,
-        "longitude": 13.0047
-    },
-    {
-        "property_id": 120792441,
-        "region": "Austria",
-        "type": "Innsbruck Airport",
-        "price": 3000000000,
-        "rent_income": 30000000.0,
-        "demand_factor": 0.67,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 47.2606,
-        "longitude": 11.3425
     },
     {
         "property_id": 120792442,
@@ -1485,17 +1100,6 @@
         "longitude": -78.4613
     },
     {
-        "property_id": 120792450,
-        "region": "Paraguay",
-        "type": "Silvio Pettirossi International Airport",
-        "price": 2500000000,
-        "rent_income": 25000000.0,
-        "demand_factor": 0.6,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": -25.2414,
-        "longitude": -57.5222
-    },
-    {
         "property_id": 153467032,
         "region": "Uruguay",
         "type": "Carrasco International Airport",
@@ -1551,17 +1155,6 @@
         "longitude": -86.8746
     },
     {
-        "property_id": 120792453,
-        "region": "Panama",
-        "type": "Tocumen International Airport",
-        "price": 5500000000,
-        "rent_income": 55000000.0,
-        "demand_factor": 0.72,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 9.0711,
-        "longitude": -79.3833
-    },
-    {
         "property_id": 153467035,
         "region": "Costa Rica",
         "type": "Juan Santamar\u00eda International Airport",
@@ -1606,39 +1199,6 @@
         "longitude": -86.1689
     },
     {
-        "property_id": 153467037,
-        "region": "Guatemala",
-        "type": "La Aurora International Airport",
-        "price": 3300000000,
-        "rent_income": 33000000.0,
-        "demand_factor": 0.69,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 14.5833,
-        "longitude": -90.5278
-    },
-    {
-        "property_id": 120792456,
-        "region": "Belize",
-        "type": "Philip S. W. Goldson International Airport",
-        "price": 2500000000,
-        "rent_income": 25000000.0,
-        "demand_factor": 0.64,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 17.5394,
-        "longitude": -88.3086
-    },
-    {
-        "property_id": 153467038,
-        "region": "Panama",
-        "type": "Enrique Malek International Airport",
-        "price": 2800000000,
-        "rent_income": 28000000.0,
-        "demand_factor": 0.65,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 8.2806,
-        "longitude": -82.4414
-    },
-    {
         "property_id": 120792457,
         "region": "South Africa",
         "type": "O.R. Tambo International Airport",
@@ -1648,28 +1208,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
         "latitude": -26.1392,
         "longitude": 28.2468
-    },
-    {
-        "property_id": 153467039,
-        "region": "Nigeria",
-        "type": "Murtala Muhammed International Airport",
-        "price": 6500000000,
-        "rent_income": 65000000.0,
-        "demand_factor": 0.72,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 6.5772,
-        "longitude": 3.3216
-    },
-    {
-        "property_id": 120792458,
-        "region": "Kenya",
-        "type": "Jomo Kenyatta International Airport",
-        "price": 4800000000,
-        "rent_income": 48000000.0,
-        "demand_factor": 0.7,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": -1.319167,
-        "longitude": 36.9275
     },
     {
         "property_id": 153467040,
@@ -1692,50 +1230,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
         "latitude": 33.3694,
         "longitude": -7.5894
-    },
-    {
-        "property_id": 153467041,
-        "region": "Algeria",
-        "type": "Houari Boumediene International Airport",
-        "price": 4300000000,
-        "rent_income": 43000000.0,
-        "demand_factor": 0.68,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 36.6892,
-        "longitude": 3.2156
-    },
-    {
-        "property_id": 120792460,
-        "region": "Ivory Coast",
-        "type": "Felix-Houphouet-Boigny International Airport",
-        "price": 4000000000,
-        "rent_income": 40000000.0,
-        "demand_factor": 0.66,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 5.2611,
-        "longitude": -3.9264
-    },
-    {
-        "property_id": 153467042,
-        "region": "Angola",
-        "type": "Quatro de Fevereiro International Airport",
-        "price": 3800000000,
-        "rent_income": 38000000.0,
-        "demand_factor": 0.65,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": -8.8586,
-        "longitude": 13.2319
-    },
-    {
-        "property_id": 120792461,
-        "region": "Ghana",
-        "type": "Kotoka International Airport",
-        "price": 3600000000,
-        "rent_income": 36000000.0,
-        "demand_factor": 0.64,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 5.6056,
-        "longitude": -0.1667
     },
     {
         "property_id": 153467043,
@@ -1826,17 +1320,6 @@
         "longitude": 44.9544
     },
     {
-        "property_id": 153467047,
-        "region": "Armenia",
-        "type": "Zvartnots International Airport",
-        "price": 4900000000,
-        "rent_income": 49000000.0,
-        "demand_factor": 0.71,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 40.1478,
-        "longitude": 44.3951
-    },
-    {
         "property_id": 120792466,
         "region": "Kazakstan",
         "type": "Aktau International Airport",
@@ -1901,17 +1384,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": 49.2906,
         "longitude": -123.1110
-      },
-      {
-        "property_id": 220001005,
-        "region": "Canada",
-        "type": "Port of Montreal",
-        "price": 3000000000,
-        "rent_income": 30000000,
-        "demand_factor": 0.75,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
-        "latitude": 45.5636,
-        "longitude": -73.5291
       },
       {
         "property_id": 220001006,
@@ -2156,39 +1628,6 @@
         "longitude": 3.0631
       },
       {
-        "property_id": 230002008,
-        "region": "Djibouti",
-        "type": "Port of Djibouti",
-        "price": 3900000000,
-        "rent_income": 39000000,
-        "demand_factor": 0.79,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
-        "latitude": 11.6071,
-        "longitude": 43.1425
-      },
-      {
-        "property_id": 230002009,
-        "region": "Ghana",
-        "type": "Port of Tema",
-        "price": 3500000000,
-        "rent_income": 35000000,
-        "demand_factor": 0.78,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
-        "latitude": 5.6484,
-        "longitude": -0.0183
-      },
-      {
-        "property_id": 230002010,
-        "region": "Ivory Coast",
-        "type": "Port of Abidjan",
-        "price": 3700000000,
-        "rent_income": 37000000,
-        "demand_factor": 0.78,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
-        "latitude": 5.3097,
-        "longitude": -4.0127
-      },
-      {
         "property_id": 240003003,
         "region": "Japan",
         "type": "Port of Tokyo",
@@ -2209,39 +1648,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": 18.9355,
         "longitude": 72.8400
-      },
-      {
-        "property_id": 240003006,
-        "region": "Indonesia",
-        "type": "Port of Tanjung Priok",
-        "price": 5000000000,
-        "rent_income": 50000000,
-        "demand_factor": 0.81,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
-        "latitude": -6.1085,
-        "longitude": 106.8855
-      },
-      {
-        "property_id": 240003007,
-        "region": "Thailand",
-        "type": "Port of Laem Chabang",
-        "price": 4700000000,
-        "rent_income": 47000000,
-        "demand_factor": 0.80,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
-        "latitude": 13.0833,
-        "longitude": 100.8833
-      },
-      {
-        "property_id": 240003008,
-        "region": "Vietnam",
-        "type": "Port of Ho Chi Minh City",
-        "price": 4600000000,
-        "rent_income": 46000000,
-        "demand_factor": 0.79,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
-        "latitude": 10.7769,
-        "longitude": 106.702
       },
       {
         "property_id": 240003009,
@@ -2299,17 +1705,6 @@
         "longitude": -58.3651
       },
       {
-        "property_id": 250004004,
-        "region": "Chile",
-        "type": "Port of Valparaíso",
-        "price": 4800000000,
-        "rent_income": 48000000,
-        "demand_factor": 0.80,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
-        "latitude": -33.0461,
-        "longitude": -71.6296
-      },
-      {
         "property_id": 250004005,
         "region": "Chile",
         "type": "Port of San Antonio",
@@ -2363,17 +1758,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
         "latitude": -2.1733,
         "longitude": -79.8843
-      },
-      {
-        "property_id": 250004010,
-        "region": "Venezuela",
-        "type": "Port of La Guaira",
-        "price": 4600000000,
-        "rent_income": 46000000,
-        "demand_factor": 0.78,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650002/ports_rtylpt.png",
-        "latitude": 10.6051,
-        "longitude": -66.9271
       },
       {
         "property_id": 280004001,
