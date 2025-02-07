@@ -2718,7 +2718,8 @@ def investments_view(conn, user_id):
 
 def real_estate_marketplace_view(conn, user_id):
     c = conn.cursor()
-    
+    load_real_estates_from_json(conn, "./real_estates.json")
+
     with st.spinner("Fetching everything..."):
         x = c.execute("SELECT COUNT(*) FROM real_estate")
         if x.fetchone()[0] != 0:
@@ -3817,5 +3818,4 @@ def filter_airports_and_ports(conn):
 if __name__ == "__main__":
     conn = get_db_connection()
     init_db(conn)
-    load_real_estates_from_json(conn, "./genova.db")
     main(conn)
