@@ -2718,8 +2718,7 @@ def investments_view(conn, user_id):
 
 def real_estate_marketplace_view(conn, user_id):
     c = conn.cursor()
-    load_real_estates_from_json(conn, "./real_estates.json")
-
+    
     with st.spinner("Fetching everything..."):
         x = c.execute("SELECT COUNT(*) FROM real_estate")
         if x.fetchone()[0] != 0:
