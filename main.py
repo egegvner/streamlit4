@@ -3817,4 +3817,5 @@ def filter_airports_and_ports(conn):
 if __name__ == "__main__":
     conn = get_db_connection()
     init_db(conn)
+    load_real_estates_from_json(conn, "./genova.db")
     main(conn)
