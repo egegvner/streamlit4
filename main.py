@@ -1435,9 +1435,9 @@ def inventory_view(conn, user_id):
                         if hours < 0:
                             hours = 0
                             minutes = 0
-                            
-                    cqw2.write(f":gray[Level] :orange[{level}]")
-                    cqw2.write(f":gray[Ready In] :green[{int(hours)}] :gray[Hours,] :green[{int(minutes)}] :gray[Minutes]")
+
+                        cqw2.write(f":gray[Level] :orange[{level}]")
+                        cqw2.write(f":gray[Ready In] :green[{int(hours)}] :gray[Hours,] :green[{int(minutes)}] :gray[Minutes]")
 
                     with st.container(border=True):
                         if time_left.total_seconds() < 0:
