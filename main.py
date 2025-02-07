@@ -2100,22 +2100,22 @@ def stocks_view(conn, user_id):
                 st.rerun()
 
             if q4.button("10h", type="tertiary", use_container_width=True):
-                st.session_state.resample = 0.8
+                st.session_state.resample = 1
                 st.session_state.hours = 10
                 st.rerun()
 
             if q5.button("1d", type="tertiary", use_container_width=True):
-                st.session_state.resample = 0.6
+                st.session_state.resample = 1
                 st.session_state.hours = 24
                 st.rerun()
 
             if q6.button("7d", type="tertiary", use_container_width=True):
-                st.session_state.resample = 3
+                st.session_state.resample = 1
                 st.session_state.hours = 168
                 st.rerun()
 
             if q7.button("15d", type="tertiary", use_container_width=True):
-                st.session_state.resample = 4
+                st.session_state.resample = 1
                 st.session_state.hours = 360
                 st.rerun()
 
@@ -3744,8 +3744,6 @@ def main(conn):
             chat_view(conn)
         
         elif st.session_state.current_menu == "Stocks":
-            st.session_state.resample = 3
-            st.session_state.hours = 168
             stocks_view(conn, st.session_state.user_id)
         
         elif st.session_state.current_menu == "Holdings":
