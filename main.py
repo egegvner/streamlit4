@@ -3780,7 +3780,47 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
     else:
         pass
 
+def filter_airports_and_ports(conn):
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM real_estate")
+    properties = cursor.fetchall()
+    
+    columns = [col[0] for col in cursor.description]
+
+    unique_airports = {}
+    unique_ports = {}
+
+    filtered_properties = []
+    for prop in properties:
+        prop_dict = dict(zip(columns, prop))
+        country = prop_dict["region"]
+
+        if "Airport" in prop_dict["type"]:
+            if country not in unique_airports:
+                unique_airports[country] = prop_dict
+        elif "Port" in prop_dict["type"]:
+            if country not in unique_ports:
+                unique_ports[country] = prop_dict
+        else:
+            filtered_properties.append(prop_dict)  # Keep all other properties
+
+    filtered_properties.extend(unique_airports.values())
+    filtered_properties.extend(unique_ports.values())
+
+    cursor.execute("DELETE FROM real_estate")
+
+    for prop in filtered_properties:
+        columns_str = ", ".join(prop.keys())
+        placeholders = ", ".join(["?" for _ in prop])
+        values = tuple(prop.values())
+
+        cursor.execute(f"INSERT INTO real_estate ({columns_str}) VALUES ({placeholders})", values)
+
+    conn.commit()
+
 if __name__ == "__main__":
     conn = get_db_connection()
     init_db(conn)
+    filter_airports_and_ports(conn)
     main(conn)
