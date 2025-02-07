@@ -902,17 +902,6 @@
         "longitude": 32.9958
     },
     {
-        "property_id": 153467024,
-        "region": "Turkey",
-        "type": "Adana \u015eakirpa\u015fa Airport",
-        "price": 2500000000,
-        "rent_income": 25000000.0,
-        "demand_factor": 0.63,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 37.0027,
-        "longitude": 35.3231
-    },
-    {
         "property_id": 120792443,
         "region": "Turkey",
         "type": "Antalya Airport",
@@ -944,61 +933,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
         "latitude": 37.2492,
         "longitude": 27.6678
-    },
-    {
-        "property_id": 153467026,
-        "region": "Turkey",
-        "type": "Dalaman Airport",
-        "price": 2200000000,
-        "rent_income": 22000000.0,
-        "demand_factor": 0.64,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 36.7131,
-        "longitude": 28.7914
-    },
-    {
-        "property_id": 120792445,
-        "region": "Turkey",
-        "type": "Trabzon Airport",
-        "price": 1800000000,
-        "rent_income": 18000000.0,
-        "demand_factor": 0.6,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 40.995,
-        "longitude": 39.7842
-    },
-    {
-        "property_id": 153467027,
-        "region": "Turkey",
-        "type": "Gaziantep O\u011fuzeli Airport",
-        "price": 1600000000,
-        "rent_income": 16000000.0,
-        "demand_factor": 0.58,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 37.0669,
-        "longitude": 37.4781
-    },
-    {
-        "property_id": 120792446,
-        "region": "Turkey",
-        "type": "Samsun \u00c7ar\u015famba Airport",
-        "price": 1200000000,
-        "rent_income": 12000000.0,
-        "demand_factor": 0.55,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 41.1786,
-        "longitude": 36.5672
-    },
-    {
-        "property_id": 153467028,
-        "region": "Turkey",
-        "type": "Van Ferit Melen Airport",
-        "price": 1400000000,
-        "rent_income": 14000000.0,
-        "demand_factor": 0.57,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 38.2972,
-        "longitude": 43.2969
     },
     {
         "property_id": 120792447,
