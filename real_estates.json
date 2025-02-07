@@ -23,7 +23,7 @@
     },
     {
         "property_id": 192634226,
-        "region": "Belgrade, Montana, USA",
+        "region": "United States",
         "type": "Bozeman Yellowstone Intl. Airport",
         "price": 160000000,
         "rent_income": 1600000.0,
@@ -34,7 +34,7 @@
     },
     {
         "property_id": 203140981,
-        "region": "Shenzhen",
+        "region": "China",
         "type": "Port of Shenzhen",
         "price": 16000000000,
         "rent_income": 160000000.0,
@@ -45,7 +45,7 @@
     },
     {
         "property_id": 277700469,
-        "region": "Doha, Qatar",
+        "region": "Qatar",
         "type": "Hamad Intl. Airport",
         "price": 26000000000,
         "rent_income": 260000000.0,
@@ -56,7 +56,7 @@
     },
     {
         "property_id": 282807722,
-        "region": "Southampton, United Kingdom",
+        "region": "United Kingdom",
         "type": "Port of Southampton",
         "price": 12000000000,
         "rent_income": 120000000.0,
@@ -67,7 +67,7 @@
     },
     {
         "property_id": 293603041,
-        "region": "Paris",
+        "region": "France",
         "type": "Charles de Gaulle Airport",
         "price": 16000000000,
         "rent_income": 160000000.0,
@@ -78,7 +78,7 @@
     },
     {
         "property_id": 309225582,
-        "region": "Busan",
+        "region": "South Korea",
         "type": "Port of Busan",
         "price": 14000000000,
         "rent_income": 140000000.0,
@@ -89,7 +89,7 @@
     },
     {
         "property_id": 376814477,
-        "region": "London",
+        "region": "United Kingdom",
         "type": "Hyde Park",
         "price": 23560000000,
         "rent_income": 235600000.0,
@@ -100,7 +100,7 @@
     },
     {
         "property_id": 406220771,
-        "region": "Hounslow United Kingdom",
+        "region": "United Kingdom",
         "type": "Heathrow Intl. Airport",
         "price": 11600000000,
         "rent_income": 116000000.0,
@@ -111,7 +111,7 @@
     },
     {
         "property_id": 423276215,
-        "region": "Oman, Muscat",
+        "region": "Oman",
         "type": "Muscat Intl' Airport",
         "price": 10,
         "rent_income": 0.1,
@@ -122,7 +122,7 @@
     },
     {
         "property_id": 457785042,
-        "region": "Shanghai",
+        "region": "China",
         "type": "Port of Shanghai",
         "price": 20000000000,
         "rent_income": 200000000.0,
@@ -133,7 +133,7 @@
     },
     {
         "property_id": 475316033,
-        "region": "Tianjin",
+        "region": "China",
         "type": "Port of Tianjin",
         "price": 13000000000,
         "rent_income": 130000000.0,
@@ -144,7 +144,7 @@
     },
     {
         "property_id": 503409745,
-        "region": "CO 80249",
+        "region": "United States",
         "type": "Denver Intl. Airport",
         "price": 4800000000,
         "rent_income": 48000000.0,
@@ -155,7 +155,7 @@
     },
     {
         "property_id": 517163026,
-        "region": "Daxing",
+        "region": "China",
         "type": "Beijing Daxing Intl. Airport",
         "price": 17500000000,
         "rent_income": 175000000.0,
@@ -166,7 +166,7 @@
     },
     {
         "property_id": 523644222,
-        "region": "East Boston, United States",
+        "region": "United States",
         "type": "Boston Logan Intl Airport",
         "price": 18000000000,
         "rent_income": 180000000.0,
@@ -177,7 +177,7 @@
     },
     {
         "property_id": 557893022,
-        "region": "Newark, United States",
+        "region": "United States",
         "type": "Newark Liberty Intl Airport",
         "price": 14000000000,
         "rent_income": 140000000.0,
@@ -188,7 +188,7 @@
     },
     {
         "property_id": 561427295,
-        "region": "TX 75261",
+        "region": "United States",
         "type": "Dallas Fort Worth Intl. Airport",
         "price": 15000000000,
         "rent_income": 150000000.0,
@@ -199,7 +199,7 @@
     },
     {
         "property_id": 622344323,
-        "region": "Sydney",
+        "region": "Australia",
         "type": "Sydney Kingsford Smith Airport",
         "price": 13000000000,
         "rent_income": 130000000.0,
@@ -210,7 +210,7 @@
     },
     {
         "property_id": 632176232,
-        "region": "Shunyi",
+        "region": "China",
         "type": "Beijing Capital Intl. Airport",
         "price": 19500000000,
         "rent_income": 195000000.0,
@@ -221,7 +221,7 @@
     },
     {
         "property_id": 659411077,
-        "region": "Ningbo",
+        "region": "China",
         "type": "Port of Ningbo-Zhoushan",
         "price": 17000000000,
         "rent_income": 170000000.0,
@@ -232,7 +232,7 @@
     },
     {
         "property_id": 659745638,
-        "region": "UAE, Dubai",
+        "region": "UAE",
         "type": "Dubai Intl' Airport",
         "price": 20000000000,
         "rent_income": 200000000.0,
@@ -243,7 +243,7 @@
     },
     {
         "property_id": 720482430,
-        "region": "Frankfurt",
+        "region": "Airport",
         "type": "Frankfurt Airport",
         "price": 15000000000,
         "rent_income": 150000000.0,
@@ -254,7 +254,7 @@
     },
     {
         "property_id": 726768487,
-        "region": "Qingdao",
+        "region": "China",
         "type": "Port of Qingdao",
         "price": 15000000000,
         "rent_income": 150000000.0,
@@ -265,7 +265,7 @@
     },
     {
         "property_id": 741204281,
-        "region": "Hongkong, China",
+        "region": "Hong Kong",
         "type": "Hongkong Intl. Airport",
         "price": 19000000000,
         "rent_income": 190000000.0,
@@ -276,7 +276,7 @@
     },
     {
         "property_id": 760999482,
-        "region": "Hartsfield-Jackson Atlanta",
+        "region": "United States",
         "type": "Hartsfield-Jackson Atlanta Intl' Airport",
         "price": 14999999999.98,
         "rent_income": 149999999.9998,
@@ -287,7 +287,7 @@
     },
     {
         "property_id": 778693020,
-        "region": "Addis Abeba, Ethiopia",
+        "region": "Ethiopia",
         "type": "Bole Intl. Airport",
         "price": 40000000,
         "rent_income": 400000.0,
@@ -298,7 +298,7 @@
     },
     {
         "property_id": 856778427,
-        "region": "Arusha, Tanzania",
+        "region": "Tanzania",
         "type": "Arusha Airport",
         "price": 4000000,
         "rent_income": 40000.0,
@@ -309,7 +309,7 @@
     },
     {
         "property_id": 909430225,
-        "region": "CA 90045",
+        "region": "United States",
         "type": "Los Angeles Intl. Airport",
         "price": 14000000000,
         "rent_income": 140000000.0,
@@ -320,7 +320,7 @@
     },
     {
         "property_id": 947235893,
-        "region": "Guangzhou",
+        "region": "China",
         "type": "Port of Guangzhou",
         "price": 12000000000,
         "rent_income": 120000000.0,
@@ -331,7 +331,7 @@
     },
     {
         "property_id": 955812946,
-        "region": "Chicago, Illinois, USA",
+        "region": "United States",
         "type": "Chicago O'Hare Intl Airport",
         "price": 17000000000,
         "rent_income": 170000000.0,
@@ -364,7 +364,7 @@
     },
     {
         "property_id": 982733858,
-        "region": "San Francisco, USA",
+        "region": "United States",
         "type": "San Francisco Intl. Airport",
         "price": 9000000000,
         "rent_income": 90000000.0,
@@ -517,17 +517,6 @@
         "longitude": -7.5894
     },
     {
-        "property_id": 153466996,
-        "region": "India",
-        "type": "Chhatrapati Shivaji Intl. Airport",
-        "price": 11500000000,
-        "rent_income": 115000000.0,
-        "demand_factor": 0.77,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 19.0886,
-        "longitude": 72.8656
-    },
-    {
         "property_id": 120792399,
         "region": "India",
         "type": "Kempegowda Intl. Airport",
@@ -550,17 +539,6 @@
         "longitude": 80.1595
     },
     {
-        "property_id": 120792401,
-        "region": "Russia",
-        "type": "Sheremetyevo Intl. Airport",
-        "price": 14000000000,
-        "rent_income": 140000000.0,
-        "demand_factor": 0.74,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 55.9726,
-        "longitude": 37.4146
-    },
-    {
         "property_id": 153466998,
         "region": "Russia",
         "type": "Domodedovo Intl. Airport",
@@ -570,17 +548,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
         "latitude": 55.4086,
         "longitude": 37.9064
-    },
-    {
-        "property_id": 120792405,
-        "region": "Russia",
-        "type": "Novosibirsk Tolmachevo Airport",
-        "price": 5700000000,
-        "rent_income": 57000000.0,
-        "demand_factor": 0.62,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 55.008,
-        "longitude": 82.6503
     },
     {
         "property_id": 120792406,
@@ -1142,17 +1109,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
         "latitude": 19.4361,
         "longitude": -99.0719
-    },
-    {
-        "property_id": 153467034,
-        "region": "Mexico",
-        "type": "Canc\u00fan International Airport",
-        "price": 6500000000,
-        "rent_income": 65000000.0,
-        "demand_factor": 0.75,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 21.0367,
-        "longitude": -86.8746
     },
     {
         "property_id": 153467035,
