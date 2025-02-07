@@ -81,7 +81,7 @@ def write_stream(s, delay = 0, random_delay = False):
             time.sleep(delay)
 
 @st.cache_resource
-def get_db_connection(path: str):
+def get_db_connection(path):
     return sqlite3.connect(path, check_same_thread = False)
 
 item_colors = {
@@ -3535,7 +3535,7 @@ def main(conn):
     if 'current_menu' not in st.session_state:
         st.session_state.current_menu = "Deposit"
 
-    conn, c = init_db()
+    conn, c = init_db(conn)
     
     if 'logged_in' not in st.session_state:
         st.session_state.logged_in = False
