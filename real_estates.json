@@ -385,17 +385,6 @@
         "longitude": -46.4731
     },
     {
-        "property_id": 428297654,
-        "region": "Buenos Aires",
-        "type": "Ministro Pistarini International Airport (Ezeiza)",
-        "price": 9000000000,
-        "rent_income": 90000000.0,
-        "demand_factor": 0.62,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": -34.8223,
-        "longitude": -58.5359
-    },
-    {
         "property_id": 653892047,
         "region": "Rio de Janeiro",
         "type": "Rio de Janeiro\u2013Gale\u00e3o International Airport",
@@ -504,17 +493,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
         "latitude": 6.5775,
         "longitude": 3.3231
-    },
-    {
-        "property_id": 120792397,
-        "region": "Morocco",
-        "type": "Mohammed V Intl. Airport",
-        "price": 7800000000,
-        "rent_income": 78000000.0,
-        "demand_factor": 0.65,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 33.3675,
-        "longitude": -7.5894
     },
     {
         "property_id": 120792399,
@@ -715,17 +693,6 @@
         "longitude": 10.2272
     },
     {
-        "property_id": 120792416,
-        "region": "Morocco",
-        "type": "Mohammed V International Airport",
-        "price": 11000000000,
-        "rent_income": 110000000.0,
-        "demand_factor": 0.77,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 33.3675,
-        "longitude": -7.5898
-    },
-    {
         "property_id": 153467012,
         "region": "France",
         "type": "Nice C\u00f4te d'Azur Airport",
@@ -869,17 +836,6 @@
         "longitude": 23.6931
     },
     {
-        "property_id": 120792438,
-        "region": "Albania",
-        "type": "Tirana International Airport",
-        "price": 1800000000,
-        "rent_income": 18000000.0,
-        "demand_factor": 0.62,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 41.4147,
-        "longitude": 19.7207
-    },
-    {
         "property_id": 120792440,
         "region": "Austria",
         "type": "Vienna International Airport",
@@ -900,39 +856,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
         "latitude": 40.1281,
         "longitude": 32.9958
-    },
-    {
-        "property_id": 120792443,
-        "region": "Turkey",
-        "type": "Antalya Airport",
-        "price": 4500000000,
-        "rent_income": 45000000.0,
-        "demand_factor": 0.75,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 36.8986,
-        "longitude": 30.8006
-    },
-    {
-        "property_id": 153467025,
-        "region": "Turkey",
-        "type": "Izmir Adnan Menderes Airport",
-        "price": 4000000000,
-        "rent_income": 40000000.0,
-        "demand_factor": 0.71,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 38.2923,
-        "longitude": 27.1286
-    },
-    {
-        "property_id": 120792444,
-        "region": "Turkey",
-        "type": "Bodrum Milas Airport",
-        "price": 3000000000,
-        "rent_income": 30000000.0,
-        "demand_factor": 0.68,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 37.2492,
-        "longitude": 27.6678
     },
     {
         "property_id": 120792447,
@@ -1056,17 +979,6 @@
         "longitude": -84.2083
     },
     {
-        "property_id": 120792454,
-        "region": "Honduras",
-        "type": "Toncont\u00edn International Airport",
-        "price": 3200000000,
-        "rent_income": 32000000.0,
-        "demand_factor": 0.68,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 13.9781,
-        "longitude": -86.0422
-    },
-    {
         "property_id": 153467036,
         "region": "El Salvador",
         "type": "Monse\u00f1or \u00d3scar Arnulfo Romero International Airport",
@@ -1076,17 +988,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
         "latitude": 13.4403,
         "longitude": -89.0569
-    },
-    {
-        "property_id": 120792455,
-        "region": "Nicaragua",
-        "type": "Augusto C. Sandino International Airport",
-        "price": 2900000000,
-        "rent_income": 29000000.0,
-        "demand_factor": 0.66,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 12.1414,
-        "longitude": -86.1689
     },
     {
         "property_id": 120792457,
@@ -1109,17 +1010,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
         "latitude": 30.1219,
         "longitude": 31.405
-    },
-    {
-        "property_id": 120792459,
-        "region": "Morocco",
-        "type": "Mohammed V International Airport",
-        "price": 5700000000,
-        "rent_income": 57000000.0,
-        "demand_factor": 0.69,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
-        "latitude": 33.3694,
-        "longitude": -7.5894
     },
     {
         "property_id": 153467043,
