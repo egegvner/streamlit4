@@ -1036,7 +1036,7 @@ def item_options(conn, user_id, item_id):
 def gift_prop_dialog(conn, user_id, prop_id):
     c = conn.cursor()
     all_users = [user[0] for user in c.execute("SELECT username FROM users WHERE username != ?", (st.session_state.username,)).fetchall()]
-    chosen = st.selectbox("", label_visibility="collapsed", options=all_users, index=random.randint(0, len(all_users)))
+    chosen = st.selectbox("", label_visibility="collapsed", options=all_users)
     chosen_id = c.execute("SELECT user_id FROM users WHERE username = ?", (chosen,)).fetchone()[0]
     if st.button("Confirm Gift Property", use_container_width=True, type="primary"):
         with st.spinner("Sending gift..."):
