@@ -3822,5 +3822,6 @@ def filter_airports_and_ports(conn):
 if __name__ == "__main__":
     conn = get_db_connection()
     init_db(conn)
-    filter_airports_and_ports(conn)
+    conn.cursor().execute("DELETE FROM real_estate")
+    conn.commit()
     main(conn)
