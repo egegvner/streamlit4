@@ -2936,9 +2936,9 @@ def real_estate_marketplace_view(conn, user_id):
             SELECT country_id, shares_owned FROM user_country_shares WHERE user_id = ?
         """, (user_id,)).fetchall()
     
-    t1, t2 = st.tabs(["PROPERTIES", "LANDS"])
+    ta1, ta2 = st.tabs(["PROPERTIES", "LANDS"])
     
-    with t1:
+    with ta1:
         if "selected_property" not in st.session_state:
             st.session_state.selected_property = None
 
@@ -3071,7 +3071,7 @@ def real_estate_marketplace_view(conn, user_id):
                             st.caption(":gray[UPGRADABLE]")
                         st.divider()
 
-    with t2:
+    with ta2:
         def get_color_from_shares(share_percentage):
             normalized_value = np.clip(share_percentage / 100, 0, 1)
             red = int((1 - normalized_value) * 255)
