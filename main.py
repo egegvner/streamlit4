@@ -17,8 +17,16 @@ import yfinance as yf
 import json
 import os
 import shutil
+import requests
+import geopandas as gpd
+import numpy as np
 from streamlit_lightweight_charts import renderLightweightCharts
-import streamlit as st
+
+ph = argon2.PasswordHasher(
+    memory_cost=65536,  # 64MB RAM usage (default: 10240)
+    time_cost=5,        # More iterations = stronger (default: 2)
+    parallelism=4       # Number of parallel threads (default: 1)
+)    
 
 if "current_menu" not in st.session_state:
     st.session_state.current_menu = "Dashboard"
@@ -35,12 +43,6 @@ st.set_page_config(
     page_icon="🏦",
     layout=current_layout,
     initial_sidebar_state="expanded"
-)
-
-ph = argon2.PasswordHasher(
-    memory_cost=65536,  # 64MB RAM usage (default: 10240)
-    time_cost=5,        # More iterations = stronger (default: 2)
-    parallelism=4       # Number of parallel threads (default: 1)
 )
 
 def format_number(num, decimals=2):
@@ -82,7 +84,7 @@ def write_stream(s, delay = 0, random_delay = False):
 
 @st.cache_resource
 def get_db_connection():
-    return sqlite3.connect("file:genova.db?mode=rwc", check_same_thread = False, uri = True)
+    return sqlite3.connect("genova_sq.db", check_same_thread = False)
 
 item_colors = {
         "Common":":gray",
@@ -564,8 +566,8 @@ def load_real_estates_from_json(conn, json_file):
         real_estates = json.load(file)
 
     for estate in real_estates:
-        c.execute("SELECT property_id FROM real_estate WHERE property_id = ?", (estate["property_id"],))
-        existing_property = c.fetchone()
+        a = c.execute("SELECT property_id FROM real_estate WHERE property_id = ?", (estate["property_id"],))
+        existing_property = a.fetchone()
 
         if existing_property is None:
             c.execute("""
@@ -578,6 +580,29 @@ def load_real_estates_from_json(conn, json_file):
                 SET region = ?, type = ?, price = ?, rent_income = ?, demand_factor = ?, image_url = ?, latitude = ?, longitude = ?
                 WHERE property_id = ?
             """, (estate["region"], estate["type"], estate["price"], estate["rent_income"], estate["demand_factor"], estate["image_url"], estate["latitude"], estate["longitude"], estate["property_id"]))
+
+    conn.commit()
+
+def load_lands_from_json(conn, json_file):
+    c = conn.cursor()
+    with open(json_file, "r", encoding="utf-8") as file:
+        lands = json.load(file)
+
+    for land in lands:
+        a = c.execute("SELECT country_id FROM country_lands WHERE country_id = ?", (land["country_id"],))
+        existing_land = a.fetchone()
+
+        if existing_land is None:
+            c.execute("""
+                INSERT INTO country_lands (country_id, name, total_worth, share_price, image_url, latitude, longitude, border_geometry)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (land["country_id"], land["name"], land["total_worth"], land["share_price"], land["image_url"], land["latitude"], land["latitude"], land["border_geometry"]))
+        else:
+            c.execute("""
+                UPDATE country_lands
+                SET name = ?, total_worth = ?, share_price = ?, image_url = ?, latitude = ?, longitude = ?, border_geometry = ?
+                WHERE country_id = ?
+            """, (land["name"], land["total_worth"], land["share_price"], land["image_url"], land["latitude"], land["longitude"], land["border_geometry"], land["country_id"]))
 
     conn.commit()
 
@@ -814,6 +839,29 @@ def init_db(conn):
             level INTEGER DEFAULT 1,
             FOREIGN KEY(user_id) REFERENCES users(user_id),
             FOREIGN KEY(property_id) REFERENCES real_estate(property_id)
+            );''')
+    
+    c.execute('''CREATE TABLE IF NOT EXISTS country_lands (
+            country_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL,
+            total_worth REAL NOT NULL,
+            share_price REAL NOT NULL,
+            image_url TEXT,
+            latitude TEXT NOT NULL,
+            longitude TEXT NOT NULL,
+            sold INTEGER DEFAULT 0,
+            username TEXT DEFAULT NULL,
+            border_geometry TEXT NOT NULL
+            );''')
+    
+    c.execute('''CREATE TABLE IF NOT EXISTS user_country_shares (
+            user_id INTEGER NOT NULL,
+            country_id INTEGER NOT NULL,
+            shares_owned REAL NOT NULL DEFAULT 0,
+            last_income_claimed TEXT DEFAULT NULL,
+            PRIMARY KEY (user_id, country_id),
+            FOREIGN KEY (user_id) REFERENCES users(user_id),
+            FOREIGN KEY (country_id) REFERENCES country_lands(country_id)
             );''')
 
     conn.commit()
@@ -1084,6 +1132,58 @@ def gift_prop_dialog(conn, user_id, prop_id):
         time.sleep(2)
         st.rerun()
         
+
+@st.dialog("Country Investment Options", width="large")
+def country_details_dialog(conn, user_id, country_id):
+    c = conn.cursor()
+    
+    country = c.execute("""
+        SELECT name, total_worth, share_price, image_url FROM country_lands WHERE country_id = ?
+    """, (country_id,)).fetchone()
+
+    if not country:
+        st.error("Country details not found.")
+        return
+
+    name, total_worth, share_price, image_url = country
+
+    user_shares = c.execute("""
+        SELECT shares_owned FROM user_country_shares WHERE user_id = ? AND country_id = ?
+    """, (user_id, country_id)).fetchone()
+
+    owned_shares = user_shares[0] if user_shares else 0
+    balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+
+    max_buyable_shares = min(balance // share_price, 100 - owned_shares)  # Ensures user can't own more than 100%
+
+    c1, c2 = st.columns(2)
+    
+    with c1:
+        if image_url:
+            st.image(image_url, use_container_width=True)
+
+    with c2:
+
+        st.subheader(f"🇨🇳 {name}", divider="rainbow")
+        st.write(f"💰 **Total Worth**: :orange[${format_number(total_worth)}]")
+        st.write(f"📈 **Share Price**: :red[${format_number(share_price)}]")
+        st.write(f"🏠 **Your Holdings**: :green[{owned_shares}%]")
+
+        st.text("")
+        
+        shares_to_buy = st.slider("Select shares to purchase (%)", min_value=0.0, max_value=float(max_buyable_shares), step=0.01)
+        total_cost = shares_to_buy * share_price  # Dynamic total cost calculation
+
+        st.write(f"💸 **Total Cost**: :red[${format_number(total_cost)}]")
+
+        if st.button("💰 Buy Shares", use_container_width=True, disabled=shares_to_buy == 0):
+            with st.spinner("Processing transaction..."):
+                time.sleep(2)
+                buy_country_shares(conn, user_id, country_id, shares_to_buy)
+            st.success(f"✅ You purchased {shares_to_buy}% of {name}!")
+            time.sleep(2)
+            st.rerun()
+
 @st.dialog("Privacy Policy", width="large")
 def privacy_policy_dialog():
     st.header("", divider="rainbow")
@@ -2112,7 +2212,7 @@ def stocks_view(conn, user_id):
                     st.session_state.selected_game_stock = stocks[i][0]
                     st.rerun()
         
-        c1, c2 = st.columns([2.5, 1.5])
+        c1, c2 = st.columns([2.3, 1.5])
 
         with c1:
             if len(history) > 1:
@@ -2810,149 +2910,295 @@ def investments_view(conn, user_id):
 
 def real_estate_marketplace_view(conn, user_id):
     c = conn.cursor()
+    with st.spinner("Fetching everything..."):
+            x = c.execute("SELECT COUNT(*) FROM real_estate")
+            if x.fetchone()[0] != 0:
+                load_lands_from_json(conn, "/Users/egeguvener/Desktop/Main/Python/NewProjects/BankingWebApp/lands.json")
+    countries = c.execute("""
+            SELECT country_id, name, total_worth, share_price, latitude, longitude, border_geometry, image_url
+            FROM country_lands
+        """).fetchall()
     
     with st.spinner("Fetching everything..."):
-        x = c.execute("SELECT COUNT(*) FROM real_estate")
-        if x.fetchone()[0] != 0:
-            load_real_estates_from_json(conn, "./real_estates.json")
-        
-    if "selected_property" not in st.session_state:
-        st.session_state.selected_property = None
+            x = c.execute("SELECT COUNT(*) FROM real_estate")
+            if x.fetchone()[0] != 0:
+                load_real_estates_from_json(conn, "/Users/egeguvener/Desktop/Main/Python/NewProjects/BankingWebApp/real_estates.json")
 
-    username = c.execute("SELECT username FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     properties = c.execute("""
-    SELECT property_id, region, type, price, rent_income, demand_factor, latitude, longitude, image_url, sold, username 
-    FROM real_estate
-    """).fetchall()
+        SELECT property_id, region, type, price, rent_income, demand_factor, latitude, longitude, image_url, sold, username 
+        FROM real_estate
+        """).fetchall()
     
-    df = pd.DataFrame(properties, columns=[
-        "Property ID", "Region", "Type", "Price", "Rent Income", "Demand Factor", "LAT", "LON", "Image URL", "Sold", "Username"
-    ])
+    username = c.execute("SELECT username FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+    
+    user_shares = c.execute("""
+            SELECT country_id, shares_owned FROM user_country_shares WHERE user_id = ?
+        """, (user_id,)).fetchall()
+    
+    t1, t2 = st.tabs(["PROPERTIES", "LANDS"])
+    
+    with t1:
+        if "selected_property" not in st.session_state:
+            st.session_state.selected_property = None
 
-    df["LAT"] = pd.to_numeric(df["LAT"], errors="coerce")
-    df["LON"] = pd.to_numeric(df["LON"], errors="coerce")
+        df = pd.DataFrame(properties, columns=[
+            "Property ID", "Region", "Type", "Price", "Rent Income", "Demand Factor", "LAT", "LON", "Image URL", "Sold", "Username"
+        ])
 
-    df["Formatted Price"] = df["Price"].apply(lambda x: format_number(x))
-    df["Formatted Rent"] = df["Rent Income"].apply(lambda x: format_number(x))
+        df["LAT"] = pd.to_numeric(df["LAT"], errors="coerce")
+        df["LON"] = pd.to_numeric(df["LON"], errors="coerce")
 
-    df["Color"] = df.apply(lambda row: 
-        [0, 255, 0] if row["Username"] == username else 
-        ([255, 0, 0] if row["Sold"] else [255, 255, 255]), axis=1
-    )
+        df["Formatted Price"] = df["Price"].apply(lambda x: format_number(x))
+        df["Formatted Rent"] = df["Rent Income"].apply(lambda x: format_number(x))
 
-    df["Color"] = df["Color"].astype(object)
+        df["Color"] = df.apply(lambda row: 
+            [0, 255, 0] if row["Username"] == username else 
+            ([255, 0, 0] if row["Sold"] else [255, 255, 255]), axis=1
+        )
 
-    st.pydeck_chart(pdk.Deck(
-        height=400,
-        layers=[
-            pdk.Layer(
-                "PointCloudLayer",
-                data=df,
-                get_position=["LON", "LAT"],  
-                get_color="Color",
-                pickable=True,
-                pointSize=4,
+        df["Color"] = df["Color"].astype(object)
+
+        st.pydeck_chart(pdk.Deck(
+            height=400,
+            layers=[
+                pdk.Layer(
+                    "PointCloudLayer",
+                    data=df,
+                    get_position=["LON", "LAT"],  
+                    get_color="Color",
+                    pickable=True,
+                    pointSize=4,
+                ),
+            ],
+            initial_view_state=pdk.ViewState(
+                latitude=float(df["LAT"].mean()),  
+                longitude=float(df["LON"].mean()),
+                zoom=2,
+                pitch=50,
             ),
-        ],
-        initial_view_state=pdk.ViewState(
-            latitude=float(df["LAT"].mean()),  
-            longitude=float(df["LON"].mean()),
-            zoom=2,
-            pitch=50,
-        ),
-        tooltip={
-            "html": """
-                <b>Property Details</b><br/><hr>
-                <span style="color: gray;">Title</span> <span style="color: white;">{Type}</span><br/>
-                <span style="color: gray;">Region</span> <span style="color: white;">{Region}</span><br/>
-                <span style="color: gray;">Price</span> <span style="color: red;">${Formatted Price}</span><br/>
-                <span style="color: gray;">Rent</span> <span style="color: lime;">${Formatted Rent} / day</span><br/>
-                <span style="color: gray;">Owner</span> <span style="color: white;">{Username}</span>
-            """,
-            "style": {
-                "backgroundColor": "black",
-                "color": "gray"
+            tooltip={
+                "html": """
+                    <b>Property Details</b><br/><hr>
+                    <span style="color: gray;">Title</span> <span style="color: white;">{Type}</span><br/>
+                    <span style="color: gray;">Region</span> <span style="color: white;">{Region}</span><br/>
+                    <span style="color: gray;">Price</span> <span style="color: red;">${Formatted Price}</span><br/>
+                    <span style="color: gray;">Rent</span> <span style="color: lime;">${Formatted Rent} / day</span><br/>
+                    <span style="color: gray;">Owner</span> <span style="color: white;">{Username}</span>
+                """,
+                "style": {
+                    "backgroundColor": "black",
+                    "color": "gray"
+                }
             }
+        ))
+
+        property_categories = {
+            "AIRPORTS": [],
+            "PORTS": [],
+            "LANDMARKS": [],
         }
-    ))
 
-    property_categories = {
-        "AIRPORTS": [],
-        "PORTS": [],
-        "LANDMARKS": [],
-    }
-
-    for _, row in df.iterrows():
-        title = row["Type"].lower()
-        if "airport" in title:
-            property_categories["AIRPORTS"].append(row)
-        elif "port" in title:
-            property_categories["PORTS"].append(row)
-        else:
-            property_categories["LANDMARKS"].append(row)
-
-    tabs = st.tabs(["✈️ AIRPORTS ✈️", "⚓️ PORTS ⚓️", "🪅 LANDMARKS 🪅"])
-    tab_names = ["AIRPORTS", "PORTS", "LANDMARKS"]
-    
-    property_categories = {category: [] for category in tab_names}
-    
-    for _, row in df.iterrows():
-        title = row["Type"].lower()
-        if "airport" in title:
-            property_categories["AIRPORTS"].append(row)
-        elif "port" in title:
-            property_categories["PORTS"].append(row)
-        else:
-            property_categories["LANDMARKS"].append(row)
-    
-    for tab, category in zip(tabs, tab_names):
-        with tab:
-            cw1, cw2 = st.columns([10, 1])
-            search_query = cw1.text_input(f"", label_visibility="collapsed", key=f"search_{category}", placeholder=f"Search {category.lower()}")
-    
-            search_button = cw2.button("", icon = ":material/search:", key=f"search_btn_{category}", use_container_width=True, type="primary")
-    
-            properties_in_category = property_categories[category]
-            if search_button and search_query.strip():
-                properties_in_category = [
-                    row for row in properties_in_category if search_query.lower() in row["Type"].lower()
-                ]
-    
-            if not properties_in_category:
-                st.info(f"No matching {category.lower()} found.")
+        for _, row in df.iterrows():
+            title = row["Type"].lower()
+            if "airport" in title:
+                property_categories["AIRPORTS"].append(row)
+            elif "port" in title:
+                property_categories["PORTS"].append(row)
             else:
-                for row in properties_in_category:
-                    image_col, details_col = st.columns([1, 3])
-                    with image_col:
-                        if row["Image URL"]:
-                            st.image(row["Image URL"], use_container_width=True)
-    
-                    with details_col:
-                        if row["Username"] == username:
-                            st.subheader(f"{row['Type']} :green[ - Owned]", divider="rainbow")
-                        elif row["Sold"]:
-                            st.subheader(f"{row['Type']} :red[ - Sold]", divider="rainbow")
-                        else:
-                            st.subheader(f"{row['Type']}", divider="rainbow")
-    
-                        st.text("")
-                        c1, c2 = st.columns(2)
-                        c1.write(f":blue[COST] :red[${format_number(row['Price'])}]")
-                        c2.write(f":blue[RENT] :green[${format_number(row['Rent Income'])} / day]")
-                        c1.write(f":blue[Region] :grey[{row['Region']}]")
-                        c2.write(f":blue[Demand Factor] :green[{format_number(row['Demand Factor'])}]")
-    
-                        st.text("")
-                        if row["Username"] == username:
-                            st.success("You own this property.")
-                        elif row["Sold"] == 0:
-                            if st.button(f"Property Options", key=f"buy_{row['Property ID']}", use_container_width=True):
-                                prop_details_dialog(conn, user_id, row["Property ID"])
-                        else:
-                            st.warning("This property has already been sold.")
+                property_categories["LANDMARKS"].append(row)
 
-                        st.caption(":gray[UPGRADABLE]")
-                    st.divider()
+        tabs = st.tabs(["✈️ AIRPORTS ✈️", "⚓️ PORTS ⚓️", "🪅 LANDMARKS 🪅"])
+        tab_names = ["AIRPORTS", "PORTS", "LANDMARKS"]
+        
+        property_categories = {category: [] for category in tab_names}
+        
+        for _, row in df.iterrows():
+            title = row["Type"].lower()
+            if "airport" in title:
+                property_categories["AIRPORTS"].append(row)
+            elif "port" in title:
+                property_categories["PORTS"].append(row)
+            else:
+                property_categories["LANDMARKS"].append(row)
+        
+        for tab, category in zip(tabs, tab_names):
+            with tab:
+                cw1, cw2 = st.columns([10, 1])
+                search_query = cw1.text_input(f"", label_visibility="collapsed", key=f"search_{category}", placeholder=f"Search {category.lower()}")
+        
+                search_button = cw2.button("", icon = ":material/search:", key=f"search_btn_{category}", use_container_width=True, type="primary")
+        
+                properties_in_category = property_categories[category]
+                if search_button and search_query.strip():
+                    properties_in_category = [
+                        row for row in properties_in_category if search_query.lower() in row["Type"].lower()
+                    ]
+        
+                if not properties_in_category:
+                    st.info(f"No matching {category.lower()} found.")
+                else:
+                    for row in properties_in_category:
+                        image_col, details_col = st.columns([1, 3])
+                        with image_col:
+                            if row["Image URL"]:
+                                st.image(row["Image URL"], use_container_width=True)
+        
+                        with details_col:
+                            if row["Username"] == username:
+                                st.subheader(f"{row['Type']} :green[ - Owned]", divider="rainbow")
+                            elif row["Sold"]:
+                                st.subheader(f"{row['Type']} :red[ - Sold]", divider="rainbow")
+                            else:
+                                st.subheader(f"{row['Type']}", divider="rainbow")
+        
+                            st.text("")
+                            c1, c2 = st.columns(2)
+                            c1.write(f":blue[COST] :red[${format_number(row['Price'])}]")
+                            c2.write(f":blue[RENT] :green[${format_number(row['Rent Income'])} / day]")
+                            c1.write(f":blue[Region] :grey[{row['Region']}]")
+                            c2.write(f":blue[Demand Factor] :green[{format_number(row['Demand Factor'])}]")
+        
+                            st.text("")
+                            if row["Username"] == username:
+                                st.success("You own this property.")
+                            elif row["Sold"] == 0:
+                                if st.button(f"Property Options", key=f"buy_{row['Property ID']}", use_container_width=True):
+                                    prop_details_dialog(conn, user_id, row["Property ID"])
+                            else:
+                                st.warning("This property has already been sold.")
+
+                            st.caption(":gray[UPGRADABLE]")
+                        st.divider()
+
+    with t2:
+        def get_color_from_shares(share_percentage):
+            normalized_value = np.clip(share_percentage / 100, 0, 1)
+            red = int((1 - normalized_value) * 255)
+            green = int(normalized_value * 255)
+            return [red, green, 0, 90]
+        
+        if not countries:
+            st.warning("No country land investments available at the moment.")
+            st.stop()
+
+        df = pd.DataFrame(countries, columns=["Country ID", "Name", "Total Worth", "Share Price", "LAT", "LON", "Borders", "Image URL"])
+        user_shares_dict = {row[0]: row[1] for row in user_shares}
+
+        df["Color"] = df["Country ID"].apply(lambda country_id: get_color_from_shares(user_shares_dict.get(country_id, 0)))
+
+        df["LAT"] = pd.to_numeric(df["LAT"], errors="coerce")
+        df["LON"] = pd.to_numeric(df["LON"], errors="coerce")
+
+        def extract_polygon_coordinates(geojson_path):
+            try:
+                with open(geojson_path, "r", encoding="utf-8") as f:
+                    geojson_data = json.load(f)
+                    features = geojson_data.get("features", [])
+                    
+                    all_polygons = []
+                    for feature in features:
+                        geometry = feature.get("geometry", {})
+                        if geometry.get("type") == "Polygon":
+                            all_polygons.append(geometry.get("coordinates"))
+                        elif geometry.get("type") == "MultiPolygon":
+                            for polygon in geometry.get("coordinates"):
+                                all_polygons.append(polygon)
+                    
+                    return all_polygons
+            except Exception as e:
+                st.error(f"Error loading {geojson_path}: {e}")
+                return []
+
+        df["Borders"] = df["Borders"].apply(lambda path: extract_polygon_coordinates(path))
+
+        polygon_data = []
+        for _, row in df.iterrows():
+            for polygon in row["Borders"]:
+                polygon_data.append({
+                    "polygon": polygon,
+                    "name": row["Name"],
+                    "total_worth": format_number(row["Total Worth"]),
+                    "color": row["Color"],
+                    "share_price": format_number(row["Share Price"]),
+                    "user_holdings": user_shares_dict.get(row["Country ID"], 0),
+                })
+
+        st.pydeck_chart(pdk.Deck(
+            layers=[
+            pdk.Layer(
+                "PolygonLayer",
+                data=polygon_data,
+                get_polygon="polygon",
+                get_fill_color="color",
+                pickable=True,
+                auto_highlight=True
+            )
+            ],
+            initial_view_state=pdk.ViewState(
+            latitude=df["LAT"].mean(), 
+            longitude=df["LON"].mean(), 
+            zoom=2
+            ),
+            tooltip={
+                "html": """
+                    <b><span style="color: white;">{name}</span></b><br/><hr>
+                    <span style="color: white;">Total Worth</span> <span style="color: lime;"><b>${total_worth}</b></span><br/>
+                    <span style="color: white;">Share Price</span> <span style="color: red;"><b>${share_price}</b></span><br/>
+                    <span style="color: white;">Owned</span> <span style="color: orange;">{user_holdings}%</span>
+                """,
+                "style": {
+                    "backgroundColor": "black",
+                }
+            }
+        ))
+
+        for idx, row in df.iterrows():
+            image_col, details_col = st.columns([1, 3])
+    
+            with image_col:
+                if row["Image URL"]:
+                    st.image(f"{row["Image URL"]}", use_container_width=True)
+
+            with details_col:
+                st.subheader(f"{row['Name']}", divider="rainbow")
+                st.write(f"💰 **Total Worth**: :orange[${format_number(row['Total Worth'])}]")
+                st.write(f"📈 **Share Price**: :red[${format_number(row['Share Price'])}]")
+                st.write(f"🏠 **Your Holdings**: :green[{user_shares_dict.get(row['Country ID'], 0)}%]")
+
+                st.text("")  
+                
+                if st.button(f"🌍 View {row['Name']} Options", key=f"view_{row['Country ID']}", use_container_width=True):
+                    country_details_dialog(conn, user_id, row["Country ID"])
+
+            st.divider()
+
+def buy_country_shares(conn, user_id, country_id, shares_to_buy):
+    c = conn.cursor()
+
+    share_price = c.execute("SELECT share_price FROM country_lands WHERE country_id = ?", (country_id,)).fetchone()[0]
+    cost = share_price * shares_to_buy
+
+    balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+
+    if cost > balance:
+        st.error("❌ Insufficient funds!")
+        return
+
+    c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (cost, user_id))
+
+    existing_shares = c.execute("SELECT shares_owned FROM user_country_shares WHERE user_id = ? AND country_id = ?", 
+                                (user_id, country_id)).fetchone()
+
+    if existing_shares:
+        new_shares = existing_shares[0] + shares_to_buy
+        c.execute("UPDATE user_country_shares SET shares_owned = ? WHERE user_id = ? AND country_id = ?", 
+                  (new_shares, user_id, country_id))
+    else:
+        c.execute("INSERT INTO user_country_shares (user_id, country_id, shares_owned) VALUES (?, ?, ?)", 
+                  (user_id, country_id, shares_to_buy))
+
+    conn.commit()
+
 
 @st.dialog("Property Details", width="large")
 def prop_details_dialog(conn, user_id, prop_id):
@@ -3870,8 +4116,4 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
 if __name__ == "__main__":
     conn = get_db_connection()
     init_db(conn)
-    add_column_if_not_exists(conn, "user_properties", "level", "INTEGER DEFAULT 1")
-    add_column_if_not_exists(conn, "stocks", "dividend_rate", "REAL DEFAULT 0.0")
-    add_column_if_not_exists(conn, "user_stocks", "purchase_date", "DATETIME DEFAULT NULL")
-    conn.cursor().execute("UPDATE user_stocks SET purchase_date = CURRENT_TIMESTAMP")
     main(conn)
