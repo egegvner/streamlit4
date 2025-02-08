@@ -1,0 +1,22 @@
+[
+      {
+        "country_id": 700001019,
+        "name": "Turkey",
+        "total_worth": 40000000000000,
+        "share_price": 400000000000,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739024257/turkey_ntrscg.png",
+        "latitude": 38.9637,
+        "longitude": 35.2433,
+        "border_geometry": "NewProjects/BankingWebApp/GeoJSON/geoBoundaries-TUR-ADM0_simplified.json"
+      },
+      {
+        "country_id": 700001020,
+        "name": "Canada",
+        "total_worth": 80000000000000,
+        "share_price": 800000000000,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739026941/canada_rxwbvi.png",
+        "latitude": 38.9637,
+        "longitude": 35.2433,
+        "border_geometry": "/Users/egeguvener/Desktop/Main/Python/NewProjects/BankingWebApp/GeoJSON/Canada_ADM0.json"
+      }
+]
