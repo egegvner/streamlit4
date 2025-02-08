@@ -17,6 +17,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739026941/canada_rxwbvi.png",
         "latitude": 38.9637,
         "longitude": 35.2433,
-        "border_geometry": "./geoBoundaries-TUR-ADM0_simplified.json"
+        "border_geometry": "./GeoJSON/geoBoundaries-TUR-ADM0_simplified.json"
       }
 ]
