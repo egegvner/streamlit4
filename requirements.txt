@@ -1,6 +1,5 @@
 streamlit
 pandas
-bcrypt
 streamlit_autorefresh
 argon2-cffi
 numerize
@@ -8,3 +7,6 @@ pydeck
 plotly
 yfinance
 streamlit_lightweight_charts
+numpy
+geopandas
+json
