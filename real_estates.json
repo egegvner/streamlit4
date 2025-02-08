@@ -230,6 +230,105 @@
       "latitude": -37.8413,
       "longitude": 144.9439
     },
+     {
+      "property_id": 500001012,
+      "region": "South Korea",
+      "type": "Incheon International Airport (ICN)",
+      "price": 13800000000,
+      "rent_income": 13800000,
+      "demand_factor": 0.96,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
+      "latitude": 37.4602,
+      "longitude": 126.4407
+    },
+    {
+      "property_id": 500001013,
+      "region": "Mexico",
+      "type": "Mexico City International Airport (MEX)",
+      "price": 8900000000,
+      "rent_income": 8900000,
+      "demand_factor": 0.91,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
+      "latitude": 19.4361,
+      "longitude": -99.0719
+    },
+    {
+      "property_id": 500001014,
+      "region": "Turkey",
+      "type": "Ankara Esenboğa Airport (ESB)",
+      "price": 7200000000,
+      "rent_income": 7200000,
+      "demand_factor": 0.89,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
+      "latitude": 40.1281,
+      "longitude": 32.9951
+    },
+    {
+      "property_id": 500001015,
+      "region": "Saudi Arabia",
+      "type": "King Abdulaziz International Airport (JED)",
+      "price": 13000000000,
+      "rent_income": 13000000,
+      "demand_factor": 0.94,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
+      "latitude": 21.6796,
+      "longitude": 39.1565
+    },
+    {
+      "property_id": 500001016,
+      "region": "Thailand",
+      "type": "Suvarnabhumi Airport (BKK)",
+      "price": 10500000000,
+      "rent_income": 10500000,
+      "demand_factor": 0.92,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
+      "latitude": 13.6900,
+      "longitude": 100.7501
+    },
+    {
+      "property_id": 500001017,
+      "region": "South Africa",
+      "type": "O.R. Tambo International Airport (JNB)",
+      "price": 7800000000,
+      "rent_income": 7800000,
+      "demand_factor": 0.89,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
+      "latitude": -26.1337,
+      "longitude": 28.2420
+    },
+    {
+      "property_id": 500001018,
+      "region": "Indonesia",
+      "type": "Soekarno-Hatta International Airport (CGK)",
+      "price": 8200000000,
+      "rent_income": 8200000,
+      "demand_factor": 0.90,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
+      "latitude": -6.1275,
+      "longitude": 106.6537
+    },
+    {
+      "property_id": 500001019,
+      "region": "Argentina",
+      "type": "Ministro Pistarini International Airport (EZE)",
+      "price": 7000000000,
+      "rent_income": 7000000,
+      "demand_factor": 0.87,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
+      "latitude": -34.8222,
+      "longitude": -58.5358
+    },
+    {
+      "property_id": 500001020,
+      "region": "Nigeria",
+      "type": "Murtala Muhammed International Airport (LOS)",
+      "price": 6000000000,
+      "rent_income": 6000000,
+      "demand_factor": 0.85,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738650001/airports_losyvr.png",
+      "latitude": 6.5774,
+      "longitude": 3.3212
+    },
     {
       "property_id": 600001001,
       "region": "France",
@@ -262,6 +361,105 @@
       "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738931555/landmarks_bffadv.png",
       "latitude": 40.4319,
       "longitude": 116.5704
+    },
+    {
+      "property_id": 600001011,
+      "region": "Turkey",
+      "type": "Hagia Sophia",
+      "price": 2000000000000,
+      "rent_income": 200000000,
+      "demand_factor": 0.95,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738931555/landmarks_bffadv.png",
+      "latitude": 41.0086,
+      "longitude": 28.9802
+    },
+    {
+      "property_id": 600001012,
+      "region": "Spain",
+      "type": "Sagrada Familia",
+      "price": 1800000000000,
+      "rent_income": 180000000,
+      "demand_factor": 0.94,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738931555/landmarks_bffadv.png",
+      "latitude": 41.4036,
+      "longitude": 2.1744
+    },
+    {
+      "property_id": 600001013,
+      "region": "Indonesia",
+      "type": "Borobudur Temple",
+      "price": 1600000000000,
+      "rent_income": 160000000,
+      "demand_factor": 0.92,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738931555/landmarks_bffadv.png",
+      "latitude": -7.6079,
+      "longitude": 110.2038
+    },
+    {
+      "property_id": 600001014,
+      "region": "Argentina",
+      "type": "Obelisk of Buenos Aires",
+      "price": 1400000000000,
+      "rent_income": 140000000,
+      "demand_factor": 0.91,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738931555/landmarks_bffadv.png",
+      "latitude": -34.6037,
+      "longitude": -58.3816
+    },
+    {
+      "property_id": 600001015,
+      "region": "Greece",
+      "type": "Acropolis of Athens",
+      "price": 1900000000000,
+      "rent_income": 190000000,
+      "demand_factor": 0.94,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738931555/landmarks_bffadv.png",
+      "latitude": 37.9715,
+      "longitude": 23.7269
+    },
+    {
+      "property_id": 600001016,
+      "region": "United Arab Emirates",
+      "type": "Burj Khalifa",
+      "price": 2100000000000,
+      "rent_income": 210000000,
+      "demand_factor": 0.97,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738931555/landmarks_bffadv.png",
+      "latitude": 25.1972,
+      "longitude": 55.2744
+    },
+    {
+      "property_id": 600001017,
+      "region": "Mexico",
+      "type": "Chichen Itza",
+      "price": 1700000000000,
+      "rent_income": 170000000,
+      "demand_factor": 0.93,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738931555/landmarks_bffadv.png",
+      "latitude": 20.6843,
+      "longitude": -88.5678
+    },
+    {
+      "property_id": 600001018,
+      "region": "Peru",
+      "type": "Machu Picchu",
+      "price": 2000000000000,
+      "rent_income": 200000000,
+      "demand_factor": 0.96,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738931555/landmarks_bffadv.png",
+      "latitude": -13.1631,
+      "longitude": -72.5450
+    },
+    {
+      "property_id": 600001019,
+      "region": "Malaysia",
+      "type": "Petronas Towers",
+      "price": 1600000000000,
+      "rent_income": 160000000,
+      "demand_factor": 0.92,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1738931555/landmarks_bffadv.png",
+      "latitude": 3.1579,
+      "longitude": 101.7111
     },
     {
       "property_id": 600001004,
