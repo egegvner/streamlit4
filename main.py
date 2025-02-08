@@ -3158,7 +3158,7 @@ def real_estate_marketplace_view(conn, user_id):
     
             with image_col:
                 if row["Image URL"]:
-                    st.image(f"{row["Image URL"]}", use_container_width=True)
+                    st.image(f"{row['Image URL']}", use_container_width=True)
 
             with details_col:
                 st.subheader(f"{row['Name']}", divider="rainbow")
