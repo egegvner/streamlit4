@@ -7,7 +7,7 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739024257/turkey_ntrscg.png",
         "latitude": 38.9637,
         "longitude": 35.2433,
-        "border_geometry": "NewProjects/BankingWebApp/GeoJSON/geoBoundaries-TUR-ADM0_simplified.json"
+        "border_geometry": "./GeoJSON/Canada_ADM0.json"
       },
       {
         "country_id": 700001020,
@@ -17,6 +17,6 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739026941/canada_rxwbvi.png",
         "latitude": 38.9637,
         "longitude": 35.2433,
-        "border_geometry": "/Users/egeguvener/Desktop/Main/Python/NewProjects/BankingWebApp/GeoJSON/Canada_ADM0.json"
+        "border_geometry": "./geoBoundaries-TUR-ADM0_simplified.json"
       }
 ]
