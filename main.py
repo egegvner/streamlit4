@@ -137,7 +137,7 @@ def apply_interest_if_due(conn, user_id, check = True):
 
             now = datetime.datetime.now()
 
-            hours_passed = (now - last_applied_time).total_seconds() / 3600
+            hours_passed = (now - last_applied_time).total_seconds() / 86400
 
             hourly_interest_rate = c.execute("SELECT interest_rate FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
 
@@ -1757,7 +1757,7 @@ def savings_view(conn, user_id):
         interest = c.execute("SELECT interest_rate from savings WHERE user_id = ?", (user_id,)).fetchone()[0]
         with st.container(border=True):
             
-            st.write(f":green[%{interest}] simple interest per **hour.**")
+            st.write(f":green[%{interest}] simple interest per **day.**")
         st.caption(":gray[HINT: Some items can boost your interest rate!]")
     st.text("")
     
