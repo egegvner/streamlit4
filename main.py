@@ -3391,23 +3391,36 @@ def buy_property(conn, user_id, property_id):
         return False
 
 def get_ai_insights(user_id, conn):
+    # Fetch transaction data for the user
     query = """
     SELECT user_id, amount, type, timestamp 
     FROM transactions 
     WHERE user_id = ?
     """
     df = pd.read_sql(query, conn, params=(user_id,))
+    
+    # Extract features
     df["hour"] = pd.to_datetime(df["timestamp"]).dt.hour
     df["day_of_week"] = pd.to_datetime(df["timestamp"]).dt.dayofweek
     df["transaction_type"] = df["type"].astype("category").cat.codes
+    
+    # Prepare features for clustering
     X = df[["amount", "hour", "day_of_week", "transaction_type"]]
+    
+    # Perform K-Means clustering
     kmeans = KMeans(n_clusters=3, random_state=42)
     df["cluster"] = kmeans.fit_predict(X)
+    
+    # Identify the user's cluster
     user_cluster = df[df["user_id"] == user_id]["cluster"].mode()[0]
+    
+    # Find similar users in the same cluster
     similar_users = df[df["cluster"] == user_cluster]["user_id"].unique()
+    
     return user_cluster, similar_users
 
 def get_recommendations(conn, user_cluster, similar_users):
+    # Fetch transaction data for similar users
     query = """
     SELECT user_id, amount, type, timestamp 
     FROM transactions 
@@ -3415,14 +3428,18 @@ def get_recommendations(conn, user_cluster, similar_users):
     """.format(",".join(["?"] * len(similar_users)))
     df = pd.read_sql(query, conn, params=similar_users)
     
+    # Extract features
     df["hour"] = pd.to_datetime(df["timestamp"]).dt.hour
     df["day_of_week"] = pd.to_datetime(df["timestamp"]).dt.dayofweek
+    
+    # Analyze trends for similar users
     trends = df.groupby('type').agg({
         'amount': 'mean',
         'hour': lambda x: x.mode()[0],
         'day_of_week': lambda x: x.mode()[0]
     }).reset_index()
     
+    # Generate recommendations
     recommendations = []
     for _, row in trends.iterrows():
         if row['type'] == 'Transfer to savings' and row['amount'] > 1000:
@@ -4147,11 +4164,13 @@ def main(conn):
                 st.session_state.current_menu = "View Savings"
                 st.rerun()
 
-            if st.button("Transaction History", type="secondary", use_container_width=True):
+            col1, col2 = st.columns(2)
+
+            if col1.button("History", type="secondary", use_container_width=True):
                 st.session_state.current_menu = "Transaction History"
                 st.rerun()
 
-            if st.button("Pending Transfers", type="secondary", use_container_width=True):
+            if col2.button("Pendings", type="secondary", use_container_width=True):
                 st.session_state.current_menu = "Manage Pending Transfers"
                 st.rerun()
             
@@ -4164,7 +4183,12 @@ def main(conn):
                 st.session_state.current_menu = "Holdings"
                 st.rerun()
 
+            if st.button("✨ **AI Insights** ✨", type="primary", use_container_width=True):
+                st.session_state.current_menu = "AI Insights"
+                st.rerun()
+
             st.divider()
+            
             if st.session_state.username in admins:
                 if st.button("Admin Panel", type="secondary", use_container_width=True):
                     st.session_state.current_menu = "Admin Panel"
@@ -4228,6 +4252,9 @@ def main(conn):
 
         elif st.session_state.current_menu == "Real Estate":
             real_estate_marketplace_view(conn, st.session_state.user_id)
+        
+        elif st.session_state.current_menu == "AI Insights":
+            ai_recommendations_view(conn, st.session_state.user_id)
 
         elif st.session_state.current_menu == "Logout":
             st.sidebar.info("Logging you out...")
