@@ -20,6 +20,7 @@ import shutil
 import requests
 import geopandas as gpd
 import numpy as np
+from sklearn.cluster import KMeans
 from streamlit_lightweight_charts import renderLightweightCharts
 
 ph = argon2.PasswordHasher(
