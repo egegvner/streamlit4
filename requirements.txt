@@ -9,3 +9,4 @@ yfinance
 streamlit_lightweight_charts
 numpy
 geopandas
+extra_streamlit_components
