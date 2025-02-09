@@ -1587,13 +1587,13 @@ def inventory_view(conn, user_id):
                             if time_left.total_seconds() < 0:
                                 st.success(f"[Accumulated Rent] :green[${format_number(rent_income)}]")
                             else:
-                                st.success(f"[Accumulated Rent] :green[$0] - Collect First Rent!")
+                                st.success(f"[Accumulated Rent] :green[$0]")
                     else:
                         cqw2.write(f":gray[Level] :orange[{level}]")
                         cqw2.write(f":gray[Ready In] :green[∞] :gray[Hours,] :green[∞] :gray[Minutes]")
 
                         with st.container(border=True):
-                            st.success(f"[Accumulated Rent] :green[$0]")
+                            st.success(f"[Accumulated Rent] :green[${format_number(rent_income)}] - Collect First Rent!")
                     
                     c1, c2, c3, c4 = st.columns(4)
 
