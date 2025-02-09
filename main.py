@@ -1132,8 +1132,7 @@ def gift_prop_dialog(conn, user_id, prop_id):
         time.sleep(2)
         st.rerun()
         
-
-@st.dialog("Country Investment Options", width="large")
+@st.dialog("Country Options", width="large")
 def country_details_dialog(conn, user_id, country_id):
     c = conn.cursor()
     
@@ -1164,25 +1163,30 @@ def country_details_dialog(conn, user_id, country_id):
 
     with c2:
 
-        st.subheader(f"🇨🇳 {name}", divider="rainbow")
+        st.subheader(f"{name}", divider="rainbow")
         st.write(f"💰 **Total Worth**: :orange[${format_number(total_worth)}]")
         st.write(f"📈 **Share Price**: :red[${format_number(share_price)}]")
         st.write(f"🏠 **Your Holdings**: :green[{owned_shares}%]")
 
         st.text("")
+
+        if not max_buyable_shares:
+            with st.container(border=True):
+                st.error("This country has been fully sold out!")
         
-        shares_to_buy = st.slider("Select shares to purchase (%)", min_value=0.0, max_value=float(max_buyable_shares), step=0.01)
-        total_cost = shares_to_buy * share_price  # Dynamic total cost calculation
+        else:
+            shares_to_buy = st.slider("Select shares to purchase (%)", min_value=0.0, max_value=float(max_buyable_shares), step=0.01)
+            total_cost = shares_to_buy * share_price  # Dynamic total cost calculation
 
-        st.write(f"💸 **Total Cost**: :red[${format_number(total_cost)}]")
+            st.write(f"💸 **Total Cost**: :red[${format_number(total_cost)}]")
 
-        if st.button("💰 Buy Shares", use_container_width=True, disabled=shares_to_buy == 0):
-            with st.spinner("Processing transaction..."):
+            if st.button("💰 Buy Shares", use_container_width=True, disabled=shares_to_buy == 0):
+                with st.spinner("Processing transaction..."):
+                    time.sleep(2)
+                    buy_country_shares(conn, user_id, country_id, shares_to_buy)
+                st.success(f"✅ You purchased {shares_to_buy}% of {name}!")
                 time.sleep(2)
-                buy_country_shares(conn, user_id, country_id, shares_to_buy)
-            st.success(f"✅ You purchased {shares_to_buy}% of {name}!")
-            time.sleep(2)
-            st.rerun()
+                st.rerun()
 
 @st.dialog("Privacy Policy", width="large")
 def privacy_policy_dialog():
