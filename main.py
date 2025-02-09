@@ -1830,10 +1830,17 @@ def dashboard(conn, user_id):
 
     with c3:
         st.write("Login Streak")
-        st.subheader(f":green[{streak}] :blue[day]" if streak == 1 else f":green[{streak}] :blue[days]")
+        st.subheader(f":green[{streak}] :orange[day]" if streak == 1 else f":blue[{streak}] :orange[days]")
 
-    st.header("", divider="rainbow")
-    st.subheader("📜 Recent Transactions")
+    st.text("")
+    st.text("")
+    if st.button("✨ Get AI Insights ✨", use_container_width = True, type="primary"):
+        st.session_state.current_menu = "AI Insights"
+        st.rerun()
+
+    st.text("")
+    st.text("")
+    st.subheader("📜 Recent Transactions", divider="rainbow")
 
     transactions = c.execute("""
         SELECT timestamp, type, amount 
@@ -3381,7 +3388,109 @@ def buy_property(conn, user_id, property_id):
         conn.rollback()
         st.error(f"Error purchasing property: {e}")
         return False
+
+def get_ai_insights(user_id, conn):
+    query = """
+    SELECT user_id, amount, type, timestamp 
+    FROM transactions 
+    WHERE user_id = ?
+    """
+    df = pd.read_sql(query, conn, params=(user_id,))
+    df["hour"] = pd.to_datetime(df["timestamp"]).dt.hour
+    df["day_of_week"] = pd.to_datetime(df["timestamp"]).dt.dayofweek
+    df["transaction_type"] = df["type"].astype("category").cat.codes
+    X = df[["amount", "hour", "day_of_week", "transaction_type"]]
+    kmeans = KMeans(n_clusters=3, random_state=42)
+    df["cluster"] = kmeans.fit_predict(X)
+    user_cluster = df[df["user_id"] == user_id]["cluster"].mode()[0]
+    similar_users = df[df["cluster"] == user_cluster]["user_id"].unique()
+    return user_cluster, similar_users
+
+def get_recommendations(conn, user_cluster, similar_users):
+    query = """
+    SELECT user_id, amount, type, timestamp 
+    FROM transactions 
+    WHERE user_id IN ({})
+    """.format(",".join(["?"] * len(similar_users)))
+    df = pd.read_sql(query, conn, params=similar_users)
     
+    df["hour"] = pd.to_datetime(df["timestamp"]).dt.hour
+    df["day_of_week"] = pd.to_datetime(df["timestamp"]).dt.dayofweek
+    trends = df.groupby('type').agg({
+        'amount': 'mean',
+        'hour': lambda x: x.mode()[0],
+        'day_of_week': lambda x: x.mode()[0]
+    }).reset_index()
+    
+    recommendations = []
+    for _, row in trends.iterrows():
+        if row['type'] == 'Transfer to savings' and row['amount'] > 1000:
+            recommendations.append({
+                "title": "Consider putting more money in your savings",
+                "reason": "Similar users are saving larger amounts.",
+                "action": "Deposit to Savings",
+                "action_key": f"{user_cluster}_deposit_increase"
+            })
+        elif row['type'] == 'withdrawal' and row['amount'] < 500:
+            recommendations.append({
+                "title": "Consider reducing your withdrawal amount",
+                "reason": "Similar users are withdrawing smaller amounts.",
+                "action": "Reduce Withdrawal",
+                "action_key": f"{user_cluster}_withdrawal_reduce"
+            })
+        if row['hour'] < 12:
+            recommendations.append({
+                "title": "Try transacting in the morning",
+                "reason": "Most similar users are more active in the morning.",
+                "action": "Morning Transaction",
+                "action_key": f"{user_cluster}_morning_transaction"
+            })
+        if row['day_of_week'] == 0:
+            recommendations.append({
+                "title": "Try transacting on Monday",
+                "reason": "Most similar users prefer transacting on Mondays.",
+                "action": "Monday Transaction",
+                "action_key": f"{user_cluster}_monday_transaction"
+            })
+    
+    # Fallback recommendation
+    if not recommendations:
+        recommendations.append({
+            "title": "Explore new financial opportunities",
+            "reason": "We couldn't find specific trends, but consider exploring new ways to manage your finances.",
+            "action": "Explore Options",
+            "action_key": f"{user_cluster}_explore_options"
+        })
+    
+    return recommendations
+
+def ai_recommendations_view(conn, user_id):
+    c = conn.cursor()
+    transaction_amount = c.execute("SELECT COUNT(*) FROM transactions WHERE user_id = ?", (user_id,)).fetchone()[0]
+
+    st.header("AI Assistant: Personalized Suggestions", divider="rainbow")
+
+    insights = get_ai_insights(user_id, conn)  # Function to return user’s cluster
+    recommendations = get_recommendations(conn, insights[0], insights[1])  # Fetch recommendations
+
+    if not recommendations:
+        st.info("No new recommendations at the moment.")
+        return
+
+    st.write(f"✨ The :orange[Genova AI] has analyzed :orange[{transaction_amount}] of your transactions.")
+    for rec in recommendations:
+        with st.container(border=True):
+            st.subheader(f"✨ {rec['title']}")
+            st.write(f"**Reason:** {rec['reason']}")
+            if rec['action']:
+                st.text("")
+                st.text("")
+                # Create a unique key by combining the user cluster and recommendation title
+                unique_key = f"{rec['action_key']}_{rec['title']}_{random.randint(0, 99999)}"
+                if st.button(f"{rec['action']} [BETA]", key=unique_key):
+                    pass  # Function to execute the suggestion
+
+
 def admin_panel(conn):
     c = conn.cursor()
     st.header("Marketplace Items", divider = "rainbow")
