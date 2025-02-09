@@ -3488,6 +3488,14 @@ def get_recommendations(conn, user_cluster, similar_users):
         FROM user_properties 
         WHERE user_id = ?
     """, (st.session_state.user_id,)).fetchone()
+
+    country_data = c.execute("""
+        SELECT COUNT(*), COALESCE(SUM(shares_owned), 0)
+        FROM user_country_shares 
+        WHERE user_id = ?
+    """, (st.session_state.user_id,)).fetchone()
+
+    user_countries, user_country_income = country_data
     
     property_count, total_rent = property_data
 
@@ -3537,6 +3545,22 @@ def get_recommendations(conn, user_cluster, similar_users):
             "action_key": f"{user_cluster}_review_stocks"
         })
 
+    if user_countries == 0 and balance > 1000000:
+        recommendations.append({
+            "title": "Start Landowning",
+            "reason": "It's a perfect time to buy shares and invest in countries, as you don't own any.",
+            "action": "Real Estate",
+            "action_key": f"{user_cluster}_real_estate"
+        })
+
+    if user_countries > 0
+        recommendations.append({
+            "title": "Money Printing",
+            "reason": f"You make around :green[${format_number(user_country_income)}] by owning a total of :orange[{format_number(user_countries)}] shares of countries worldwide. Revise your landlord strategy.",
+            "action": "Real Estate",
+            "action_key": f"{user_cluster}_real_estate"
+        })
+
     if property_count == 0 and balance > 10000:
         recommendations.append({
             "title": "Real Estate Opportunity",
@@ -3544,10 +3568,11 @@ def get_recommendations(conn, user_cluster, similar_users):
             "action": "View Properties",
             "action_key": f"{user_cluster}_property"
         })
+        
     elif property_count > 0:
         recommendations.append({
             "title": "Property Empire",
-            "reason": f"Your properties generate :green[${format_number(total_rent)} per day]. Expand your real estate portfolio!",
+            "reason": f"Your properties generate :green[${format_number(total_rent)} per day]. It's a good time to expand your property portofolio!",
             "action": "Expand Portfolio",
             "action_key": f"{user_cluster}_expand_properties"
         })
@@ -3575,7 +3600,7 @@ def get_recommendations(conn, user_cluster, similar_users):
         
         recommendations.append({
             "title": "Smart Analytics",
-            "reason": f"You have a peak activity on :blue[{days[peak_days]}] at :blue[{peak_hours + 9}:00]. Monthly volume: :green[${format_number(monthly_volume)}]",
+            "reason": f"You have a peak activity on :blue[{days[peak_days]}], around :blue[{peak_hours + 9}:00]. Monthly volume: :green[${format_number(monthly_volume)}]",
             "action": "View Analytics",
             "action_key": f"{user_cluster}_analytics"
         })
