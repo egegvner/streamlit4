@@ -3553,7 +3553,7 @@ def get_recommendations(conn, user_cluster, similar_users):
             "action_key": f"{user_cluster}_real_estate"
         })
 
-    if user_countries > 0
+    if user_countries > 0:
         recommendations.append({
             "title": "Money Printing",
             "reason": f"You make around :green[${format_number(user_country_income)}] by owning a total of :orange[{format_number(user_countries)}] shares of countries worldwide. Revise your landlord strategy.",
