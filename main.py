@@ -3488,14 +3488,6 @@ def get_recommendations(conn, user_cluster, similar_users):
         FROM user_properties 
         WHERE user_id = ?
     """, (st.session_state.user_id,)).fetchone()
-
-    country_data = c.execute("""
-        SELECT COUNT(*), COALESCE(SUM(shares_owned), 0)
-        FROM user_country_shares 
-        WHERE user_id = ?
-    """, (st.session_state.user_id,)).fetchone()
-
-    user_countries, user_country_income = country_data
     
     property_count, total_rent = property_data
 
@@ -3543,22 +3535,6 @@ def get_recommendations(conn, user_cluster, similar_users):
             "reason": f"Review your total of :blue[{format_number(total_stocks)}] stocks and optimize your trading strategy.",
             "action": "Review Stocks",
             "action_key": f"{user_cluster}_review_stocks"
-        })
-
-    if user_countries == 0 and balance > 1000000:
-        recommendations.append({
-            "title": "Start Landowning",
-            "reason": "It's a perfect time to buy shares and invest in countries, as you don't own any.",
-            "action": "Real Estate",
-            "action_key": f"{user_cluster}_real_estate"
-        })
-
-    if user_countries > 0:
-        recommendations.append({
-            "title": "Money Printing",
-            "reason": f"You make around :green[${format_number(user_country_income)}] by owning a total of :orange[{format_number(user_countries)}] shares of countries worldwide. Revise your landlord strategy.",
-            "action": "Real Estate",
-            "action_key": f"{user_cluster}_real_estate"
         })
 
     if property_count == 0 and balance > 10000:
