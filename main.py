@@ -17,9 +17,9 @@ import yfinance as yf
 import json
 import os
 import shutil
-import requests
 import geopandas as gpd
 import numpy as np
+import extra_streamlit_components as stx
 from streamlit_lightweight_charts import renderLightweightCharts
 
 ph = argon2.PasswordHasher(
@@ -84,7 +84,7 @@ def write_stream(s, delay = 0, random_delay = False):
 
 @st.cache_resource
 def get_db_connection():
-    return sqlite3.connect("genova.db", check_same_thread = False)
+    return sqlite3.connect("genova_sq.db", check_same_thread = False)
 
 item_colors = {
         "Common":":gray",
@@ -2910,14 +2910,19 @@ def investments_view(conn, user_id):
 
 def real_estate_marketplace_view(conn, user_id):
     c = conn.cursor()
-    load_lands_from_json(conn, "./lands.json")
-                
+    with st.spinner("Fetching everything..."):
+            x = c.execute("SELECT COUNT(*) FROM real_estate")
+            if x.fetchone()[0] != 0:
+                load_lands_from_json(conn, "/Users/egeguvener/Desktop/Main/Python/NewProjects/BankingWebApp/lands.json")
     countries = c.execute("""
             SELECT country_id, name, total_worth, share_price, latitude, longitude, border_geometry, image_url
             FROM country_lands
         """).fetchall()
     
-    load_real_estates_from_json(conn, "./real_estates.json")
+    with st.spinner("Fetching everything..."):
+            x = c.execute("SELECT COUNT(*) FROM real_estate")
+            if x.fetchone()[0] != 0:
+                load_real_estates_from_json(conn, "/Users/egeguvener/Desktop/Main/Python/NewProjects/BankingWebApp/real_estates.json")
 
     properties = c.execute("""
         SELECT property_id, region, type, price, rent_income, demand_factor, latitude, longitude, image_url, sold, username 
@@ -2930,9 +2935,9 @@ def real_estate_marketplace_view(conn, user_id):
             SELECT country_id, shares_owned FROM user_country_shares WHERE user_id = ?
         """, (user_id,)).fetchall()
     
-    ta1, ta2 = st.tabs(["PROPERTIES", "LANDS"])
+    t1, t2 = st.tabs(["PROPERTIES", "LANDS"])
     
-    with ta1:
+    with t1:
         if "selected_property" not in st.session_state:
             st.session_state.selected_property = None
 
@@ -3065,7 +3070,7 @@ def real_estate_marketplace_view(conn, user_id):
                             st.caption(":gray[UPGRADABLE]")
                         st.divider()
 
-    with ta2:
+    with t2:
         def get_color_from_shares(share_percentage):
             normalized_value = np.clip(share_percentage / 100, 0, 1)
             red = int((1 - normalized_value) * 255)
@@ -3132,8 +3137,7 @@ def real_estate_marketplace_view(conn, user_id):
             initial_view_state=pdk.ViewState(
             latitude=df["LAT"].mean(), 
             longitude=df["LON"].mean(), 
-            zoom=1,
-            pitch = 50
+            zoom=2
             ),
             tooltip={
                 "html": """
@@ -3153,7 +3157,7 @@ def real_estate_marketplace_view(conn, user_id):
     
             with image_col:
                 if row["Image URL"]:
-                    st.image(f"{row['Image URL']}", use_container_width=True)
+                    st.image(f"{row["Image URL"]}", use_container_width=True)
 
             with details_col:
                 st.subheader(f"{row['Name']}", divider="rainbow")
@@ -3834,6 +3838,16 @@ def settings(conn, username):
 
     st.button("Ege Güvener • © 2024", type = "tertiary", use_container_width = True, disabled = True)
 
+def check_persistent_login(manager):
+    if "logged_in" not in st.session_state:
+        user_id = manager.get("user_id")
+        username = manager.get("username")
+
+        if user_id and username:
+            st.session_state.logged_in = True
+            st.session_state.user_id = int(user_id)
+            st.session_state.username = username
+
 def main(conn):
 
     if 'current_menu' not in st.session_state:
@@ -3845,7 +3859,6 @@ def main(conn):
         st.session_state.logged_in = False
         st.session_state.user_id = None
         st.session_state.username = None
-        st.session_state.current_menu = "Dashboard"
 
     if not st.session_state.logged_in:
         st.title("Bank :red[Genova] ™", anchor = False)
@@ -3870,7 +3883,10 @@ def main(conn):
                             st.session_state.logged_in = True
                             st.session_state.user_id = user[0]
                             st.session_state.username = username
-                            time.sleep(1)
+                            manager.set("user_id", str(user[0]))
+                            manager.set("username", username)
+
+                            time.sleep(3)
                             
                     time.sleep(2)
                     st.rerun()
@@ -3880,13 +3896,9 @@ def main(conn):
             st.text("")
             st.text("")
 
-            c1, c2, c3 = st.columns([1, 1, 1])
-            with c2:
-                c1, c2 = st.columns(2)
-                if c1.button("[ Privacy Policy", type = "tertiary"):
-                    privacy_policy_dialog()
-
-                c2.button("Terms of Use ]", type = "tertiary")
+            c1, c2, c3 = st.columns([1.25, 1, 1])
+            if c2.button("[Privacy Policy & Terms]", type = "tertiary"):
+                privacy_policy_dialog()
             
             st.write('<div style="position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); color: slategray; text-align: center;"><marquee>Simple and educational bank / finance simulator by Ege. Specifically built for IB Computer Science IA. All rights of this "game" is reserved.</marquee></div>', unsafe_allow_html=True)
 
@@ -3919,13 +3931,10 @@ def main(conn):
                     st.error("Empty username is illegal.")
             
             st.text("")
-            c1, c2, c3 = st.columns([1, 1, 1])
-            with c2:
-                c1, c2 = st.columns(2)
-                if c1.button("[ Privacy Policy", type = "tertiary"):
-                    privacy_policy_dialog()
+            c1, c2, c3 = st.columns([1.25, 1, 1])
+            if c2.button("[Privacy Policy & Terms]", type = "tertiary"):
+                privacy_policy_dialog()
 
-                c2.button("Terms of Use ]", type = "tertiary")
             st.write('<div style="position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); color: slategray; text-align: center;"><marquee>Simple and educational bank / finance simulator by Ege. Specifically built for IB Computer Science IA. All rights of this "game" is reserved.</marquee></div>', unsafe_allow_html=True)
 
     elif st.session_state.logged_in:
@@ -4080,11 +4089,10 @@ def main(conn):
 
         elif st.session_state.current_menu == "Logout":
             st.sidebar.info("Logging you out...")
-            time.sleep(2.5)
-            st.session_state.logged_in = False
-            st.session_state.user_id = None
-            st.session_state.username = None
-            st.session_state.current_menu = "Dashboard"
+            time.sleep(2)
+            st.session_state.clear()
+            manager.delete("user_id")
+            manager.delete("username")
             st.rerun()
 
         elif st.session_state.current_menu == "Settings":
@@ -4112,4 +4120,6 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
 if __name__ == "__main__":
     conn = get_db_connection()
     init_db(conn)
+    manager = stx.CookieManager()
+    check_persistent_login(manager)
     main(conn)
