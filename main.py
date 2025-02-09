@@ -2910,14 +2910,30 @@ def investments_view(conn, user_id):
 
 def real_estate_marketplace_view(conn, user_id):
     c = conn.cursor()
-    load_lands_from_json(conn, "./lands.json")
-                
+    with st.spinner("Fetching everything..."):
+            x = c.execute("SELECT COUNT(*) FROM real_estate")
+            if x.fetchone()[0] != 0:
+                load_lands_from_json(conn, "/Users/egeguvener/Desktop/Main/Python/NewProjects/BankingWebApp/lands.json")
+    
     countries = c.execute("""
             SELECT country_id, name, total_worth, share_price, latitude, longitude, border_geometry, image_url
             FROM country_lands
         """).fetchall()
     
-    load_real_estates_from_json(conn, "./real_estates.json")
+    top_shareholders = c.execute("""
+            SELECT country_id, username, shares_owned FROM user_country_shares 
+            JOIN users ON user_country_shares.user_id = users.user_id 
+            WHERE (country_id, shares_owned) IN (
+                SELECT country_id, MAX(shares_owned) 
+                FROM user_country_shares 
+                GROUP BY country_id
+            )
+        """).fetchall()
+    
+    with st.spinner("Fetching everything..."):
+            x = c.execute("SELECT COUNT(*) FROM real_estate")
+            if x.fetchone()[0] != 0:
+                load_real_estates_from_json(conn, "/Users/egeguvener/Desktop/Main/Python/NewProjects/BankingWebApp/real_estates.json")
 
     properties = c.execute("""
         SELECT property_id, region, type, price, rent_income, demand_factor, latitude, longitude, image_url, sold, username 
@@ -2930,9 +2946,9 @@ def real_estate_marketplace_view(conn, user_id):
             SELECT country_id, shares_owned FROM user_country_shares WHERE user_id = ?
         """, (user_id,)).fetchall()
     
-    ta1, ta2 = st.tabs(["PROPERTIES", "LANDS"])
+    t1, t2 = st.tabs(["PROPERTIES", "LANDS"])
     
-    with ta1:
+    with t1:
         if "selected_property" not in st.session_state:
             st.session_state.selected_property = None
 
@@ -2973,12 +2989,11 @@ def real_estate_marketplace_view(conn, user_id):
             ),
             tooltip={
                 "html": """
-                    <b>Property Details</b><br/><hr>
-                    <span style="color: gray;">Title</span> <span style="color: white;">{Type}</span><br/>
-                    <span style="color: gray;">Region</span> <span style="color: white;">{Region}</span><br/>
-                    <span style="color: gray;">Price</span> <span style="color: red;">${Formatted Price}</span><br/>
-                    <span style="color: gray;">Rent</span> <span style="color: lime;">${Formatted Rent} / day</span><br/>
-                    <span style="color: gray;">Owner</span> <span style="color: white;">{Username}</span>
+                    <span style="color: white;"><b>{Type}</b></span><br/><hr>
+                    <span style="color: white;">Region</span> <span style="color: gold;">{Region}</span><br/>
+                    <span style="color: white;">Price</span> <span style="color: red;">${Formatted Price}</span><br/>
+                    <span style="color: white;">Rent</span> <span style="color: lime;">${Formatted Rent} / day</span><br/>
+                    <span style="color: white;">Owner</span> <span style="color: gold;">{Username}</span>
                 """,
                 "style": {
                     "backgroundColor": "black",
@@ -3065,7 +3080,7 @@ def real_estate_marketplace_view(conn, user_id):
                             st.caption(":gray[UPGRADABLE]")
                         st.divider()
 
-    with ta2:
+    with t2:
         def get_color_from_shares(share_percentage):
             normalized_value = np.clip(share_percentage / 100, 0, 1)
             red = int((1 - normalized_value) * 255)
@@ -3105,10 +3120,14 @@ def real_estate_marketplace_view(conn, user_id):
                 return []
 
         df["Borders"] = df["Borders"].apply(lambda path: extract_polygon_coordinates(path))
+        top_shareholders_dict = {row[0]: (row[1], row[2]) for row in top_shareholders}
+
+        df["Top Shareholder"] = df["Country ID"].apply(lambda country_id: top_shareholders_dict.get(country_id, ("None", 0)))
 
         polygon_data = []
         for _, row in df.iterrows():
             for polygon in row["Borders"]:
+                top_owner, top_shares = row["Top Shareholder"]
                 polygon_data.append({
                     "polygon": polygon,
                     "name": row["Name"],
@@ -3116,9 +3135,21 @@ def real_estate_marketplace_view(conn, user_id):
                     "color": row["Color"],
                     "share_price": format_number(row["Share Price"]),
                     "user_holdings": user_shares_dict.get(row["Country ID"], 0),
-                })
+                    "top_shareholder": f"{top_owner} ({(top_shares)}%)"
 
-        st.pydeck_chart(pdk.Deck(
+                })
+        
+        if 'r' not in st.session_state:
+            st.session_state.r = {}
+
+        def on_select():
+            if st.session_state.r["selection"]["objects"].get("polygon-layer", [{"name": "NotFound"}])[0].get("name") == "NotFound":
+                return
+            else:
+                country_id = c.execute("SELECT country_id FROM country_lands WHERE name = ?", (st.session_state.r["selection"]["objects"]["polygon-layer"][0]["name"],)).fetchone()[0]
+                country_details_dialog(conn, user_id, country_id)
+        
+        r = st.pydeck_chart(pdk.Deck(
             layers=[
             pdk.Layer(
                 "PolygonLayer",
@@ -3126,28 +3157,33 @@ def real_estate_marketplace_view(conn, user_id):
                 get_polygon="polygon",
                 get_fill_color="color",
                 pickable=True,
-                auto_highlight=True
+                auto_highlight=False,
+                extruded=False,
+                id="polygon-layer"
             )
             ],
             initial_view_state=pdk.ViewState(
             latitude=df["LAT"].mean(), 
             longitude=df["LON"].mean(), 
-            zoom=1,
-            pitch = 50
+            zoom=1.5,
+            pitch=40
             ),
             tooltip={
                 "html": """
                     <b><span style="color: white;">{name}</span></b><br/><hr>
                     <span style="color: white;">Total Worth</span> <span style="color: lime;"><b>${total_worth}</b></span><br/>
                     <span style="color: white;">Share Price</span> <span style="color: red;"><b>${share_price}</b></span><br/>
-                    <span style="color: white;">Owned</span> <span style="color: orange;">{user_holdings}%</span>
+                    <span style="color: white;">Owned</span> <span style="color: gold;">{user_holdings}%</span><br>
+                    <span style="color: white;">Top Landowner</span> <span style="color: gold;">{top_shareholder}</span>
+
                 """,
                 "style": {
                     "backgroundColor": "black",
                 }
             }
-        ))
-
+        ), on_select=on_select, selection_mode="single-object")
+        st.session_state.r = r
+        
         for idx, row in df.iterrows():
             image_col, details_col = st.columns([1, 3])
     
@@ -3167,6 +3203,7 @@ def real_estate_marketplace_view(conn, user_id):
                     country_details_dialog(conn, user_id, row["Country ID"])
 
             st.divider()
+
 
 def buy_country_shares(conn, user_id, country_id, shares_to_buy):
     c = conn.cursor()
