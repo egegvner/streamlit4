@@ -1196,11 +1196,11 @@ def country_details_dialog(conn, user_id, country_id):
     """, (country_id,)).fetchone()
     
     shareholders = c.execute("""
-        SELECT u.username, u.visible_name, ul.shares_held
-        FROM user_lands ul
-        JOIN users u ON ul.user_id = u.user_id
-        WHERE ul.country_id = ? AND ul.shares_held > 0
-        ORDER BY ul.shares_held DESC
+        SELECT u.username, u.visible_name, ucs.shares_owned as shares_held
+        FROM user_country_shares ucs
+        JOIN users u ON ucs.user_id = u.user_id
+        WHERE ucs.country_id = ? AND ucs.shares_owned > 0
+        ORDER BY ucs.shares_owned DESC
     """, (country_id,)).fetchall()
 
     with st.dialog("Country Details", on_close=lambda: None):
