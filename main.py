@@ -4281,7 +4281,7 @@ def admin_panel(conn):
 
     st.header("Manage Country Lands", divider = "rainbow")
     with st.spinner("Loading Lands..."):
-        country_data = c.execute("country_id, name, total_worth, share_price, available_shares, image_url, latitude, longitude, border_geometry FROM country_lands").fetchall()
+        country_data = c.execute("SELECT country_id, name, total_worth, share_price, available_shares, image_url, latitude, longitude, border_geometry FROM country_lands").fetchall()
     df = pd.DataFrame(country_data, columns = ["Country ID", "Name", "Total Worth", "Share Price", "Available Shares", "Image Path", "Latitude", "Longitude", "Border Geometry"])
     edited_df = st.data_editor(df, key = "country_table", num_rows = "fixed", use_container_width = True, hide_index = True)
     if st.button("Update Country Lands", use_container_width = True):
