@@ -2847,7 +2847,7 @@ def bank_view(conn, user_id):
         st.divider()
         st.warning(f"[Max Borrow] :green[${format_currency(st.session_state.amt)}] $||$ :green[{format_number(st.session_state.amt)}]")
         st.subheader("Borrow Loan")
-        borrow_amount = st.number_input("A", label_visibility="collapsed", min_value=100.0, max_value=float(st.session_state.amt), step=100.0)
+        borrow_amount = st.number_input("A", label_visibility="collapsed", min_value=0.0, max_value=float(st.session_state.amt), step=100.0)
         if st.button(f"Borrow :red[${format_number(borrow_amount)}]", use_container_width=True):
             with st.spinner("Processing borrow"):
                 time.sleep(3)
@@ -2858,7 +2858,7 @@ def bank_view(conn, user_id):
         st.subheader("Repay Loan")
         c1, c2 = st.columns(2)
         
-        st.session_state.repay = c1.number_input("d", label_visibility="collapsed", min_value=0.0, value=float(st.session_state.repay), step=10.0)
+        st.session_state.repay = c1.number_input("d", label_visibility="collapsed", min_value=0.0, value=float(st.session_state.repay), step=100.0)
         if c2.button("Max", use_container_width=True):
             st.session_state.repay = loan
             st.rerun()
