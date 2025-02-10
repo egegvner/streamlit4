@@ -851,8 +851,6 @@ def init_db(conn):
             image_url TEXT,
             latitude TEXT NOT NULL,
             longitude TEXT NOT NULL,
-            sold INTEGER DEFAULT 0,
-            username TEXT DEFAULT NULL,
             border_geometry TEXT NOT NULL
             );''')
     
@@ -4280,6 +4278,59 @@ def admin_panel(conn):
             c.execute("DELETE FROM real_estate WHERE property_id = ?", (estate_id_to_delete,))
         conn.commit()
         st.rerun()
+
+    st.header("Manage Country Lands", divider = "rainbow")
+    with st.spinner("Loading Lands..."):
+        country_data = c.execute("country_id, name, total_worth, share_price, available_shares, image_url, latitude, longitude, border_geometry FROM country_lands").fetchall()
+    df = pd.DataFrame(country_data, columns = ["Country ID", "Name", "Total Worth", "Share Price", "Available Shares", "Image Path", "Latitude", "Longitude", "Border Geometry"])
+    edited_df = st.data_editor(df, key = "country_table", num_rows = "fixed", use_container_width = True, hide_index = True)
+    if st.button("Update Country Lands", use_container_width = True):
+        for _, row in edited_df.iterrows():
+            c.execute("UPDATE OR IGNORE country_lands SET name = ?, total_worth = ?, share_price = ?, available_shares = ?, image_url = ?, latitude = ?, longitude = ?, border_geometry = ? WHERE country_id = ?", (row["Name"], row["Total Worth"], row["Share Price"], row["Available Shares"], row["Image Path"], row["Latitude"], row["Longitude"], row["Border Geometry"], row["Country ID"]))
+        conn.commit()
+        st.rerun()
+
+    country_id_to_delete = st.number_input("Enter Country ID to Delete", min_value = 0, step = 1)
+    if st.button("Delete Country", use_container_width = True):
+        with st.spinner("Processing..."):
+            c.execute("DELETE FROM country_lands WHERE country_id = ?", (country_id_to_delete,))
+        conn.commit()
+        st.rerun()
+
+    st.subheader("User Country Lands", divider="rainbow")
+    user = st.selectbox("Select User", [u[0] for u in c.execute("SELECT username FROM users").fetchall()], key="inv4")
+    if user:
+        user_id = c.execute("SELECT user_id FROM users WHERE username = ?", (user,)).fetchone()[0]
+        user_country_lands = c.execute("SELECT country_id, shares_owned, last_income_claimed FROM user_country_shares WHERE user_id = ? ORDER BY country_id", (user_id,)).fetchall()
+
+        if user_country_lands:
+            df = pd.DataFrame(user_country_lands, columns=["Country ID", "Shares Owned", "Last Income Claimed"])
+            edited_df = st.data_editor(df, key="user_country_lands_table", num_rows="fixed", use_container_width=True, hide_index=False)
+            
+            if st.button("Update User Country Lands", use_container_width=True):
+                for _, row in edited_df.iterrows():
+                    c.execute("""
+                        UPDATE OR IGNORE user_country_shares 
+                        SET shares_owned = ?, last_income_claimed = ? 
+                        WHERE country_id = ? AND user_id = ?
+                    """, (row["Shares Owned"], row["Last Income Claimed"], row["Country ID"], user_id))
+                conn.commit()
+                st.success("User country lands updated successfully.")
+                st.rerun()
+            
+            st.text("")
+
+            with st.container(border=True):
+                c1, c2 = st.columns(2)
+                country_id_to_delete = c1.number_input("Enter Country ID to Delete", min_value=0, step=1)
+
+            if c2.button("Delete Country Land", use_container_width=True):
+                with st.spinner("Processing..."):
+                    c.execute("DELETE FROM user_country_shares WHERE country_id = ? AND user_id = ?", (country_id_to_delete, user_id))
+                conn.commit()
+                st.rerun()
+        else:
+            st.write(f"No country lands found for {user}.")
 
     st.header("User Removal", divider = "rainbow")
     
