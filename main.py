@@ -1139,23 +1139,30 @@ def country_details_dialog(conn, user_id, country_id):
     c = conn.cursor()
     
     country = c.execute("""
-        SELECT name, total_worth, share_price, image_url FROM country_lands WHERE country_id = ?
+        SELECT name, total_worth, share_price, image_url, available_shares 
+        FROM country_lands 
+        WHERE country_id = ?
     """, (country_id,)).fetchone()
 
     if not country:
         st.error("Country details not found.")
         return
 
-    name, total_worth, share_price, image_url = country
+    name, total_worth, share_price, image_url, available_shares = country
 
     user_shares = c.execute("""
-        SELECT shares_owned FROM user_country_shares WHERE user_id = ? AND country_id = ?
+        SELECT shares_owned FROM user_country_shares 
+        WHERE user_id = ? AND country_id = ?
     """, (user_id, country_id)).fetchone()
 
     owned_shares = user_shares[0] if user_shares else 0
     balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
-    max_buyable_shares = min(balance // share_price, 100 - owned_shares)  # Ensures user can't own more than 100%
+    # Calculate max buyable shares based on available shares and user's balance
+    max_buyable_shares = min(
+        balance // share_price,  # Maximum shares user can afford
+        available_shares  # Maximum shares available for purchase
+    )
 
     c1, c2 = st.columns(2)
     
@@ -1164,28 +1171,64 @@ def country_details_dialog(conn, user_id, country_id):
             st.image(image_url, use_container_width=True)
 
     with c2:
-
         st.subheader(f"{name}", divider="rainbow")
         st.write(f"💰 **Total Worth**: :orange[${format_number(total_worth)}]")
         st.write(f"📈 **Share Price**: :red[${format_number(share_price)}]")
         st.write(f"🏠 **Your Holdings**: :green[{owned_shares}%]")
+        st.write(f"📊 **Available Shares**: :blue[{available_shares}%]")
 
         st.text("")
 
-        if not max_buyable_shares:
+        if available_shares <= 0:
             with st.container(border=True):
                 st.error("This country has been fully sold out!")
-        
         else:
-            shares_to_buy = st.slider("Select shares to purchase (%)", min_value=0.0, max_value=float(max_buyable_shares), step=0.01)
-            total_cost = shares_to_buy * share_price  # Dynamic total cost calculation
+            shares_to_buy = st.slider(
+                "Select shares to purchase (%)", 
+                min_value=0.0, 
+                max_value=float(max_buyable_shares), 
+                step=0.01
+            )
+            total_cost = shares_to_buy * share_price
 
             st.write(f"💸 **Total Cost**: :red[${format_number(total_cost)}]")
 
             if st.button("💰 Buy Shares", use_container_width=True, disabled=shares_to_buy == 0):
                 with st.spinner("Processing transaction..."):
+                    # Update available shares
+                    c.execute("""
+                        UPDATE country_lands 
+                        SET available_shares = available_shares - ? 
+                        WHERE country_id = ?
+                    """, (shares_to_buy, country_id))
+                    
+                    # Update or insert user shares
+                    existing_shares = c.execute("""
+                        SELECT shares_owned FROM user_country_shares 
+                        WHERE user_id = ? AND country_id = ?
+                    """, (user_id, country_id)).fetchone()
+
+                    if existing_shares:
+                        c.execute("""
+                            UPDATE user_country_shares 
+                            SET shares_owned = shares_owned + ? 
+                            WHERE user_id = ? AND country_id = ?
+                        """, (shares_to_buy, user_id, country_id))
+                    else:
+                        c.execute("""
+                            INSERT INTO user_country_shares (user_id, country_id, shares_owned) 
+                            VALUES (?, ?, ?)
+                        """, (user_id, country_id, shares_to_buy))
+
+                    # Update user balance
+                    c.execute("""
+                        UPDATE users 
+                        SET balance = balance - ? 
+                        WHERE user_id = ?
+                    """, (total_cost, user_id))
+
+                    conn.commit()
                     time.sleep(2)
-                    buy_country_shares(conn, user_id, country_id, shares_to_buy)
                 st.success(f"✅ You purchased {shares_to_buy}% of {name}!")
                 time.sleep(2)
                 st.rerun()
@@ -4789,5 +4832,4 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
 if __name__ == "__main__":
     conn = get_db_connection()
     init_db(conn)
-    conn.cursor().execute("ALTER TABLE country_lands ADD COLUMN available_shares REAL DEFAULT 100.0;")
     main(conn)
