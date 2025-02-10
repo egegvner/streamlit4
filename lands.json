@@ -58,5 +58,45 @@
         "latitude": 0.00,
         "longitude": 0.00,
         "border_geometry": "./GeoJSON/China.json"
+      },
+      {
+        "country_id": 700001025,
+        "name": "Brazil",
+        "total_worth": 38700000000000,
+        "share_price": 387000000000,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739192787/brazil-_tyzdxq.png",
+        "latitude": 0.00,
+        "longitude": 0.00,
+        "border_geometry": "./GeoJSON/Brazil.json"
+      },
+      {
+        "country_id": 700001026,
+        "name": "India",
+        "total_worth": 98400000000000,
+        "share_price": 984000000000,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739192788/india_gteh2g.png",
+        "latitude": 0.00,
+        "longitude": 0.00,
+        "border_geometry": "./GeoJSON/India.json"
+      },
+      {
+        "country_id": 700001025,
+        "name": "South Africa",
+        "total_worth": 63200000000000,
+        "share_price": 632000000000,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739192787/south-africa_xgx0m6.png",
+        "latitude": 0.00,
+        "longitude": 0.00,
+        "border_geometry": "./GeoJSON/SouthAfrica.json"
+      },
+      {
+        "country_id": 700001025,
+        "name": "Russia",
+        "total_worth": 78700000000000,
+        "share_price": 787000000000,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739192787/russia_k8shxe.png",
+        "latitude": 0.00,
+        "longitude": 0.00,
+        "border_geometry": "./GeoJSON/Russia.json"
       }
 ]
