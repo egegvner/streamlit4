@@ -60,16 +60,6 @@
         "border_geometry": "./GeoJSON/China.json"
       },
       {
-        "country_id": 700001025,
-        "name": "Brazil",
-        "total_worth": 38700000000000,
-        "share_price": 387000000000,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739192787/brazil-_tyzdxq.png",
-        "latitude": 0.00,
-        "longitude": 0.00,
-        "border_geometry": "./GeoJSON/Brazil.json"
-      },
-      {
         "country_id": 700001026,
         "name": "India",
         "total_worth": 98400000000000,
