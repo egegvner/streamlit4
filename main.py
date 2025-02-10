@@ -1203,51 +1203,38 @@ def country_details_dialog(conn, user_id, country_id):
         ORDER BY ucs.shares_owned DESC
     """, (country_id,)).fetchall()
 
-    with st.dialog("Country Details", on_close=lambda: None):
-        col1, col2 = st.columns([1, 2])
+    if shareholders:
+        st.subheader("📊 Shareholders")
         
-        with col1:
-            st.image(country_data[3], use_column_width=True)
+        df = pd.DataFrame(shareholders, columns=["Username", "Visible Name", "Shares Held"])
+        df["Ownership Value"] = df["Shares Held"] * country_data[2]
+        df["Ownership %"] = (df["Shares Held"] / df["Shares Held"].sum() * 100).round(2)
         
-        with col2:
-            st.subheader(f"{country_data[0]}")
-            st.write(f"Total Worth: :green[${format_number(country_data[1])}]")
-            st.write(f"Share Price: :green[${format_number(country_data[2])}]")
+        df["Display Name"] = df.apply(lambda x: x["Visible Name"] if x["Visible Name"] else x["Username"], axis=1)
         
-        st.divider()
+        display_df = df[["Display Name", "Shares Held", "Ownership Value", "Ownership %"]]
+        display_df = display_df.rename(columns={
+            "Display Name": "Shareholder",
+            "Ownership Value": "Value",
+            "Ownership %": "Share"
+        })
         
-        if shareholders:
-            st.subheader("📊 Shareholders")
-            
-            df = pd.DataFrame(shareholders, columns=["Username", "Visible Name", "Shares Held"])
-            df["Ownership Value"] = df["Shares Held"] * country_data[2]
-            df["Ownership %"] = (df["Shares Held"] / df["Shares Held"].sum() * 100).round(2)
-            
-            df["Display Name"] = df.apply(lambda x: x["Visible Name"] if x["Visible Name"] else x["Username"], axis=1)
-            
-            display_df = df[["Display Name", "Shares Held", "Ownership Value", "Ownership %"]]
-            display_df = display_df.rename(columns={
-                "Display Name": "Shareholder",
-                "Ownership Value": "Value",
-                "Ownership %": "Share"
-            })
-            
-            display_df["Value"] = display_df["Value"].apply(lambda x: f"${format_number(x)}")
-            display_df["Share"] = display_df["Share"].apply(lambda x: f"{x}%")
-            
-            st.dataframe(
-                display_df,
-                hide_index=True,
-                use_container_width=True,
-                column_config={
-                    "Shareholder": st.column_config.TextColumn("📝 Shareholder"),
-                    "Shares Held": st.column_config.NumberColumn("🔢 Shares"),
-                    "Value": st.column_config.TextColumn("💰 Value"),
-                    "Share": st.column_config.TextColumn("📊 Share")
-                }
-            )
-        else:
-            st.info("No shareholders yet! Be the first to invest in this country.")
+        display_df["Value"] = display_df["Value"].apply(lambda x: f"${format_number(x)}")
+        display_df["Share"] = display_df["Share"].apply(lambda x: f"{x}%")
+        
+        st.dataframe(
+            display_df,
+            hide_index=True,
+            use_container_width=True,
+            column_config={
+                "Shareholder": st.column_config.TextColumn("📝 Shareholder"),
+                "Shares Held": st.column_config.NumberColumn("🔢 Shares"),
+                "Value": st.column_config.TextColumn("💰 Value"),
+                "Share": st.column_config.TextColumn("📊 Share")
+            }
+        )
+    else:
+        st.info("No shareholders yet! Be the first to invest in this country.")
 
 @st.dialog("Privacy Policy", width="large")
 def privacy_policy_dialog():
