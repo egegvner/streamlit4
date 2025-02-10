@@ -1189,6 +1189,58 @@ def country_details_dialog(conn, user_id, country_id):
                 time.sleep(2)
                 st.rerun()
 
+    share_owners = c.execute("""
+        SELECT u.username, u.visible_name, cl.share_amount 
+        FROM country_land_shares cl
+        JOIN users u ON cl.user_id = u.user_id
+        WHERE cl.country_id = ? AND cl.share_amount > 0
+        ORDER BY cl.share_amount DESC
+    """, (country_id,)).fetchall()
+    
+    if share_owners:
+        st.divider()
+        st.subheader("📊 Share Distribution")
+        
+        # Create DataFrame for share ownership
+        df = pd.DataFrame(share_owners, columns=["Username", "Display Name", "Shares Held"])
+        df["Display Name"] = df.apply(lambda x: x["Display Name"] if x["Display Name"] else x["Username"], axis=1)
+        df = df.drop("Username", axis=1)  # Remove username column since we're using display names
+        
+        # Calculate percentage of total shares
+        total_shares = df["Shares Held"].sum()
+        df["Ownership %"] = (df["Shares Held"] / total_shares * 100).round(2)
+        df["Ownership %"] = df["Ownership %"].apply(lambda x: f"{x}%")
+        
+        # Format share numbers
+        df["Shares Held"] = df["Shares Held"].apply(format_number)
+        
+        # Display the table
+        st.dataframe(
+            df,
+            hide_index=True,
+            use_container_width=True,
+            column_config={
+                "Display Name": st.column_config.TextColumn(
+                    "Owner",
+                    help="Land share owner's display name",
+                    width="medium"
+                ),
+                "Shares Held": st.column_config.TextColumn(
+                    "Shares",
+                    help="Number of shares held",
+                    width="small"
+                ),
+                "Ownership %": st.column_config.TextColumn(
+                    "Ownership",
+                    help="Percentage of total shares",
+                    width="small"
+                )
+            }
+        )
+    else:
+        st.info("No shares have been purchased for this country yet.")
+
+
 @st.dialog("Privacy Policy", width="large")
 def privacy_policy_dialog():
     st.header("", divider="rainbow")
