@@ -3047,7 +3047,7 @@ def real_estate_marketplace_view(conn, user_id):
             SELECT country_id, shares_owned FROM user_country_shares WHERE user_id = ?
         """, (user_id,)).fetchall()
     
-    t1, t2 = st.tabs(["PROPERTIES", "LANDS"])
+    t1, t2 = st.tabs(["🏠 PROPERTIES 🏠", "🚩 LANDS 🚩"])
     
     with t1:
         if "selected_property" not in st.session_state:
