@@ -2,31 +2,61 @@
       {
         "country_id": 700001019,
         "name": "Turkey",
-        "total_worth": 40000000000000,
-        "share_price": 400000000000,
+        "total_worth": 42500000000000,
+        "share_price": 425000000000,
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739024257/turkey_ntrscg.png",
-        "latitude": 38.9637,
-        "longitude": 35.2433,
-        "border_geometry": "./GeoJSON/geoBoundaries-TUR-ADM0_simplified.json"
+        "latitude": 0.00,
+        "longitude": 0.00,
+        "border_geometry": "./GeoJSON/Turkiye.json"
       },
       {
         "country_id": 700001020,
         "name": "Canada",
-        "total_worth": 80000000000000,
-        "share_price": 800000000000,
+        "total_worth": 73600000000000,
+        "share_price": 736000000000,
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739026941/canada_rxwbvi.png",
-        "latitude": 38.9637,
-        "longitude": 35.2433,
-        "border_geometry": "./GeoJSON/Canada_ADM0.json"
+        "latitude": 0.00,
+        "longitude": 0.00,
+        "border_geometry": "./GeoJSON/Canada.json"
       },
       {
         "country_id": 700001021,
+        "name": "Australia",
+        "total_worth": 54400000000000,
+        "share_price": 544000000000,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739175427/australia_wsf6ja.png",
+        "latitude": 0.00,
+        "longitude": 0.00,
+        "border_geometry": "./GeoJSON/Australia.json"
+      },
+      {
+        "country_id": 700001022,
         "name": "United Kingdom",
-        "total_worth": 70000000000000,
-        "share_price": 700000000000,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739026941/canada_rxwbvi.png",
-        "latitude": 38.9637,
-        "longitude": 35.2433,
+        "total_worth": 65600000000000,
+        "share_price": 656000000000,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739175427/united-kingdom_zlezqa.png",
+        "latitude": 0.00,
+        "longitude": 0.00,
         "border_geometry": "./GeoJSON/UK.json"
+      },
+      {
+        "country_id": 700001023,
+        "name": "United States",
+        "total_worth": 163800000000000,
+        "share_price": 1638000000000,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739175426/united-states_fplcyv.pngg",
+        "latitude": 0.00,
+        "longitude": 0.00,
+        "border_geometry": "./GeoJSON/UnitedStates.json"
+      },
+      {
+        "country_id": 700001024,
+        "name": "China",
+        "total_worth": 181900000000000,
+        "share_price": 1819000000000,
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739175426/china_qt3uek.png",
+        "latitude": 0.00,
+        "longitude": 0.00,
+        "border_geometry": "./GeoJSON/China.json"
       }
 ]
