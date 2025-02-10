@@ -1186,14 +1186,14 @@ def country_details_dialog(conn, user_id, country_id):
             shares_to_buy = st.slider(
                 "Select shares to purchase (%)", 
                 min_value=0.0, 
-                max_value=float(max_buyable_shares), 
+                max_value=float(available_shares), 
                 step=0.01
             )
             total_cost = shares_to_buy * share_price
 
             st.write(f"💸 **Total Cost**: :red[${format_number(total_cost)}]")
 
-            if st.button("💰 Buy Shares", use_container_width=True, disabled=shares_to_buy == 0):
+            if st.button("💰 Buy Shares", use_container_width=True, disabled=True if shares_to_buy == 0 or total_cost > balance else False):
                 with st.spinner("Processing transaction..."):
                     # Update available shares
                     c.execute("""
