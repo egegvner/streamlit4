@@ -847,6 +847,7 @@ def init_db(conn):
             name TEXT UNIQUE NOT NULL,
             total_worth REAL NOT NULL,
             share_price REAL NOT NULL,
+            available_shares REAL NOT NULL,
             image_url TEXT,
             latitude TEXT NOT NULL,
             longitude TEXT NOT NULL,
@@ -4788,4 +4789,5 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
 if __name__ == "__main__":
     conn = get_db_connection()
     init_db(conn)
+    conn.cursor().execute("ALTER TABLE country_lands ADD COLUMN available_shares INTEGER DEFAULT 100.0;")
     main(conn)
