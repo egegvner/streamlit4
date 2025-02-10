@@ -44,7 +44,7 @@
         "name": "United States",
         "total_worth": 163800000000000,
         "share_price": 1638000000000,
-        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739175426/united-states_fplcyv.pngg",
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739175426/united-states_fplcyv.png",
         "latitude": 0.00,
         "longitude": 0.00,
         "border_geometry": "./GeoJSON/UnitedStates.json"
