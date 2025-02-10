@@ -37,7 +37,7 @@
         "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739175427/united-kingdom_zlezqa.png",
         "latitude": 0.00,
         "longitude": 0.00,
-        "border_geometry": "./GeoJSON/UK.json"
+        "border_geometry": "./GeoJSON/UnitedKingdom.json"
       },
       {
         "country_id": 700001023,
