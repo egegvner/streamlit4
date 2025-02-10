@@ -4322,9 +4322,9 @@ def admin_panel(conn):
 
             with st.container(border=True):
                 c1, c2 = st.columns(2)
-                country_id_to_delete = c1.number_input("Enter Country ID to Delete", min_value=0, step=1)
+                country_id2_to_delete = c1.number_input("Enter Country ID to Remove", min_value=0, step=1)
 
-            if c2.button("Delete Country Land", use_container_width=True):
+            if c2.button("Delete Country Land", use_container_width=True, key="2"):
                 with st.spinner("Processing..."):
                     c.execute("DELETE FROM user_country_shares WHERE country_id = ? AND user_id = ?", (country_id_to_delete, user_id))
                 conn.commit()
