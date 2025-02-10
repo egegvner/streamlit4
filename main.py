@@ -1128,6 +1128,7 @@ def gift_prop_dialog(conn, user_id, prop_id):
             c.execute("DELETE FROM user_properties WHERE property_id = ? AND user_id = ?", (prop_id, user_id))
             c.execute("INSERT INTO user_properties (user_id, property_id, purchase_date, rent_income, level) VALUES (?, ?, ?, ?, ?)", (chosen_id, prop_id, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), rent_i, prop_level))
             c.execute("UPDATE real_estate SET username = ? WHERE property_id = ?", (chosen, prop_id))
+            c.execute("INSET INTO transactions (transaction_id, user_id, type, amount, receiver_username) VALUES (?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Gift Property ID {prop_id}", 0.00, chosen))
         st.success("Gift was sent successfully!")
         time.sleep(2)
         st.rerun()
@@ -1461,6 +1462,7 @@ def inventory_item_options(conn, user_id, item_id):
         with st.spinner("Gifting NFT..."):
             c.execute("DELETE FROM user_inventory WHERE item_id = ?", (item_id,))
             c.execute("INSERT INTO user_inventory (user_id, item_id, item_number) VALUES (?, ?, ?)", (receiver_id, item_id, item_number))
+            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, receiver_username) VALUES (?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Gift GNFT ID {item_data[0]}", 0.00, user_to_gift))
             if item_data[3] == "interest_boost":
                 c.execute("UPDATE savings SET interest_rate = interest_rate - ? WHERE user_id = ?", (item_data[4], receiver_id))
                 conn.commit()
@@ -1532,6 +1534,7 @@ def buy_item(conn, user_id, item_id):
             c.execute("UPDATE users SET balance = balance + ? WHERE username = 'Government'", (price,))
             c.execute("INSERT INTO user_inventory (user_id, item_id, item_number) VALUES (?, ?, ?)", (user_id, item_id, next_item_number))
             c.execute("UPDATE marketplace_items SET stock = stock - 1 WHERE item_id = ?", (item_id,))
+            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Buy GNFT ID {item_id}", price))
             conn.commit()
 
             if item_data[3] == "interest_boost":
@@ -1743,6 +1746,7 @@ def manage_pending_transfers(conn, receiver_id):
                 c.execute("UPDATE transactions SET status = 'Accepted' WHERE transaction_id = ?", (transaction_id,))
                 c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (net, receiver_id))
                 c.execute("UPDATE users SET balance = balance + ? WHERE username = 'Government'", (tax,))
+                c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, receiver_username) VALUES (?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), receiver_id, f"Transfer Accepted", amount, sender_username))
                 conn.commit()
                 time.sleep(2)
             st.toast("Transfer accepted!")
@@ -1753,6 +1757,7 @@ def manage_pending_transfers(conn, receiver_id):
             with st.spinner("Declining Transfer"):
                 c.execute("UPDATE transactions SET status = 'Rejected' WHERE transaction_id = ?", (transaction_id,))
                 c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (amount, sender_id))
+                c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, receiver_username) VALUES (?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), sender_id, f"Transfer Declined", amount, receiver_id))
                 conn.commit()
                 time.sleep(2)
             st.toast("Transfer declined!")
@@ -2736,28 +2741,10 @@ def borrow_money(conn, user_id, amount, interest_rate):
     new_loan = round(amount * (1 + interest_rate), 2)
     due_date = (datetime.date.today() + datetime.timedelta(days=7)).strftime("%Y-%m-%d")  # Due in 7 days
 
-    c.execute("UPDATE users SET loan = ?, loan_due_date = ?, balance = balance + ? WHERE user_id = ?", 
-              (new_loan, due_date, amount, user_id))
-    conn.commit()
-
-    st.toast(f"✅ Borrowed ${amount:.2f}. Due Date: {due_date}. You owe ${new_loan:.2f}.")
-    st.rerun()
-
-def borrow_money(conn, user_id, amount, interest_rate):
-    c = conn.cursor()
-
-    current_loan = c.execute("SELECT loan FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
-    
-    if current_loan > 0:
-        st.toast("❌ You must repay your existing loan first!")
-        return
-
-    new_loan = round(amount * (1 + interest_rate), 2)
-    due_date = (datetime.date.today() + datetime.timedelta(days=7)).strftime("%Y-%m-%d")  # Due in 7 days
-
     c.execute("UPDATE users SET balance = balance - ? WHERE username = 'Government'", (amount,))
     c.execute("UPDATE users SET loan = ?, loan_due_date = ?, balance = balance + ? WHERE user_id = ?", 
               (new_loan, due_date, amount, user_id))
+    c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?) VALUES", (random.randint(100000000, 999999999), user_id, "Borrow Loan", amount))
     conn.commit()
 
     st.toast(f"✅ Borrowed ${amount:.2f}. Due Date: {due_date}. You owe ${new_loan:.2f}.")
@@ -2782,6 +2769,7 @@ def repay_loan(conn, user_id, amount):
 
     c.execute("UPDATE users SET balance = balance + ? WHERE username = 'Government'", (amount,))
     c.execute("UPDATE users SET loan = ?, balance = ? WHERE user_id = ?", (new_loan, new_balance, user_id))
+    c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000, 999999999), user_id, "Repay Loan", amount))
     conn.commit()
     
     st.toast(f"✅ Loan repaid. Remaining debt: ${format_number(new_loan)}.")
@@ -3327,9 +3315,12 @@ def buy_country_shares(conn, user_id, country_id, shares_to_buy):
         new_shares = existing_shares[0] + shares_to_buy
         c.execute("UPDATE user_country_shares SET shares_owned = ? WHERE user_id = ? AND country_id = ?", 
                   (new_shares, user_id, country_id))
+        c.execute("INSERT INTO transactions (user_id, type, amount, quantity) VALUES (?, ?, ?)", (user_id, "Buy Country Shares", cost, shares_to_buy))
     else:
         c.execute("INSERT INTO user_country_shares (user_id, country_id, shares_owned) VALUES (?, ?, ?)", 
                   (user_id, country_id, shares_to_buy))
+        c.execute("INSERT INTO transactions (user_id, type, amount, quantity) VALUES (?, ?, ?)", (user_id, "Buy Country Shares", cost, shares_to_buy))
+
 
     conn.commit()
 
