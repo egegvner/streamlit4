@@ -21,6 +21,7 @@ import requests
 import geopandas as gpd
 import numpy as np
 from sklearn.cluster import KMeans
+from sklearn.preprocessing import LabelEncoder
 from streamlit_lightweight_charts import renderLightweightCharts
 
 ph = argon2.PasswordHasher(
@@ -1633,6 +1634,7 @@ def inventory_view(conn, user_id):
                     if c1.button("Sell", key=f"sell_{prop_id}", use_container_width=True):
                         with st.spinner("Selling..."):
                             c.execute("DELETE FROM user_properties WHERE property_id = ?", (prop_id,))
+
                             c.execute("UPDATE real_estate SET sold = 0, is_owned = 0, username = NULL, user_id = 0 WHERE property_id = ?", (prop_id,))
                             c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Sell Property {region} (ID {prop_id})", (rent_income / 100) * 25))
                             conn.commit()
@@ -3409,575 +3411,50 @@ def buy_property(conn, user_id, property_id):
         st.error(f"Error purchasing property: {e}")
         return False
 
-def get_ai_insights(user_id, conn):
+def get_transaction_data(conn, user_id):
     query = """
-    SELECT user_id, amount, type, timestamp 
-    FROM transactions 
-    WHERE user_id = ?
+        SELECT type, amount, timestamp, stock_id, quantity
+        FROM transactions
+        WHERE user_id = ?
     """
-    df = pd.read_sql(query, conn, params=(user_id,))
-    
-    if df.empty:
-        return None, []
-        
-    # Process timestamps
-    df["hour"] = pd.to_datetime(df["timestamp"]).dt.hour
-    df["day_of_week"] = pd.to_datetime(df["timestamp"]).dt.dayofweek
-    df["transaction_type"] = df["type"].astype("category").cat.codes
-    
-    # Feature engineering
-    df["amount_normalized"] = (df["amount"] - df["amount"].mean()) / df["amount"].std()
-    X = df[["amount_normalized", "hour", "day_of_week", "transaction_type"]]
-    
-    # Clustering
-    kmeans = KMeans(n_clusters=3, random_state=42)
-    df["cluster"] = kmeans.fit_predict(X)
-    
-    user_cluster = df["cluster"].mode()[0]
-    similar_users = df[df["cluster"] == user_cluster]["user_id"].unique()
-    
-    return user_cluster, similar_users
+    df = pd.read_sql_query(query, conn, params=(user_id,))
+    return df
 
-def get_recommendations(conn, user_cluster, similar_users):
-    if user_cluster is None:
-        return [{
-            "title": "👋 Welcome to Genova!",
-            "reason": "Start your financial journey with your first transaction and unlock personalized recommendations.",
-            "action": "Quick Start Guide",
-            "action_key": "new_user_explore"
-        }]
+def preprocess_transactions(df):
+    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    df['day_of_week'] = df['timestamp'].dt.dayofweek  # 0=Monday, 6=Sunday
+    df['hour'] = df['timestamp'].dt.hour
     
-    c = conn.cursor()
+    le = LabelEncoder()
+    df['type'] = le.fit_transform(df['type'])
     
-    # Fetch comprehensive user data
-    user_data = c.execute("""
-        SELECT balance, has_savings_account, loan, login_streak, level,
-               incoming_transfers, outgoing_transfers, total_transactions,
-               last_transaction_time
-        FROM users 
-        WHERE user_id = ?
-    """, (st.session_state.user_id,)).fetchone()
+    df = df.drop(columns=['timestamp'])
     
-    balance, has_savings, loan, login_streak, level, incoming, outgoing, total_txns, last_tx = user_data
+    return df, le
+
+def train_kmeans(df):
+    model = KMeans(n_clusters=3, random_state=42)
+    model.fit(df)
+    return model
+
+def get_recommendations(model, df):
+    cluster = model.predict(df)[0]
     
-    # Get transaction history
-    df = pd.read_sql("""
-        SELECT amount, type, timestamp 
-        FROM transactions 
-        WHERE user_id = ? 
-        ORDER BY timestamp DESC
-    """, conn, params=(st.session_state.user_id,))
+    if cluster == 0:
+        return "🔹 You seem to prefer high-value investments. Consider long-term stocks."
+    elif cluster == 1:
+        return "🔸 You frequently transfer money. Try increasing savings contributions."
+    elif cluster == 2:
+        return "⚡ You trade stocks often. Watch for market trends to optimize profits."
+
+def genova_ai_assistant(conn, user_id):
+    df = get_transaction_data(conn, user_id)
+    df, le = preprocess_transactions(df)
+    model = train_kmeans(df)
     
-    if df.empty:
-        return []
-        
-    df["timestamp"] = pd.to_datetime(df["timestamp"])
-    df["hour"] = df["timestamp"].dt.hour
-    df["day_of_week"] = df["timestamp"].dt.dayofweek
-    
-    recommendations = []
-    
-    # Calculate advanced metrics
-    avg_transaction = df["amount"].mean()
-    max_transaction = df["amount"].max()
-    weekly_volume = df[df["timestamp"] > pd.Timestamp.now() - pd.Timedelta(days=7)]["amount"].sum()
-    monthly_volume = df[df["timestamp"] > pd.Timestamp.now() - pd.Timedelta(days=30)]["amount"].sum()
-    transfer_ratio = outgoing / incoming if incoming > 0 else 0
-    
-    # Get portfolio data
-    investment_data = c.execute("""
-        SELECT COUNT(*), COALESCE(SUM(amount), 0), 
-               COUNT(CASE WHEN status = 'completed' THEN 1 END)
-        FROM investments 
-        WHERE user_id = ?
-    """, (st.session_state.user_id,)).fetchone()
-    
-    inv_count, total_invested, completed_invs = investment_data
-    
-    stock_data = c.execute("""
-        SELECT COUNT(*), COALESCE(SUM(quantity), 0)
-        FROM user_stocks 
-        WHERE user_id = ?
-    """, (st.session_state.user_id,)).fetchone()
-    
-    stock_count, total_stocks = stock_data
-    
-    property_data = c.execute("""
-        SELECT COUNT(*), COALESCE(SUM(rent_income), 0)
-        FROM user_properties 
-        WHERE user_id = ?
-    """, (st.session_state.user_id,)).fetchone()
-    
-    property_count, total_rent = property_data
-
-    if not has_savings and balance > 1000:
-        recommendations.append({
-            "title": "Unlock High-Yield Savings",
-            "reason": f"Your balance of :green[${format_number(balance)}] could earn up to ${format_number(balance * 0.05)} annually in our savings account.",
-            "action": "Open Savings",
-            "action_key": f"{user_cluster}_savings"
-        })
-    
-    if has_savings and balance > 10000:
-        recommendations.append({
-            "title": "Optimize Your Savings",
-            "reason": "Transfer more funds to your savings account for maximized interest earnings.",
-            "action": "Manage Savings",
-            "action_key": f"{user_cluster}_manage_savings"
-        })
-
-    if inv_count == 0 and balance > 5000:
-        recommendations.append({
-            "title": "Start Investing Today",
-            "reason": "Begin your investment journey with our risk-managed portfolio options.",
-            "action": "Explore Investments",
-            "action_key": f"{user_cluster}_invest"
-        })
-    elif completed_invs > 0:
-        recommendations.append({
-            "title": "Investment Success",
-            "reason": f"You've completed {completed_invs} investments. Ready to reinvest your returns?",
-            "action": "Reinvest",
-            "action_key": f"{user_cluster}_reinvest"
-        })
-
-    if stock_count == 0 and balance > 1000:
-        recommendations.append({
-            "title": "Enter Stock Trading",
-            "reason": "Start trading with our beginner-friendly stock market platform.",
-            "action": "Trade Stocks",
-            "action_key": f"{user_cluster}_stocks"
-        })
-    elif stock_count > 0:
-        recommendations.append({
-            "title": "Portfolio Review",
-            "reason": f"Review your total of :blue[{format_number(total_stocks)}] stocks and optimize your trading strategy.",
-            "action": "Review Stocks",
-            "action_key": f"{user_cluster}_review_stocks"
-        })
-
-    if property_count == 0 and balance > 10000:
-        recommendations.append({
-            "title": "Real Estate Opportunity",
-            "reason": "Discover prime real estate investments with high ROI potential.",
-            "action": "View Properties",
-            "action_key": f"{user_cluster}_property"
-        })
-        
-    elif property_count > 0:
-        recommendations.append({
-            "title": "Property Empire",
-            "reason": f"Your properties generate :green[${format_number(total_rent)} per day]. It's a good time to expand your property portofolio!",
-            "action": "Expand Portfolio",
-            "action_key": f"{user_cluster}_expand_properties"
-        })
-
-    if login_streak > 5:
-        recommendations.append({
-            "title": "Streak Rewards",
-            "reason": f"Amazing :blue[{login_streak} - day] streak! Keep logging in for increasing rewards.",
-            "action": "Claim Rewards",
-            "action_key": f"{user_cluster}_rewards"
-        })
-
-    if level < 5 and total_txns > 10:
-        recommendations.append({
-            "title": "Level Up Guide",
-            "reason": "You're close to leveling up! Complete more transactions to unlock new features.",
-            "action": "View Progress",
-            "action_key": f"{user_cluster}_level_progress"
-        })
-
-    if len(df) > 5:
-        peak_hours = df["hour"].value_counts().index[0]
-        peak_days = df["day_of_week"].value_counts().index[0]
-        days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-        
-        recommendations.append({
-            "title": "Smart Analytics",
-            "reason": f"You have a peak activity on :blue[{days[peak_days]}], around :blue[{peak_hours + 9}:00]. Monthly volume: :green[${format_number(monthly_volume)}]",
-            "action": "View Analytics",
-            "action_key": f"{user_cluster}_analytics"
-        })
-
-    # 8. Loan Management
-    if loan > 0:
-        recommendations.append({
-            "title": "Loan Optimizer",
-            "reason": f"Optimize your ${format_number(loan)} loan with our smart repayment strategies.",
-            "action": "Optimize Loan",
-            "action_key": f"{user_cluster}_loan_optimize"
-        })
-
-    # 9. Transfer Patterns
-    if transfer_ratio > 2:
-        recommendations.append({
-            "title": "Transfer Insights",
-            "reason": "Your outgoing transfers are high. Consider our money management tools.",
-            "action": "Money Management",
-            "action_key": f"{user_cluster}_money_management"
-        })
-
-    # 10. Market Opportunities
-    if total_txns > 10:
-        recommendations.append({
-            "title": "Exclusive Marketplace",
-            "reason": "Unlock special items and limited-time offers in our marketplace.",
-            "action": "Visit Marketplace",
-            "action_key": f"{user_cluster}_market"
-        })
-
-    # 11. Security Recommendations
-    if pd.Timestamp.now() - pd.Timestamp(last_tx) > pd.Timedelta(days=30):
-        recommendations.append({
-            "title": "Account Security",
-            "reason": "It's been a while! Review your security settings and recent activity.",
-            "action": "Security Check",
-            "action_key": f"{user_cluster}_security"
-        })
-
-    # 12. Portfolio Diversification
-    if inv_count > 0 and stock_count > 0:
-        recommendations.append({
-            "title": "Portfolio Balance",
-            "reason": "Review your diversified portfolio and optimizing your asset allocation.",
-            "action": "Portfolio Review",
-            "action_key": f"{user_cluster}_portfolio_review"
-        })
-
-    # 13. Achievement Tracking
-    if total_txns > 100:
-        recommendations.append({
-            "title": "Power User",
-            "reason": f"You've made {total_txns} transactions! Unlock special features and rewards.",
-            "action": "View Achievements",
-            "action_key": f"{user_cluster}_achievements"
-        })
-
-    # Default recommendation if none apply
-    if not recommendations:
-        recommendations.append({
-            "title": "Explore Genova",
-            "reason": "Discover the full potential of your Genova!",
-            "action": "Explore Features",
-            "action_key": f"{user_cluster}_explore"
-        })
-    
-    # Sort recommendations by relevance and return top 5
-    return sorted(recommendations, 
-                 key=lambda x: ("savings" in x["action_key"], "invest" in x["action_key"]), 
-                 reverse=True)[:5]
-
-def get_similar_user_insights(conn, user_id, similar_users):
-    c = conn.cursor()
-    insights = {}
-    
-    # Exclude current user from similar users
-    similar_users = [u for u in similar_users if u != user_id]
-    
-    if not similar_users:
-        return None
-        
-    similar_users_str = ','.join('?' * len(similar_users))
-    
-    # Get average metrics for similar users
-    similar_metrics = c.execute(f"""
-        SELECT 
-            AVG(balance) as avg_balance,
-            AVG(CASE WHEN has_savings_account = 1 THEN 1 ELSE 0 END) as savings_ratio,
-            COUNT(DISTINCT CASE WHEN level >= 5 THEN user_id END) * 1.0 / COUNT(DISTINCT user_id) as high_level_ratio
-        FROM users 
-        WHERE user_id IN ({similar_users_str})
-    """, similar_users).fetchone()
-    
-    # Get investment patterns
-    investment_patterns = c.execute(f"""
-        SELECT 
-            COUNT(DISTINCT user_id) as investing_users,
-            AVG(amount) as avg_investment
-        FROM investments 
-        WHERE user_id IN ({similar_users_str})
-        AND status = 'pending'
-    """, similar_users).fetchone()
-    
-    # Get stock trading patterns
-    stock_patterns = c.execute(f"""
-        SELECT 
-            COUNT(DISTINCT user_id) as trading_users,
-            AVG(quantity) as avg_quantity
-        FROM user_stocks 
-        WHERE user_id IN ({similar_users_str})
-    """, similar_users).fetchone()
-    
-    # Get property ownership patterns
-    property_patterns = c.execute(f"""
-        SELECT 
-            COUNT(DISTINCT user_id) as property_owners,
-            AVG(rent_income) as avg_rent
-        FROM user_properties 
-        WHERE user_id IN ({similar_users_str})
-    """, similar_users).fetchone()
-    
-    # Get current user's metrics for comparison
-    user_metrics = c.execute("""
-        SELECT balance, has_savings_account, level
-        FROM users 
-        WHERE user_id = ?
-    """, (user_id,)).fetchone()
-    
-    total_similar_users = len(similar_users)
-    
-    return {
-        "similar_users_count": total_similar_users,
-        "avg_balance": similar_metrics[0],
-        "savings_ratio": similar_metrics[1],
-        "high_level_ratio": similar_metrics[2],
-        "investing_ratio": investment_patterns[0] / total_similar_users if total_similar_users > 0 else 0,
-        "avg_investment": investment_patterns[1] or 0,
-        "trading_ratio": stock_patterns[0] / total_similar_users if total_similar_users > 0 else 0,
-        "avg_stock_quantity": stock_patterns[1] or 0,
-        "property_ratio": property_patterns[0] / total_similar_users if total_similar_users > 0 else 0,
-        "avg_rent_income": property_patterns[1] or 0,
-        "user_balance": user_metrics[0],
-        "user_has_savings": user_metrics[1],
-        "user_level": user_metrics[2]
-    }
-
-def get_peer_recommendations(insights):
-    if not insights:
-        return []
-        
-    recommendations = []
-    
-    # Savings Account Recommendations
-    if not insights["user_has_savings"] and insights["savings_ratio"] > 0.5:
-        recommendations.append({
-            "title": "📊 Peer Insight: Savings Account",
-            "reason": f"{int(insights['savings_ratio']*100)}% of similar users have a savings account. Consider opening one to stay competitive!",
-            "action": "Open Savings",
-            "action_key": "peer_savings"
-        })
-    
-    # Balance Optimization
-    if insights["user_balance"] < insights["avg_balance"] * 0.8:
-        recommendations.append({
-            "title": "💰 Peer Comparison: Balance Growth",
-            "reason": f"Similar users maintain an average balance of ${format_number(insights['avg_balance'])}. Explore ways to grow your balance!",
-            "action": "Growth Tips",
-            "action_key": "peer_growth"
-        })
-    
-    # Investment Recommendations
-    if insights["investing_ratio"] > 0.3:
-        recommendations.append({
-            "title": "📈 Popular Investment Trends",
-            "reason": f"{int(insights['investing_ratio']*100)}% of similar users are actively investing, with average investments of ${format_number(insights['avg_investment'])}",
-            "action": "Start Investing",
-            "action_key": "peer_invest"
-        })
-    
-    # Stock Trading Insights
-    if insights["trading_ratio"] > 0.3:
-        recommendations.append({
-            "title": "📊 Stock Market Activity",
-            "reason": f"{int(insights['trading_ratio']*100)}% of similar users are trading stocks, with average holdings of {int(insights['avg_stock_quantity'])} stocks",
-            "action": "Explore Stocks",
-            "action_key": "peer_stocks"
-        })
-    
-    # Property Investment Insights
-    if insights["property_ratio"] > 0.2:
-        recommendations.append({
-            "title": "🏠 Real Estate Trends",
-            "reason": f"{int(insights['property_ratio']*100)}% of similar users own properties, earning ${format_number(insights['avg_rent_income'])}/day in rent",
-            "action": "View Properties",
-            "action_key": "peer_property"
-        })
-    
-    # Level Progress
-    if insights["user_level"] < 5 and insights["high_level_ratio"] > 0.3:
-        recommendations.append({
-            "title": "⭐ Level Up Opportunity",
-            "reason": f"{int(insights['high_level_ratio']*100)}% of similar users are level 5 or higher. Time to level up!",
-            "action": "Level Guide",
-            "action_key": "peer_level"
-        })
-    
-    return recommendations
-
-def ai_recommendations_view(conn, user_id):
-    c = conn.cursor()
-    transaction_amount = c.execute("SELECT COUNT(*) FROM transactions WHERE user_id = ?", (user_id,)).fetchone()[0]
-
-    st.subheader("Personalized Suggestions", divider="rainbow")
-
-    insights = get_ai_insights(user_id, conn)
-    recommendations = get_recommendations(conn, insights[0], insights[1])
-
-    peer_insights = get_similar_user_insights(conn, user_id, insights[1])
-    peer_recommendations = get_peer_recommendations(peer_insights) if peer_insights else []
-    
-    if not recommendations and not peer_recommendations:
-        st.info("No new recommendations at the moment.")
-        return
-
-    # Get user stats for context
-    user_stats = c.execute("""
-        SELECT level, login_streak, total_transactions, balance 
-        FROM users 
-        WHERE user_id = ?
-    """, (user_id,)).fetchone()
-    level, streak, total_txns, balance = user_stats
-
-    # Enhanced header with user context
-    st.write(f"""
-    ✨ The :orange[Genova AI] has analyzed your financial profile:
-    - :orange[{transaction_amount}] transactions processed
-    - Level :orange[{level}] account
-    - :orange[{streak}]-day login streak
-    - Current balance: :orange[${format_number(balance)}]
-    """)
-    
-    st.text("")
-    st.subheader(":orange[Genova AI]'s suggestions", divider="orange")
-    financial_recs = [r for r in recommendations if any(x in r['action_key'] for x in ['savings', 'invest', 'stocks', 'property'])]
-    activity_recs = [r for r in recommendations if any(x in r['action_key'] for x in ['rewards', 'level', 'analytics'])]
-    security_recs = [r for r in recommendations if any(x in r['action_key'] for x in ['security', 'loan', 'money_management'])]
-    other_recs = [r for r in recommendations if r not in financial_recs + activity_recs + security_recs]
-
-
-    if peer_insights:
-        st.write(f"""
-        🤝 Comparing with :orange[{peer_insights['similar_users_count']}] similar users:
-        - Average balance: :orange[${format_number(peer_insights['avg_balance'])}]
-        - {int(peer_insights['savings_ratio']*100)}% have savings accounts
-        - {int(peer_insights['investing_ratio']*100)}% are active investors
-        """)
-    
-    st.divider()
-
-    if peer_recommendations:
-        st.subheader("👥 Peer Insights", divider="gray")
-        for rec in peer_recommendations:
-            with st.container(border=True):
-                col1, col2 = st.columns([3, 1])
-                with col1:
-                    st.subheader(f"✨ {rec['title']}")
-                    st.write(f"**Trend:** {rec['reason']}")
-                with col2:
-                    if st.button(f"{rec['action']}", key=f"{rec['action_key']}_{random.randint(0, 99999)}", use_container_width=True):
-                        handle_recommendation_action(rec['action_key'])
-                        st.rerun()
-
-    if financial_recs:
-        st.text("")
-        for rec in financial_recs:
-            with st.container(border=True):
-                col1, col2 = st.columns([3, 1], vertical_alignment="center")
-                with col1:
-                    st.subheader(f"✨ {rec['title']}")
-                    st.text("")
-                    st.write(f"**:orange[Genova AI Thinks ->]** {rec['reason']}")
-                with col2:
-                    st.text("")
-                    st.text("")
-                    if st.button(f"{rec['action']}", key=f"{rec['action_key']}_{random.randint(0, 99999)}", use_container_width=True):
-                        handle_recommendation_action(rec['action_key'])
-                st.caption(":gray[*• Financial Recommendations*]")
-
-    st.text("")
-    st.text("")
-    st.text("")
-
-    if activity_recs:
-        st.text("")
-        for rec in activity_recs:
-            with st.container(border=True):
-                col1, col2 = st.columns([3, 1], vertical_alignment="center")
-                with col1:
-                    st.subheader(f"✨ {rec['title']}")
-                    st.text("")
-                    st.write(f"**:orange[Genova AI Thinks ->]** {rec['reason']}")
-                with col2:
-                    st.text("")
-                    st.text("")
-                    if st.button(f"{rec['action']}", key=f"{rec['action_key']}_{random.randint(0, 99999)}", use_container_width=True):
-                        handle_recommendation_action(rec['action_key'])
-                st.caption(":gray[*• Activity & Goal Recommendations*]")
-
-
-    st.text("")
-    st.text("")
-    st.text("")
-
-    if security_recs:
-        st.text("")
-        for rec in security_recs:
-            with st.container(border=True):
-                col1, col2 = st.columns([3, 1], vertical_alignment="center")
-                with col1:
-                    st.subheader(f"✨ {rec['title']}")
-                    st.write(f"**:orange[Genova AI Thinks ->]** {rec['reason']}")
-                with col2:
-                    st.text("")
-                    st.text("")
-                    if st.button(f"{rec['action']}", key=f"{rec['action_key']}_{random.randint(0, 99999)}", use_container_width=True):
-                        handle_recommendation_action(rec['action_key'])
-                st.caption(":gray[*• Security Recommendations*]")
-
-    
-    st.text("")
-    st.text("")
-    st.text("")
-
-    if other_recs:
-        st.text("")
-        for rec in other_recs:
-            with st.container(border=True):
-                col1, col2 = st.columns([3, 1], vertical_alignment="center")
-                with col1:
-                    st.subheader(f"✨ {rec['title']}")
-                    st.text("")
-                    st.write(f"**:orange[Genova AI Thinks ->]** {rec['reason']}")
-                with col2:
-                    st.text("")
-                    st.text("")
-                    if st.button(f"{rec['action']}", key=f"{rec['action_key']}_{random.randint(0, 99999)}", use_container_width=True):
-                        handle_recommendation_action(rec['action'])
-                st.caption(":gray[*• Other Recommendations*]")
-    
-    for _ in range(5):
-        st.text("")
-
-    st.button(":gray[New recommendations will be generated based on your transactions and financial activity.]", type="tertiary", use_container_width=True, disabled=True)
-
-def handle_recommendation_action(action_key):
-    if "savings" "savingshfjowpf":
-        st.session_state.current_menu = "View Savings"
-        st.rerun()
-    elif "invest" in action_key:
-        st.session_state.current_menu = "Investments"
-        st.rerun()
-    elif "stocks" in action_key:
-        st.session_state.current_menu = "Stocks"
-        st.rerun()
-    elif "property" in action_key:
-        st.session_state.current_menu = "Real Estate"
-        st.rerun()
-    elif "market" in action_key:
-        st.session_state.current_menu = "Marketplace"
-        st.rerun()
-    elif "security" in action_key:
-        st.session_state.current_menu = "Settings"
-        st.rerun()
-    elif "analytics" in action_key:
-        st.session_state.current_menu = "Analytics"
-    elif "loan" in action_key:
-        st.session_state.current_menu = "Bank"
-        st.rerun()
-    elif "rewards" in action_key:
-        st.session_state.current_menu = "Rewards"
-
+    recommendation = get_recommendations(model, df)
+    st.subheader("🤖 Genova AI Assistant")
+    st.write(recommendation)
 
 def admin_panel(conn):
     c = conn.cursor()
@@ -4777,7 +4254,7 @@ def main(conn):
             real_estate_marketplace_view(conn, st.session_state.user_id)
         
         elif st.session_state.current_menu == "AI Insights":
-            ai_recommendations_view(conn, st.session_state.user_id)
+            genova_ai_assistant(conn, st.session_state.user_id)
 
         elif st.session_state.current_menu == "Logout":
             st.sidebar.info("Logging you out...")
