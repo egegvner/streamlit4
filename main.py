@@ -1722,9 +1722,9 @@ def main_account_view(conn, user_id):
     st.text("")
 
     col1, col2 = st.columns(2)
-    if col1.button("**Withdraw to Savings**", type="primary", use_container_width = True):
+    if col1.button("**Transfer to Savings**", type="primary", use_container_width = True):
         transfer_to_savings_dialog(conn, user_id)
-    if col2.button("**Transfe to People**", use_container_width = True):
+    if col2.button("**Transfer to People**", use_container_width = True):
         transfer_dialog(conn, user_id)
 
     st.divider()
