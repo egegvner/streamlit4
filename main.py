@@ -2835,7 +2835,7 @@ def investments_view(conn, user_id):
 
     if active_investments:
         for company, amount, risk, start, end in active_investments:
-            with st.container(border=True, height = 200):
+            with st.container(border=True, height = 50):
                 st.write(f"**{company}** - :gray[[Invested]] :green[${format_number(amount)}] $|$ :gray[[Risk]] :red[{float(risk) * 100}%] $|$ :gray[[Ends]] :blue[{end}]")
     else:
         st.info("No active investments!")
@@ -2848,7 +2848,7 @@ def investments_view(conn, user_id):
     """, (user_id,)).fetchall()
 
     if completed_investments:
-        with st.container(border = True, height = 300):
+        with st.container(border = True, height = 200):
             for company, amount, rate, status in completed_investments:
                 outcome = "Profit" if rate > 0 else "Loss"
                 if rate > 0:
