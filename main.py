@@ -3420,6 +3420,72 @@ def get_transaction_data(conn, user_id):
     df = pd.read_sql_query(query, conn, params=(user_id,))
     return df
 
+
+def get_user_financial_data(conn, user_id):
+    data = {}
+
+    # Fetch Stock Holdings
+    data['stocks'] = pd.read_sql_query("""
+        SELECT stock_id, quantity, avg_buy_price FROM user_stocks WHERE user_id = ?
+    """, conn, params=(user_id,))
+
+    # Fetch Transaction History
+    data['transactions'] = pd.read_sql_query("""
+        SELECT type, amount, timestamp FROM transactions WHERE user_id = ?
+    """, conn, params=(user_id,))
+
+    # Fetch Loans
+    data['loans'] = pd.read_sql_query("""
+        SELECT loan_id, amount, interest_rate, status FROM loans WHERE user_id = ?
+    """, conn, params=(user_id,))
+
+    # Fetch Real Estate
+    data['real_estate'] = pd.read_sql_query("""
+        SELECT property_id, region, rent_income FROM user_properties WHERE user_id = ?
+    """, conn, params=(user_id,))
+
+    return data
+
+def generate_recommendations(data):
+    recommendations = []
+
+    # 📈 Stock Market Insights
+    if not data['stocks'].empty:
+        risky_stock = data['stocks'].sample(1)
+        recommendations.append(f"⚠️ Consider selling some shares of {risky_stock.iloc[0]['stock_id']} if its price is unstable.")
+
+        if len(data['stocks']) > 3:
+            recommendations.append("📊 You have a diversified portfolio. Keep monitoring for better investment opportunities!")
+
+    # 💰 Savings & Budgeting
+    total_spent = data['transactions']['amount'].sum()
+    if total_spent > 5000:
+        recommendations.append(f"💸 You spent over $5000 this month. Consider setting a spending limit!")
+
+    if total_spent < 1000:
+        recommendations.append("🤑 You're saving well! Consider investing some savings into stocks or real estate.")
+
+    # 📊 Investment Strategies
+    if len(data['stocks']) >= 5:
+        recommendations.append("🧐 Your portfolio has a good range of stocks. Try exploring new sectors like tech or healthcare!")
+
+    # 🏦 Loan & Credit Advice
+    if not data['loans'].empty:
+        unpaid_loans = data['loans'][data['loans']['status'] == 'Pending']
+        if not unpaid_loans.empty:
+            recommendations.append(f"🔴 You have {len(unpaid_loans)} pending loans. Prioritize repayment to avoid interest hikes!")
+
+    # 🏠 Real Estate Investment
+    if not data['real_estate'].empty:
+        high_rent_property = data['real_estate'].sort_values('rent_income', ascending=False).iloc[0]
+        recommendations.append(f"🏡 Your property in {high_rent_property['region']} is generating high rent. Consider investing more in such areas!")
+
+    # 🏆 Dividend Alerts
+    upcoming_dividend = random.choice(["Tesla", "Microsoft", "Apple"])
+    recommendations.append(f"💰 Dividend payout from {upcoming_dividend} is coming soon. Reinvest to maximize gains!")
+
+    return recommendations
+
 def preprocess_transactions(df):
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     df['day_of_week'] = df['timestamp'].dt.dayofweek  # 0=Monday, 6=Sunday
@@ -3448,13 +3514,12 @@ def get_recommendations(model, df):
         return "⚡ You trade stocks often. Watch for market trends to optimize profits."
 
 def genova_ai_assistant(conn, user_id):
-    df = get_transaction_data(conn, user_id)
-    df, le = preprocess_transactions(df)
-    model = train_kmeans(df)
-    
-    recommendation = get_recommendations(model, df)
+    data = get_user_financial_data(conn, user_id)
+    recommendations = generate_recommendations(data)
+
     st.subheader("🤖 Genova AI Assistant")
-    st.write(recommendation)
+    for rec in recommendations:
+        st.write(rec)
 
 def admin_panel(conn):
     c = conn.cursor()
