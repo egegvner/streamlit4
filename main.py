@@ -1691,7 +1691,7 @@ def inventory_view(conn, user_id):
                     country_details_dialog(conn, user_id, c.execute("SELECT country_id FROM country_lands WHERE name = ?", (name,)).fetchone()[0])
     
     with t4:
-        st_autorefresh(interval=10000, key="p")
+        st_autorefresh(interval=30000, key="p")
 
         if "portofolio_value" not in st.session_state:
             st.session_state.portofolio_value = 0
