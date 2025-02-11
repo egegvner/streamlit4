@@ -274,7 +274,7 @@ def claim_daily_reward(conn, user_id):
         last_claimed_date = datetime.datetime.strptime(last_claimed, "%Y-%m-%d")
         if last_claimed_date.date() == datetime.datetime.today().date():
             st.toast("You've already claimed your daily reward today!")
-            time.sleep(3)
+            time.sleep(2)
         else:
             streak = c.execute("SELECT login_streak FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
             new_streak = streak + 1 if last_claimed else 1
@@ -1518,7 +1518,7 @@ def marketplace_view(conn, user_id):
 def inventory_view(conn, user_id):
     c = conn.cursor()
 
-    t1, t2 = st.tabs(["💠 GNFTs", "🏠 Properties"])
+    t1, t2, t3, t4 = st.tabs(["💠 GNFTs", "🏠 Properties", "Lands" "Stock Holdings"])
     st.markdown('''<style>
                         button[data-baseweb="tab"] {
                         font-size: 24px;
@@ -1654,6 +1654,106 @@ def inventory_view(conn, user_id):
                         st.toast(f"🎉 Collected :green[${format_number(rent_income)}]!")
                         time.sleep(1)
                         st.rerun()
+
+    with t3:
+            st.text("")
+            st.text("")
+            st.header("🚩 My Country Lands", divider="rainbow")
+
+            user_country_lands = c.execute("""
+            SELECT cl.name, ucs.shares_owned, cl.share_price, cl.total_worth, cl.image_url
+            FROM user_country_shares ucs
+            JOIN country_lands cl ON ucs.country_id = cl.country_id
+            WHERE ucs.user_id = ?
+            """, (user_id,)).fetchall()
+
+            if not user_country_lands:
+                st.info("You don't own any country lands yet.")
+                return
+
+            for country in user_country_lands:
+                name, shares_owned, share_price, total_worth, image_url = country
+
+            with st.container(border=True):
+                col1, col2 = st.columns([1, 3])
+
+                with col1:
+                    if image_url:
+                        st.image(image_url, use_container_width=True)
+
+                with col2:
+                    st.subheader(f"{name}")
+                    st.write(f"**Shares Owned**: :green[{shares_owned}%]")
+                    st.write(f"**Share Price**: :red[${format_number(share_price)}]")
+                    st.write(f"**Total Worth**: :orange[${format_number(total_worth)}]")
+
+                if st.button(f"View {name} Details", key=f"view_{name}", use_container_width=True):
+                    country_details_dialog(conn, user_id, c.execute("SELECT country_id FROM country_lands WHERE name = ?", (name,)).fetchone()[0])
+    
+    with t4:
+        st_autorefresh(interval=10000, key="p")
+
+        if "portofolio_value" not in st.session_state:
+            st.session_state.portofolio_value = 0
+
+        st.header("📊 My Portfolio", divider="rainbow")
+
+        user_stocks = c.execute("""
+            SELECT us.stock_id, s.name, s.symbol, us.quantity, us.avg_buy_price, s.price 
+            FROM user_stocks us
+            JOIN stocks s ON us.stock_id = s.stock_id
+            WHERE us.user_id = ? AND us.quantity > 0
+        """, (user_id,)).fetchall()
+
+        if not user_stocks:
+            st.info("You don't own any stocks yet. Start investing now! 🚀")
+            return
+        
+        st.text("")
+        st.text("")
+
+        for stock_id, name, symbol, quantity, avg_buy_price, current_price in user_stocks:
+            stock_worth = quantity * current_price
+            st.session_state.portofolio_value = stock_worth
+            profit_loss = (current_price - avg_buy_price) * quantity
+            profit_loss_percent = ((current_price - avg_buy_price) / avg_buy_price) * 100 if avg_buy_price > 0 else 0
+
+            st.subheader(f"{name} ({symbol})")
+
+            with st.container(border=True):  
+                c1, c2, c3, c4, c5 = st.columns([2,2,2,2,3])
+
+                with c1:
+                    st.write("Holding")
+                    st.write(f":blue[{format_number(quantity)}]")
+
+                with c2:
+                    st.write("AVG Buy P.")
+                    st.write(f":red[{format_number(avg_buy_price)}]")
+
+                with c3:
+                    st.write("Current P.")
+                    st.write(f":green[{format_number(current_price)}]")
+
+                with c4:
+                    st.write("Total Worth")
+                    st.write(f":green[{format_number(stock_worth)}]")
+
+                with c5:
+                    st.write("Gain / Loss")
+                    if profit_loss < 0:
+                        st.subheader(f":red[{format_number(profit_loss)}]")
+                        st.caption(f":red[{format_number(profit_loss_percent)}%]")
+                    else:
+                        st.subheader(f":green[{format_number(profit_loss)}]")
+                        st.caption(f":green[+{format_number(profit_loss_percent)}%]")
+                
+            if st.button("Quick Sell (ALL)", use_container_width = True, key = stock_id):
+                with st.spinner("Processing..."):
+                    sell_stock(conn, user_id, stock_id, quantity)
+                    time.sleep(2)
+        
+            st.divider()
 
 def manage_pending_transfers(conn, receiver_id):
     c = conn.cursor()
@@ -2562,72 +2662,6 @@ def stocks_view(conn, user_id):
             for _ in range(3):
                 st.text("")
             st.caption("Graph coming soon")
-
-def portfolio_view(conn, user_id):
-    c = conn.cursor()
-    st_autorefresh(interval=10000, key="p")
-
-    if "portofolio_value" not in st.session_state:
-        st.session_state.portofolio_value = 0
-
-    st.header("📊 My Portfolio", divider="rainbow")
-
-    user_stocks = c.execute("""
-        SELECT us.stock_id, s.name, s.symbol, us.quantity, us.avg_buy_price, s.price 
-        FROM user_stocks us
-        JOIN stocks s ON us.stock_id = s.stock_id
-        WHERE us.user_id = ? AND us.quantity > 0
-    """, (user_id,)).fetchall()
-
-    if not user_stocks:
-        st.info("You don't own any stocks yet. Start investing now! 🚀")
-        return
-    
-    st.text("")
-    st.text("")
-
-    for stock_id, name, symbol, quantity, avg_buy_price, current_price in user_stocks:
-        stock_worth = quantity * current_price
-        st.session_state.portofolio_value = stock_worth
-        profit_loss = (current_price - avg_buy_price) * quantity
-        profit_loss_percent = ((current_price - avg_buy_price) / avg_buy_price) * 100 if avg_buy_price > 0 else 0
-
-        st.subheader(f"{name} ({symbol})")
-
-        with st.container(border=True):  
-            c1, c2, c3, c4, c5 = st.columns([2,2,2,2,3])
-
-            with c1:
-                st.write("Holding")
-                st.write(f":blue[{format_number(quantity)}]")
-
-            with c2:
-                st.write("AVG Buy P.")
-                st.write(f":red[{format_number(avg_buy_price)}]")
-
-            with c3:
-                st.write("Current P.")
-                st.write(f":green[{format_number(current_price)}]")
-
-            with c4:
-                st.write("Total Worth")
-                st.write(f":green[{format_number(stock_worth)}]")
-
-            with c5:
-                st.write("Gain / Loss")
-                if profit_loss < 0:
-                    st.subheader(f":red[{format_number(profit_loss)}]")
-                    st.caption(f":red[{format_number(profit_loss_percent)}%]")
-                else:
-                    st.subheader(f":green[{format_number(profit_loss)}]")
-                    st.caption(f":green[+{format_number(profit_loss_percent)}%]")
-            
-        if st.button("Quick Sell (ALL)", use_container_width = True, key = stock_id):
-            with st.spinner("Processing..."):
-                sell_stock(conn, user_id, stock_id, quantity)
-                time.sleep(2)
-    
-        st.divider()
 
 def blackmarket_view(conn, user_id):
     c = conn.cursor()
@@ -4698,12 +4732,8 @@ def main(conn):
                 st.rerun()
             
             c1, c2 = st.columns(2)
-            if c1.button("Inventory", type="secondary", use_container_width=True):
+            if c1.button("Inventory & Holdings", type="secondary", use_container_width=True):
                 st.session_state.current_menu = "Inventory"
-                st.rerun()
-
-            if c2.button("Holdings", type="secondary", use_container_width=True):
-                st.session_state.current_menu = "Holdings"
                 st.rerun()
 
             if st.button("✨ **AI Insights** ✨", type="primary", use_container_width=True):
@@ -4760,9 +4790,6 @@ def main(conn):
         
         elif st.session_state.current_menu == "Stocks":
             stocks_view(conn, st.session_state.user_id)
-        
-        elif st.session_state.current_menu == "Holdings":
-            portfolio_view(conn, st.session_state.user_id)
 
         elif st.session_state.current_menu == "Bank":
             bank_view(conn, st.session_state.user_id)
