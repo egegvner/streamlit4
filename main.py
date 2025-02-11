@@ -4731,8 +4731,7 @@ def main(conn):
                 st.session_state.current_menu = "Manage Pending Transfers"
                 st.rerun()
             
-            c1, c2 = st.columns(2)
-            if c1.button("Inventory & Holdings", type="secondary", use_container_width=True):
+            if st.button("Inventory & Holdings", type="secondary", use_container_width=True):
                 st.session_state.current_menu = "Inventory"
                 st.rerun()
 
