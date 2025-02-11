@@ -2824,7 +2824,7 @@ def investments_view(conn, user_id):
     if "invest_value" not in st.session_state:
         st.session_state.invest_value = 0
 
-    st.subheader(f"💰 Balance: **:green[${format_number(balance)}]**")
+    st.subheader(f"Balance -> **:green[${format_number(balance)}]**")
 
     st.divider()
     st.subheader("📊 Active Investments", divider="rainbow")
@@ -2834,13 +2834,12 @@ def investments_view(conn, user_id):
     """, (user_id,)).fetchall()
 
     if active_investments:
-        for company, amount, risk, start, end in active_investments:
-            with st.container(border=True, height = 50):
+        with st.container(border=True, height = 70):
+            for company, amount, risk, start, end in active_investments:
                 st.write(f"**{company}** - :gray[[Invested]] :green[${format_number(amount)}] $|$ :gray[[Risk]] :red[{float(risk) * 100}%] $|$ :gray[[Ends]] :blue[{end}]")
     else:
         st.info("No active investments!")
 
-    st.divider()
     st.subheader("✅ Completed Investments", divider="rainbow")
     completed_investments = c.execute("""
         SELECT company_name, amount, return_rate, status
@@ -2865,7 +2864,7 @@ def investments_view(conn, user_id):
         st.info("No investment opportunities are currently available.")
         return
 
-    st.write("Available Companies")
+    st.subheader("Start Investing", divider = "rainbow")
     columns = st.columns(len(companies))
     for idx, (company_id, company_name, risk_level) in enumerate(companies):
         if columns[idx].button(company_name, use_container_width=True):
