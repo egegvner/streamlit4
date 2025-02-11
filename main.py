@@ -33,7 +33,7 @@ if "current_menu" not in st.session_state:
     st.session_state.current_menu = "Dashboard"
 
 previous_layout = st.session_state.get("previous_layout", "centered")
-current_layout = "wide" if st.session_state.current_menu == "Blackmarket" or st.session_state.current_menu == "Investments" or st.session_state.current_menu == "Bank" or st.session_state.current_menu == "Stocks" or st.session_state.current_menu == "Char" or st.session_state.current_menu == "View Savings" or st.session_state.current_menu == "Transaction History" or st.session_state.current_menu == "Main Account" or st.session_state.current_menu == "Inventory" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "Real Estate" or st.session_state.current_menu == "Chat" else "centered"
+current_layout = "wide" if st.session_state.current_menu == "Blackmarket" or st.session_state.current_menu == "Investments" or st.session_state.current_menu == "Bank" or st.session_state.current_menu == "Stocks" or st.session_state.current_menu == "Char" or st.session_state.current_menu == "Transaction History" or st.session_state.current_menu == "Inventory" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "Real Estate" or st.session_state.current_menu == "Chat" else "centered"
 
 if previous_layout != current_layout:
     st.session_state.previous_layout = current_layout
@@ -71,7 +71,6 @@ def format_number(num, decimals=2):
             return f"{formatted_str}{suffix}"
     
     return str(num)
-
 
 def write_stream(s, delay = 0, random_delay = False):
     if random_delay:
@@ -867,8 +866,8 @@ def init_db(conn):
     conn.commit()
     return conn, c
     
-@st.dialog("Withdraw to Savings", width = "small")
-def withdraw_dialog(conn, user_id):
+@st.dialog("Transfer to Savings", width = "small")
+def transfer_to_savings_dialog(conn, user_id):
 
     c = conn.cursor()
     has_savings = c.execute("SELECT has_savings_account FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
@@ -895,26 +894,26 @@ def withdraw_dialog(conn, user_id):
     st.divider()
     tax = (amount / 100) * 0.5
     net = amount - tax
-    st.write(f"Net Withdraw -> :green[{format_number(net, 2)}] $|$ :red[${format_number(tax, 2)} Tax*]")
+    st.write(f"Net Transfer -> :green[{format_number(net, 2)}] $|$ :red[${format_number(tax, 2)} Tax*]")
     c1, c2 = st.columns(2)
     c1.write(f"Remaining Balance -> :green[${format_number((current_balance - amount), 2)}]")
     if (current_balance - amount) < 0:
         c2.write("**:red[Insufficent]**")
     
     st.text("")
-    if st.button("Withdraw to Savings", type = "primary", use_container_width = True, disabled = True if net <= 0 or (current_balance - amount) < 0 or not has_savings else False, help = "Insufficent funds" if net <= 0 or (current_balance - net) < 0 else None):
+    if st.button("Transfer to Savings", type = "primary", use_container_width = True, disabled = True if net <= 0 or (current_balance - amount) < 0 or not has_savings else False, help = "Insufficent funds" if net <= 0 or (current_balance - net) < 0 else None):
         if check_cooldown(conn, user_id):
             c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (amount, user_id))
             c.execute("UPDATE savings SET balance = balance + ? WHERE user_id = ?", (net, user_id))
             conn.commit()
             new_savings_balance = c.execute("SELECT balance FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
-            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, "Withdraw From Main Account To Savings", amount))
+            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, "Transfer To Savings", amount))
             c.execute("UPDATE users SET balance = balance + ? WHERE username = 'Government'", (tax,))
             conn.commit()
             update_last_transaction_time(conn, user_id)
             with st.spinner("Processing..."):
                 time.sleep(random.uniform(1, 2))
-                st.success(f"Successfully withdrawn ${amount:.2f}")
+                st.success(f"Successfully transferred ${amount:.2f}")
             st.session_state.withdraw_value = 0.0
             time.sleep(1)
             st.rerun()
@@ -922,7 +921,7 @@ def withdraw_dialog(conn, user_id):
     st.text(" ")
     st.caption("*All transactions are subject to %0.5 tax (VAT) and are irreversible.")
 
-@st.dialog("Transfer Funds", width="small")
+@st.dialog("Transfer to Pepole", width="small")
 def transfer_dialog(conn, user_id):
 
     c = conn.cursor()
@@ -977,68 +976,8 @@ def transfer_dialog(conn, user_id):
     
     st.caption("All transactions are subject to %0.5 tax (VAT) and irreversible.*")
     
-@st.dialog("Deposit To Savings", width = "small")
-def deposit_to_savings_dialog(conn, user_id):
-
-    c = conn.cursor()
-
-    if "deposit_to_savings_value" not in st.session_state:
-        st.session_state.deposit_to_savings_value = 0.00
-
-    current_savings = c.execute("SELECT balance FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
-    main_balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
-
-    st.header(f"Savings -> :green[${format_number(current_savings, 2)}]", divider = "rainbow")
-    st.write("#### Deposit Source")
-    st.session_state.deposit_source = st.radio("A", label_visibility = "collapsed", options = [f"Main Account   •   :green[${format_number(main_balance, 2)}]"])
-
-    max_value = main_balance 
-
-    if st.session_state.deposit_to_savings_value > max_value:
-        st.session_state.deposit_to_savings_value = max_value
-
-    c1, c2, c3, c4 = st.columns(4)
-
-    if c1.button("%25", use_container_width=True):
-        st.session_state.deposit_to_savings_value = (main_balance / 100) * 25
-    if c2.button("%50", use_container_width=True):
-        st.session_state.deposit_to_savings_value = (main_balance / 100) * 50
-    if c3.button("%75", use_container_width=True):
-        st.session_state.deposit_to_savings_value = (main_balance / 100) * 75
-    if c4.button("%100", use_container_width=True):
-        st.session_state.deposit_to_savings_value = main_balance
-
-    amount = st.number_input("Amount", min_value = 0.00, max_value = max_value, value = st.session_state.deposit_to_savings_value)
-    tax = (amount / 100) * 0.5
-    net = amount - tax
-
-    st.divider()
-    st.write(f"Net Deposit -> :green[${format_number(net, )}]   $|$   :red[${format_number(tax, 2)} Tax]")
-    st.write(f"New Savings -> :green[${format_number((current_savings + net), 2)}]")
-    if st.button("Confirm Deposition", type="primary", use_container_width = True, disabled = True if amount <= 0.00 else False):
-        if check_cooldown(conn, user_id):
-            if amount <= 0:
-                st.error("Deposit amount must be greater than zero.")
-                return
-
-            c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (amount, user_id))
-
-            c.execute("UPDATE savings SET balance = balance + ? WHERE user_id = ?", (net, user_id))
-
-            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Transfer to savings", amount))
-            c.execute("UPDATE users SET balance = balance + ? WHERE username = 'Government'", (tax,))
-            conn.commit()
-            update_last_transaction_time(conn, user_id)
-            with st.spinner("Processing..."):
-                time.sleep(1)
-            st.success(f"Successfully transferred ${format_number(net, 2)} from vault to savings.")
-            time.sleep(1)
-            st.rerun()
-
-    st.caption("All transactions are subject to %0.5 tax (VAT) and irreversible.*")
-
-@st.dialog("Withdraw Savings", width = "small")
-def withdraw_from_savings_dialog(conn, user_id):
+@st.dialog("Transfer to Vault", width = "small")
+def transfer_to_vault_dialog(conn, user_id):
 
     c = conn.cursor()
 
@@ -1065,10 +1004,10 @@ def withdraw_from_savings_dialog(conn, user_id):
     net = amount - tax
 
     st.divider()
-    st.write(f"Net Withdrawal -> :green[${format_number(net, 2)}] $|$ :red[${format_number(tax, 2)} Tax]")
+    st.write(f"Net Transfer -> :green[${format_number(net, 2)}] $|$ :red[${format_number(tax, 2)} Tax]")
     st.write(f"Remaining Savings -> :green[${format_number((current_savings - amount), 2)}]")
 
-    if st.button("Withdraw to Vault", type = "primary", use_container_width = True, disabled = True if amount <= 0.00 else False):
+    if st.button("Transfer to Vault", type = "primary", use_container_width = True, disabled = True if amount <= 0.00 else False):
         if check_cooldown(conn, user_id):
             c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (net, user_id))
             c.execute("UPDATE savings SET balance = balance - ? WHERE user_id = ?", (amount, user_id))
@@ -1080,7 +1019,7 @@ def withdraw_from_savings_dialog(conn, user_id):
             update_last_transaction_time(conn, user_id)
             with st.spinner("Processing..."):
                 time.sleep(random.uniform(1, 2))
-            st.success(f"Successfully withdrawn ${format_number(net, 2)} to vault.")
+            st.success(f"Successfully transferred ${format_number(net, 2)} to vault.")
             time.sleep(1.5)
             st.session_state.withdraw_from_savings_value = 0.0
             st.rerun()
@@ -1447,6 +1386,7 @@ def inventory_item_options(conn, user_id, item_id):
     if c2.button("**Put on BlackMarket**", use_container_width=True):
         with st.spinner("Processing..."):
             c.execute("INSERT INTO blackmarket_items (item_id, item_number, name, description, rarity, price, image_url, seller_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (item_id, item_number, item_data[0], item_data[1], item_data[2], new_price, item_data[4], user_id))
+            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Put GNFT {item_data[0]} (ID {item_id}) on BlackMarket", 0.00))
             time.sleep(3)
         st.success("Item is now for sale on blackmarket!")
         time.sleep(2)
@@ -1509,6 +1449,7 @@ def upgrade_prop_dialog(conn, user_id, prop_id):
         with st.spinner("🔨 Processing upgrade..."):
             c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (user_prop[0] * user_prop[1] * 10, user_id))
             c.execute("UPDATE user_properties SET rent_income = ?, level = level + 1 WHERE property_id = ?", (user_prop[1] * 1.5, prop_id))
+            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Upgrade Property {prop} (ID {prop_id}) to Level {user_prop[0] + 1}", user_prop[0] * user_prop[1] * 10))
             conn.commit()
             time.sleep(3)
         st.success(f"Upgraded {prop} to level :orange[{user_prop[0] + 1}]!")
@@ -1693,9 +1634,10 @@ def inventory_view(conn, user_id):
                         with st.spinner("Selling..."):
                             c.execute("DELETE FROM user_properties WHERE property_id = ?", (prop_id,))
                             c.execute("UPDATE real_estate SET sold = 0, is_owned = 0, username = NULL, user_id = 0 WHERE property_id = ?", (prop_id,))
+                            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Sell Property {region} (ID {prop_id})", (rent_income / 100) * 25))
                             conn.commit()
                             time.sleep(3)
-                        st.success("Sold property to the bank for free.")
+                        st.success("Sold property to the bank for 25% of its value.")
                         st.rerun()
 
                     if c2.button("Gift", key=f"gift_{prop_id}", use_container_width=True):
@@ -1707,6 +1649,7 @@ def inventory_view(conn, user_id):
                     if c4.button("**COLLECT RENT**", type="primary", key=f"rent_{prop_id}", use_container_width=True, disabled=not can_collect, help="Rent for this property has already been collected today." if not can_collect else None):
                         c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (rent_income, user_id))
                         c.execute("UPDATE user_properties SET last_collected = ? WHERE property_id = ?", (now.strftime("%Y-%m-%d %H:%M:%S"), prop_id))
+                        c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Collect Rent from Property {region} (ID {prop_id})", rent_income))
                         conn.commit()
                         st.toast(f"🎉 Collected :green[${format_number(rent_income)}]!")
                         time.sleep(1)
@@ -1779,11 +1722,9 @@ def main_account_view(conn, user_id):
     st.text("")
 
     col1, col2 = st.columns(2)
-    if col1.button("**Deposit from Savings**", type="primary", use_container_width = True):
-        withdraw_dialog(conn, user_id)
-    if col2.button("**Withdraw to Savings**", type="primary", use_container_width = True):
-        withdraw_dialog(conn, user_id)
-    if st.button("**Transfer**", use_container_width = True):
+    if col1.button("**Withdraw to Savings**", type="primary", use_container_width = True):
+        transfer_to_savings_dialog(conn, user_id)
+    if col2.button("**Transfe to People**", use_container_width = True):
         transfer_dialog(conn, user_id)
 
     st.divider()
@@ -1837,13 +1778,10 @@ def savings_view(conn, user_id):
         st.text("")
 
         c1, c2 = st.columns(2)
-        if c1.button("**Deposit**", type="primary", use_container_width=True):
-            deposit_to_savings_dialog(conn, st.session_state.user_id)
-
-        if c2.button("**Withdraw**", type="secondary", use_container_width=True):
-            withdraw_from_savings_dialog(conn, st.session_state.user_id)
+        if c1.button("**Transfer to Vault**", type="primary", use_container_width=True):
+            transfer_to_vault_dialog(conn, st.session_state.user_id)
         
-        if st.button("Refresh Savings Balance", use_container_width=True):
+        if c2.button("Refresh Savings Balance", use_container_width=True):
             apply_interest_if_due(conn, user_id)
 
     st.text("")
@@ -1892,6 +1830,7 @@ def dashboard(conn, user_id):
     minutes, seconds = divmod(remainder, 60)
     if not days and not hours and not minutes:
         pass
+
     distribute_dividends(conn)
 
     st.header(f"Welcome, {st.session_state.username}!", divider="rainbow")
