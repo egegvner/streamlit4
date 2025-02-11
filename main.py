@@ -3178,7 +3178,6 @@ def real_estate_marketplace_view(conn, user_id):
                 country_details_dialog(conn, user_id, country_id)
         
         r = st.pydeck_chart(pdk.Deck(
-            map_provider = "mapbox",
             layers=[
             pdk.Layer(
                 "PolygonLayer",
