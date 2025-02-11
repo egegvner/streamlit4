@@ -2816,7 +2816,7 @@ def bank_view(conn, user_id):
                 else:
                     st.info(f"📅 [You Have an Active Loan!] **Due:** {due_date}")
         
-        st.session_state.amt = balance
+        st.session_state.amt = balance * 1.75
         st.divider()
         st.warning(f"[Max Borrow] :green[${format_currency(st.session_state.amt)}] $||$ :green[{format_number(st.session_state.amt)}]")
         st.subheader("Borrow Loan")
