@@ -4,7 +4,7 @@
         "name": "Turkey",
         "total_worth": 42500000000000,
         "share_price": 425000000000,
-        "image_url": "./CountryFlags/Turkiye.png",
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739024257/turkey_ntrscg.png",
         "latitude": 0.00,
         "longitude": 0.00,
         "border_geometry": "./GeoJSON/Turkiye.json"
@@ -14,7 +14,7 @@
         "name": "Canada",
         "total_worth": 73600000000000,
         "share_price": 736000000000,
-        "image_url": "./CountryFlags/Canada.png",
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739026941/canada_rxwbvi.png",
         "latitude": 0.00,
         "longitude": 0.00,
         "border_geometry": "./GeoJSON/Canada.json"
@@ -24,7 +24,7 @@
         "name": "Australia",
         "total_worth": 54400000000000,
         "share_price": 544000000000,
-        "image_url": "./CountryFlags/Australia.png",
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739175427/australia_wsf6ja.png",
         "latitude": 0.00,
         "longitude": 0.00,
         "border_geometry": "./GeoJSON/Australia.json"
@@ -34,7 +34,7 @@
         "name": "United Kingdom",
         "total_worth": 65600000000000,
         "share_price": 656000000000,
-        "image_url": "./CountryFlags/UnitedKingdom.png",
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739175427/united-kingdom_zlezqa.png",
         "latitude": 0.00,
         "longitude": 0.00,
         "border_geometry": "./GeoJSON/UnitedKingdom.json"
@@ -44,7 +44,7 @@
         "name": "United States",
         "total_worth": 163800000000000,
         "share_price": 1638000000000,
-        "image_url": "./CountryFlags/UnitedStates.png",
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739175426/united-states_fplcyv.png",
         "latitude": 0.00,
         "longitude": 0.00,
         "border_geometry": "./GeoJSON/UnitedStates.json"
@@ -54,7 +54,7 @@
         "name": "China",
         "total_worth": 181900000000000,
         "share_price": 1819000000000,
-        "image_url": "./CountryFlags/China.png",
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739175426/china_qt3uek.png",
         "latitude": 0.00,
         "longitude": 0.00,
         "border_geometry": "./GeoJSON/China.json"
@@ -64,7 +64,7 @@
         "name": "India",
         "total_worth": 98400000000000,
         "share_price": 984000000000,
-        "image_url": "./CountryFlags/India.png",
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739192788/india_gteh2g.png",
         "latitude": 0.00,
         "longitude": 0.00,
         "border_geometry": "./GeoJSON/India.json"
@@ -74,7 +74,7 @@
         "name": "South Africa",
         "total_worth": 63200000000000,
         "share_price": 632000000000,
-        "image_url": "./CountryFlags/SouthAfrica.png",
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739192787/south-africa_xgx0m6.png",
         "latitude": 0.00,
         "longitude": 0.00,
         "border_geometry": "./GeoJSON/SouthAfrica.json"
@@ -84,7 +84,7 @@
         "name": "Russia",
         "total_worth": 78700000000000,
         "share_price": 787000000000,
-        "image_url": "./CountryFlags/Russia.png",
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739192787/russia_k8shxe.png",
         "latitude": 0.00,
         "longitude": 0.00,
         "border_geometry": "./GeoJSON/Russia.json"
@@ -94,9 +94,9 @@
         "name": "Japan",
         "total_worth": 78800000000000,
         "share_price": 788000000000,
-        "image_url": "./CountryFlags/Japan.png",
+        "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739241993/Japan_sugof4.png",
         "latitude": 0.00,
         "longitude": 0.00,
         "border_geometry": "./GeoJSON/Japan.json"
-      }
+      },
 ]
