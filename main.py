@@ -622,7 +622,7 @@ def register_user(conn, username, password, email = None, visible_name = None):
                    1,    # Default level
                    visible_name,
                    hashed_password, 
-                   10,   # Default balance
+                   1000,   # Default balance
                    0,    # Default savings account
                    0,    # Default suspension (0 = not suspended)
                    0,    # Default deposits
