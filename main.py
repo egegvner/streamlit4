@@ -4673,7 +4673,7 @@ def main(conn):
                 st.session_state.current_menu = "Blackmarket"
                 st.rerun()
 
-            if st.button("Gov. & Economy", type="secondary", use_container_width=True):
+            if st.button("Gov. & Economy & Loans", type="secondary", use_container_width=True):
                 st.session_state.current_menu = "Bank"
                 st.rerun()
 
