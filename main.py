@@ -2036,7 +2036,7 @@ def chat_view(conn):
                 ''', unsafe_allow_html=True)
     
     with t1:
-        with st.container(height=500, border=False):  
+        with st.container(height=400, border=False):  
             chat_container = st.container()
             with chat_container:
                 for username, message, timestamp in messages1:
@@ -2050,21 +2050,20 @@ def chat_view(conn):
                         with st.chat_message(name="user"):
                             st.write(f":gray[[{username}] :gray[[{timestamp.split()[1]}]]] {message}")
 
-        with st.container(border=True):
-            new_message = st.chat_input("Message @English")
-            if new_message:
-                if (datetime.datetime.now() - st.session_state.cd).total_seconds() >= 2:
-                    c.execute(
-                        "INSERT INTO chats (user_id, message, timestamp) VALUES (?, ?, CURRENT_TIMESTAMP)", 
-                        (st.session_state.user_id, new_message.strip())
-                    )
-                    conn.commit()
-                    
-                    st.session_state.last_chat_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    st.session_state.cd = datetime.datetime.now()
-                    st.rerun()
-                else:
-                    st.toast("Please wait a bit before sending another message.")
+        new_message = st.chat_input("Message @English")
+        if new_message:
+            if (datetime.datetime.now() - st.session_state.cd).total_seconds() >= 2:
+                c.execute(
+                    "INSERT INTO chats (user_id, message, timestamp) VALUES (?, ?, CURRENT_TIMESTAMP)", 
+                    (st.session_state.user_id, new_message.strip())
+                )
+                conn.commit()
+                
+                st.session_state.last_chat_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                st.session_state.cd = datetime.datetime.now()
+                st.rerun()
+            else:
+                st.toast("Please wait a bit before sending another message.")
 
     with t2:
         with st.container(height=500, border=False):  
@@ -2081,21 +2080,20 @@ def chat_view(conn):
                         with st.chat_message(name="user"):
                             st.write(f":gray[[{username}] :gray[[{timestamp.split()[1]}]]] {message}")
 
-        with st.container(border=True):
-            new_message = st.chat_input("Message @Other")
-            if new_message:
-                if (datetime.datetime.now() - st.session_state.cd).total_seconds() >= 2:
-                    c.execute(
-                        "INSERT INTO chats2 (user_id, message, timestamp) VALUES (?, ?, CURRENT_TIMESTAMP)", 
-                        (st.session_state.user_id, new_message.strip())
-                    )
-                    conn.commit()
-                    
-                    st.session_state.last_chat_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    st.session_state.cd = datetime.datetime.now()
-                    st.rerun()
-                else:
-                    st.toast("Please wait a bit before sending another message.")
+        new_message = st.chat_input("Message @Other")
+        if new_message:
+            if (datetime.datetime.now() - st.session_state.cd).total_seconds() >= 2:
+                c.execute(
+                    "INSERT INTO chats2 (user_id, message, timestamp) VALUES (?, ?, CURRENT_TIMESTAMP)", 
+                    (st.session_state.user_id, new_message.strip())
+                )
+                conn.commit()
+                
+                st.session_state.last_chat_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                st.session_state.cd = datetime.datetime.now()
+                st.rerun()
+            else:
+                st.toast("Please wait a bit before sending another message.")
 
 def get_latest_message_time(conn):
     c = conn.cursor()
