@@ -2826,6 +2826,39 @@ def investments_view(conn, user_id):
 
     st.subheader(f"💰 Balance: **:green[${format_number(balance)}]**")
 
+    st.divider()
+    st.subheader("📊 Active Investments", divider="rainbow")
+    active_investments = c.execute("""
+        SELECT company_name, amount, risk_level, start_date, end_date
+        FROM investments WHERE user_id = ? AND status = 'pending'
+    """, (user_id,)).fetchall()
+
+    if active_investments:
+        for company, amount, risk, start, end in active_investments:
+            with st.container(border=True, height = 200):
+                st.write(f"**{company}** - :gray[[Invested]] :green[${format_number(amount)}] $|$ :gray[[Risk]] :red[{float(risk) * 100}%] $|$ :gray[[Ends]] :blue[{end}]")
+    else:
+        st.info("No active investments!")
+
+    st.divider()
+    st.subheader("✅ Completed Investments", divider="rainbow")
+    completed_investments = c.execute("""
+        SELECT company_name, amount, return_rate, status
+        FROM investments WHERE user_id = ? AND status != 'pending'
+    """, (user_id,)).fetchall()
+
+    if completed_investments:
+        with st.container(border = True, height = 300):
+            for company, amount, rate, status in completed_investments:
+                outcome = "Profit" if rate > 0 else "Loss"
+                if rate > 0:
+                    st.write(f"**{company}** - {outcome}: :green[${format_number(rate)}] ({status.upper()})")
+                else:
+                    st.write(f"**{company}** - {outcome}: :red[${format_number(rate)}] ({status.upper()})")
+    else:
+
+        st.info("No completed investments yet.")
+
     companies = c.execute("SELECT company_id, company_name, risk_level FROM investment_companies").fetchall()
 
     if not companies:
@@ -2903,38 +2936,6 @@ def investments_view(conn, user_id):
             time.sleep(2)
             st.session_state.balance = balance - investment_amount
             st.rerun()
-
-    st.divider()
-    st.subheader("📊 Active Investments", divider="rainbow")
-    active_investments = c.execute("""
-        SELECT company_name, amount, risk_level, start_date, end_date
-        FROM investments WHERE user_id = ? AND status = 'pending'
-    """, (user_id,)).fetchall()
-
-    if active_investments:
-        for company, amount, risk, start, end in active_investments:
-            with st.container(border=True):
-                st.write(f"**{company}** - :gray[[Invested]] :green[${format_number(amount)}] $|$ :gray[[Risk]] :red[{float(risk) * 100}%] $|$ :gray[[Ends]] :blue[{end}]")
-    else:
-        st.info("No active investments!")
-
-    st.divider()
-    st.subheader("✅ Completed Investments", divider="rainbow")
-    completed_investments = c.execute("""
-        SELECT company_name, amount, return_rate, status
-        FROM investments WHERE user_id = ? AND status != 'pending'
-    """, (user_id,)).fetchall()
-
-    if completed_investments:
-        for company, amount, rate, status in completed_investments:
-            outcome = "Profit" if rate > 0 else "Loss"
-            if rate > 0:
-                st.write(f"**{company}** - {outcome}: :green[${format_number(rate)}] ({status.upper()})")
-            else:
-                st.write(f"**{company}** - {outcome}: :red[${format_number(rate)}] ({status.upper()})")
-    else:
-
-        st.info("No completed investments yet.")
 
 def real_estate_marketplace_view(conn, user_id):
     c = conn.cursor()
