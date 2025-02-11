@@ -2066,7 +2066,7 @@ def chat_view(conn):
                 st.toast("Please wait a bit before sending another message.")
 
     with t2:
-        with st.container(height=500, border=False):  
+        with st.container(height=400, border=False):  
             chat_container = st.container()
             with chat_container:
                 for username, message, timestamp in messages2:
@@ -2094,6 +2094,8 @@ def chat_view(conn):
                 st.rerun()
             else:
                 st.toast("Please wait a bit before sending another message.")
+
+    st.html("<style> .main {overflow: hidden} </style>")
 
 def get_latest_message_time(conn):
     c = conn.cursor()
