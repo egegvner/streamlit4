@@ -1518,7 +1518,7 @@ def marketplace_view(conn, user_id):
 def inventory_view(conn, user_id):
     c = conn.cursor()
 
-    t1, t2, t3, t4 = st.tabs(["💠 GNFTs", "🏠 Properties", "Lands" "Stock Holdings"])
+    t1, t2, t3, t4 = st.tabs(["💠 GNFTs 💠", "🏠 Properties 🏠", "🚩 Lands & Countries 🚩", "📈 Stock Holdings 📈"])
     st.markdown('''<style>
                         button[data-baseweb="tab"] {
                         font-size: 24px;
