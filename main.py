@@ -3073,7 +3073,7 @@ def real_estate_marketplace_view(conn, user_id):
                 property_categories["AIRPORTS"].append(row)
             elif "port" in title:
                 property_categories["PORTS"].append(row)
-            elif "ms." or "mr." or "mrs." in title.lower():
+            elif any(x in title.lower() for x in ["ms.", "mr.", "mrs."]):
                 property_categories["BSB"].append(row)
             else:
                 property_categories["LANDMARKS"].append(row)
