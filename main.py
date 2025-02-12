@@ -3048,19 +3048,11 @@ def real_estate_marketplace_view(conn, user_id):
             "AIRPORTS": [],
             "PORTS": [],
             "LANDMARKS": [],
+            "BSB": [],
         }
 
-        for _, row in df.iterrows():
-            title = row["Type"].lower()
-            if "airport" in title:
-                property_categories["AIRPORTS"].append(row)
-            elif "port" in title:
-                property_categories["PORTS"].append(row)
-            else:
-                property_categories["LANDMARKS"].append(row)
-
-        tabs = st.tabs(["✈️ AIRPORTS ✈️", "⚓️ PORTS ⚓️", "🪅 LANDMARKS 🪅"])
-        tab_names = ["AIRPORTS", "PORTS", "LANDMARKS"]
+        tabs = st.tabs(["✈️ AIRPORTS ✈️", "⚓️ PORTS ⚓️", "🪅 LANDMARKS 🪅", "📚 BSB 📚"])
+        tab_names = ["AIRPORTS", "PORTS", "LANDMARKS", "BSB"]
         
         property_categories = {category: [] for category in tab_names}
         
@@ -3070,6 +3062,8 @@ def real_estate_marketplace_view(conn, user_id):
                 property_categories["AIRPORTS"].append(row)
             elif "port" in title:
                 property_categories["PORTS"].append(row)
+            elif "ms." or "mr." or "mrs." in title.lower():
+                property_categories["BSB"].append(row)
             else:
                 property_categories["LANDMARKS"].append(row)
         
