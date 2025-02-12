@@ -676,6 +676,7 @@ def init_db(conn):
                   show_main_balance_on_leaderboard INTEGER DEFAULT 1,
                   show_savings_balance_on_leaderboard INTEGER DEFAULT 1,
                   last_savings_refresh DATETIME NOT NULL,
+                  last_quota_reset DATETIME DEFAULT CURRENT_TIMESTAMP,
                   last_username_change DATETIME DEFAULT CURRENT_TIMESTAMP
                   );''')
 
@@ -3047,7 +3048,6 @@ def real_estate_marketplace_view(conn, user_id):
             "AIRPORTS": [],
             "PORTS": [],
             "LANDMARKS": [],
-            "BSB": [],
         }
 
         for _, row in df.iterrows():
@@ -3056,13 +3056,11 @@ def real_estate_marketplace_view(conn, user_id):
                 property_categories["AIRPORTS"].append(row)
             elif "port" in title:
                 property_categories["PORTS"].append(row)
-            elif "ms." or "mr." or "mrs." in title.lower():
-                property_categories["BSB"].append(row)
             else:
                 property_categories["LANDMARKS"].append(row)
 
-        tabs = st.tabs(["✈️ AIRPORTS ✈️", "⚓️ PORTS ⚓️", "🪅 LANDMARKS 🪅", "📚 BSB 📚"])
-        tab_names = ["AIRPORTS", "PORTS", "LANDMARKS", "BSB"]
+        tabs = st.tabs(["✈️ AIRPORTS ✈️", "⚓️ PORTS ⚓️", "🪅 LANDMARKS 🪅"])
+        tab_names = ["AIRPORTS", "PORTS", "LANDMARKS"]
         
         property_categories = {category: [] for category in tab_names}
         
@@ -3072,8 +3070,6 @@ def real_estate_marketplace_view(conn, user_id):
                 property_categories["AIRPORTS"].append(row)
             elif "port" in title:
                 property_categories["PORTS"].append(row)
-            elif any(x in title.lower() for x in ["ms.", "mr.", "mrs."]):
-                property_categories["BSB"].append(row)
             else:
                 property_categories["LANDMARKS"].append(row)
         
@@ -4579,7 +4575,7 @@ def main(conn):
                             st.session_state.logged_in = True
                             st.session_state.user_id = user[0]
                             st.session_state.username = username
-                            st.session_state.current_menu = "Dashboard"
+                            time.sleep(1)
                             
                     time.sleep(2)
                     st.rerun()
