@@ -676,7 +676,6 @@ def init_db(conn):
                   show_main_balance_on_leaderboard INTEGER DEFAULT 1,
                   show_savings_balance_on_leaderboard INTEGER DEFAULT 1,
                   last_savings_refresh DATETIME NOT NULL,
-                  last_quota_reset DATETIME DEFAULT CURRENT_TIMESTAMP,
                   last_username_change DATETIME DEFAULT CURRENT_TIMESTAMP
                   );''')
 
@@ -4580,7 +4579,7 @@ def main(conn):
                             st.session_state.logged_in = True
                             st.session_state.user_id = user[0]
                             st.session_state.username = username
-                            time.sleep(1)
+                            st.session_state.current_menu = "Dashboard"
                             
                     time.sleep(2)
                     st.rerun()
