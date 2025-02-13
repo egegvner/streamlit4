@@ -594,9 +594,9 @@ def load_lands_from_json(conn, json_file):
 
         if existing_land is None:
             c.execute("""
-                INSERT INTO country_lands (country_id, name, total_worth, share_price, image_url, latitude, longitude, border_geometry)
+                INSERT INTO country_lands (country_id, name, total_worth, share_price, available_shares, image_url, latitude, longitude, border_geometry)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (land["country_id"], land["name"], land["total_worth"], land["share_price"], land["image_url"], land["latitude"], land["latitude"], land["border_geometry"]))
+            """, (land["country_id"], land["name"], land["total_worth"], land["share_price"], 100.0, land["image_url"], land["latitude"], land["latitude"], land["border_geometry"]))
         else:
             c.execute("""
                 UPDATE country_lands
