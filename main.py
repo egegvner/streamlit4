@@ -842,7 +842,7 @@ def init_db(conn):
             name TEXT UNIQUE NOT NULL,
             total_worth REAL NOT NULL,
             share_price REAL NOT NULL,
-            available_shares REAL NOT NULL,
+            available_shares REAL DEFAULT 100.0,
             image_url TEXT,
             latitude TEXT NOT NULL,
             longitude TEXT NOT NULL,
