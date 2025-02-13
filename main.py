@@ -4580,7 +4580,7 @@ def main(conn):
                 else:
                     st.error("Invalid username or password")
             if st.button("Password Reset", type = "tertiary", use_container_width = True, help = "Not yet available"):
-                reset_password_dialog()
+                reset_password_dialog(conn)
 
             st.text("")
             st.text("")
