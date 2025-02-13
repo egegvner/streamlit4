@@ -3981,7 +3981,7 @@ def handle_recommendation_action(action_key):
         st.session_state.current_menu = "Rewards"
 
 @st.dialog("Reset Password")
-def reset_password_dialog(conn, username):
+def reset_password_dialog(conn):
     c = conn.cursor()
     username = st.text_input("Username")
     new_pass = st.text_input("New Password")
@@ -4580,7 +4580,7 @@ def main(conn):
                     st.error("Invalid username or password")
             if st.button("Password Reset", type = "tertiary", use_container_width = True, help = "Not yet available"):
                 reset_password_dialog()
-                
+
             st.text("")
             st.text("")
 
@@ -4588,7 +4588,7 @@ def main(conn):
             with c2:
                 c1, c2 = st.columns(2)
                 if c1.button("[ Privacy Policy", type = "tertiary"):
-                    privacy_policy_dialog()
+                    privacy_policy_dialog(conn)
 
                 c2.button("Terms of Use ]", type = "tertiary")
             
