@@ -3765,7 +3765,7 @@ def admin_panel(conn):
 
     if st.button("Update Data", use_container_width = True, type = "secondary"):
         for _, row in edited_df.iterrows():
-            c.execute("UPDATE OR IGNORE users SET username = ?, level = ?, visible_name = ?, password = ?, balance = ?, has_savings_account = ?, suspension = ?, incoming_transfers = ?, outgoing_transfers = ?, last_transaction_time = ?, email = ?, last_daily_reward_claimed = ?, login_streak = ?, last_username_change = ? WHERE user_id = ?", (row["Username"], row["Level"], row["Visible Name"], row["Pass"], row["Balance"], row["Has Savings Account"], row["Suspension"], row["Transfers Received"], row["Transfers Sent"], row["Last Transaction Time"], row["Email"], row["Last Daily Reward Claimed"], row["Login Streak"], row["User ID"]))
+            c.execute("UPDATE OR IGNORE users SET username = ?, level = ?, visible_name = ?, password = ?, balance = ?, has_savings_account = ?, suspension = ?, incoming_transfers = ?, outgoing_transfers = ?, last_transaction_time = ?, email = ?, last_daily_reward_claimed = ?, login_streak = ?, last_username_change = ? WHERE user_id = ?", (row["Username"], row["Level"], row["Visible Name"], row["Pass"], row["Balance"], row["Has Savings Account"], row["Suspension"], row["Transfers Received"], row["Transfers Sent"], row["Last Transaction Time"], row["Email"], row["Last Daily Reward Claimed"], row["Login Streak"], row["Last Username Change"], row["User ID"]))
         conn.commit()
         st.rerun()
 
