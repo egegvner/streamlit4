@@ -4812,10 +4812,5 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
 
 if __name__ == "__main__":
     conn = get_db_connection()
-    conn.cursor().execute("ALTER TABLE users DROP COLUMN deposits")
-    conn.cursor().execute("ALTER TABLE users DROP COLUMN withdraws")
-    conn.cursor().execute("ALTER TABLE users DROP COLUMN total_transactions")
-    conn.cursor().execute("ALTER TABLE users DROP COLUMN last_quota_reset")
-
     init_db(conn)
     main(conn)
