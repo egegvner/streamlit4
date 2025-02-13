@@ -84,7 +84,7 @@ def write_stream(s, delay = 0, random_delay = False):
 
 @st.cache_resource
 def get_db_connection():
-    return sqlite3.connect("genova.db", check_same_thread = False)
+    return sqlite3.connect("bank_genova.db", check_same_thread = False)
 
 item_colors = {
         "Common":":gray",
@@ -606,33 +606,35 @@ def load_lands_from_json(conn, json_file):
 
     conn.commit()
 
-def register_user(conn, username, password, email = None, visible_name = None):
+def register_user(conn, username, password):
     c = conn.cursor()
     try:
 
         user_id_to_be_registered = random.randint(100000, 999999)
         hashed_password = hashPass(password)
                 
-        with st.spinner("Creatning your account..."):
-            c.execute('''INSERT INTO users (user_id, username, level, visible_name, password, balance, has_savings_account, suspension, deposits, withdraws, incoming_transfers, outgoing_transfers, total_transactions, last_transaction_time, email, last_daily_reward_claimed)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', 
+        with st.spinner("Creating your account..."):
+            c.execute('''INSERT INTO users (user_id, username, level, visible_name, password, balance, has_savings_account, suspension, incoming_transfers, outgoing_transfers, last_transaction_time, email, last_daily_reward_claimed, login_streak, show_main_balance_on_leaderboard, show_savings_balance_on_leaderboard, last_savings_refresh, last_username_change)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', 
                   (
                    user_id_to_be_registered,
                    username,
                    1,    # Default level
-                   visible_name,
+                   None,
                    hashed_password, 
-                   10,   # Default balance
+                   1000,   # Default balance
                    0,    # Default savings account
                    0,    # Default suspension (0 = not suspended)
-                   0,    # Default deposits
-                   0,    # Default withdraws
                    0,    # Default incoming transfers
                    0,    # Default outgoing transfers
-                   0,    # Default total transactions
                    None, # Default last transaction time
-                   email,
-                   datetime.datetime.today().strftime("%Y-%m-%d")
+                   None,
+                   None,
+                   0,
+                   1,
+                   1,
+                   None,
+                   None,
                    ))
             conn.commit()
 
@@ -664,11 +666,8 @@ def init_db(conn):
                   balance REAL DEFAULT 1000,
                   has_savings_account INTEGER DEFAULT 0,
                   suspension INTEGER DEFAULT 0,
-                  deposits INTEGER DEFAULT 0,
-                  withdraws INTEGER DEFAULT 0,
                   incoming_transfers INTEGER DEFAULT 0,
                   outgoing_transfers INTEGER DEFAULT 0,
-                  total_transactions INTEGER DEFAULT 0,
                   last_transaction_time DATETIME DEFAULT NULL,
                   email TEXT,
                   last_daily_reward_claimed TIMESTAMP DEFAULT NULL,
@@ -676,7 +675,6 @@ def init_db(conn):
                   show_main_balance_on_leaderboard INTEGER DEFAULT 1,
                   show_savings_balance_on_leaderboard INTEGER DEFAULT 1,
                   last_savings_refresh DATETIME NOT NULL,
-                  last_quota_reset DATETIME DEFAULT CURRENT_TIMESTAMP,
                   last_username_change DATETIME DEFAULT CURRENT_TIMESTAMP
                   );''')
 
@@ -4550,6 +4548,8 @@ def main(conn):
 
             st.text("")
             st.text("")
+            a = c.execute("SELECT * FROM users")
+            st.write(a)
 
             if st.button("**Log In**", use_container_width = True, type="primary"):
                 user = c.execute("SELECT user_id, password FROM users WHERE username = ?", (username,)).fetchone()
@@ -4812,5 +4812,10 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
 
 if __name__ == "__main__":
     conn = get_db_connection()
+    conn.cursor().execute("ALTER TABLE users DROP COLUMN deposits")
+    conn.cursor().execute("ALTER TABLE users DROP COLUMN withdraws")
+    conn.cursor().execute("ALTER TABLE users DROP COLUMN total_transactions")
+    conn.cursor().execute("ALTER TABLE users DROP COLUMN last_quota_reset")
+
     init_db(conn)
     main(conn)
