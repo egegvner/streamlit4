@@ -4610,6 +4610,7 @@ def main(conn):
                         if new_password != "":
                             if len(new_password) >= 8:
                                 if new_password == confirm_password:
+                                    st.toast("Fejio")
                                     register_user(conn, new_username, new_password)
                                     st.rerun()
                                 else:
