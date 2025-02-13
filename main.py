@@ -606,7 +606,7 @@ def load_lands_from_json(conn, json_file):
 
     conn.commit()
 
-def register_user(conn, username, password, email = None, visible_name = None):
+def register_user(conn, username, password):
     c = conn.cursor()
     try:
 
@@ -614,25 +614,13 @@ def register_user(conn, username, password, email = None, visible_name = None):
         hashed_password = hashPass(password)
                 
         with st.spinner("Creatning your account..."):
-            c.execute('''INSERT INTO users (user_id, username, level, visible_name, password, balance, has_savings_account, suspension, deposits, withdraws, incoming_transfers, outgoing_transfers, total_transactions, last_transaction_time, email, last_daily_reward_claimed)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', 
+            c.execute('''INSERT INTO users (user_id, username, password)
+                     VALUES (?, ?, ?)''', 
                   (
                    user_id_to_be_registered,
                    username,
-                   1,    # Default level
-                   visible_name,
-                   hashed_password, 
-                   1000,   # Default balance
-                   0,    # Default savings account
-                   0,    # Default suspension (0 = not suspended)
-                   0,    # Default deposits
-                   0,    # Default withdraws
-                   0,    # Default incoming transfers
-                   0,    # Default outgoing transfers
-                   0,    # Default total transactions
-                   None, # Default last transaction time
-                   email,
-                   datetime.datetime.today().strftime("%Y-%m-%d")
+                   password,
+                   
                    ))
             conn.commit()
 
