@@ -2934,10 +2934,8 @@ def investments_view(conn, user_id):
 
 def real_estate_marketplace_view(conn, user_id):
     c = conn.cursor()
-    with st.spinner("Fetching everything..."):
-            x = c.execute("SELECT COUNT(*) FROM real_estate")
-            if x.fetchone()[0] != 0:
-                load_lands_from_json(conn, "./lands.json")
+    
+    load_lands_from_json(conn, "./lands.json")
     
     countries = c.execute("""
             SELECT country_id, name, total_worth, share_price, latitude, longitude, border_geometry, image_url
@@ -2954,10 +2952,7 @@ def real_estate_marketplace_view(conn, user_id):
             )
         """).fetchall()
     
-    with st.spinner("Fetching everything..."):
-            x = c.execute("SELECT COUNT(*) FROM real_estate")
-            if x.fetchone()[0] != 0:
-                load_real_estates_from_json(conn, "./real_estates.json")
+    load_real_estates_from_json(conn, "./real_estates.json")
 
     properties = c.execute("""
         SELECT property_id, region, type, price, rent_income, demand_factor, latitude, longitude, image_url, sold, username 
