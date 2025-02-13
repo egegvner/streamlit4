@@ -707,7 +707,7 @@ def init_db(conn):
                 stock INTEGER NOT NULL,
                 boost_type TEXT NOT NULL,
                 boost_value REAL NOT NULL,
-                duration INTEGER DEFAULT NULL
+                image_url TEXT DEFAULT NULL
                 );''')
     
     c.execute('''CREATE TABLE IF NOT EXISTS user_inventory (
