@@ -2682,7 +2682,7 @@ def borrow_money(conn, user_id, amount, interest_rate):
     c.execute("UPDATE users SET balance = balance - ? WHERE username = 'Government'", (amount,))
     c.execute("UPDATE users SET loan = ?, loan_due_date = ?, balance = balance + ? WHERE user_id = ?", 
               (new_loan, due_date, amount, user_id))
-    c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?) VALUES", (random.randint(100000000, 999999999), user_id, "Borrow Loan", amount))
+    c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000, 999999999), user_id, "Borrow Loan", amount))
     conn.commit()
 
     st.toast(f"✅ Borrowed ${amount:.2f}. Due Date: {due_date}. You owe ${new_loan:.2f}.")
