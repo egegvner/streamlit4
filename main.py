@@ -3955,7 +3955,17 @@ def settings(conn, username):
     st.button("Ege Güvener • © 2024", type = "tertiary", use_container_width = True, disabled = True)
 
 def main(conn):
-
+    st.markdown(
+    """
+    <style>
+        body {
+            background-color: black;
+            color: white;
+        }
+    </style>
+    """, 
+    unsafe_allow_html=True
+)
     if 'current_menu' not in st.session_state:
         st.session_state.current_menu = "Deposit"
 
