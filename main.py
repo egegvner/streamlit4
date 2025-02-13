@@ -3971,8 +3971,6 @@ def main(conn):
 
             st.text("")
             st.text("")
-            a = c.execute("SELECT * FROM users")
-            st.write(a)
 
             if st.button("**Log In**", use_container_width = True, type="primary"):
                 user = c.execute("SELECT user_id, password FROM users WHERE username = ?", (username,)).fetchone()
