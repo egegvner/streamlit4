@@ -1,6 +1,7 @@
 # Copyright Ege Güvener, 20/12/2024
 # License: MIT
 
+
 import streamlit as st
 import sqlite3
 import random
