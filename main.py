@@ -3980,6 +3980,15 @@ def handle_recommendation_action(action_key):
     elif "rewards" in action_key:
         st.session_state.current_menu = "Rewards"
 
+@st.dialog("Reset Password")
+def reset_password_dialog(conn, username):
+    c = conn.cursor()
+    username = st.text_input("Username")
+    new_pass = st.text_input("New Password")
+    if st.button("Set New Password", type="primary", use_container_width=True):
+        c.execute("UPDATE users SET password = ? WHERE username = ?", (username, new_pass))
+        conn.commit()
+    st.rerun()
 
 def admin_panel(conn):
     c = conn.cursor()
@@ -4569,7 +4578,9 @@ def main(conn):
                     st.rerun()
                 else:
                     st.error("Invalid username or password")
-            st.button("Password Reset", type = "tertiary", use_container_width = True, help = "Not yet available")
+            if st.button("Password Reset", type = "tertiary", use_container_width = True, help = "Not yet available"):
+                reset_password_dialog()
+                
             st.text("")
             st.text("")
 
