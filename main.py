@@ -673,7 +673,10 @@ def init_db(conn):
                   show_main_balance_on_leaderboard INTEGER DEFAULT 1,
                   show_savings_balance_on_leaderboard INTEGER DEFAULT 1,
                   last_savings_refresh DATETIME DEFAULT CURRENT_TIMESTAMP,
-                  last_username_change DATETIME DEFAULT CURRENT_TIMESTAMP
+                  last_username_change DATETIME DEFAULT CURRENT_TIMESTAMP,
+                  loan REAL DEFAULT 0,
+                  loan_due_date DATETIME DEFAULT NULL,
+                  loan_penalty REAL DEFAULT 0
                   );''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS transactions (
@@ -4234,5 +4237,6 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
 
 if __name__ == "__main__":
     conn = get_db_connection()
+    conn.cursor().execute("ALTER TABLE users ADD COLUMN loan_penalty REAL DEFAULT 0;")
     init_db(conn)
     main(conn)
