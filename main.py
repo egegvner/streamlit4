@@ -95,15 +95,6 @@ item_colors = {
         
     }
 
-def format_currency(amount):
-    if isinstance(amount, str):
-        amount = amount.replace(",", "")
-        amount = float(amount)
-    return "{:,.2f}".format(amount)
-
-# def format_currency(amount):
-#     return "{:,.2f}".format(amount).replace(",", "X").replace(".", ",").replace("X", ".")
-
 def hashPass(password):
     return ph.hash(password)
 
@@ -437,7 +428,7 @@ def update_inflation(conn):
     
     last_entry = c.execute("SELECT date FROM inflation_history ORDER BY date DESC LIMIT 1").fetchone()
     if last_entry and last_entry[0] == today:
-        return  # Already updated today
+        return
     
     new_inflation = round(random.uniform(-0.05, 0.05), 4)
     
@@ -459,7 +450,7 @@ def check_and_apply_loan_penalty(conn, user_id):
     user_data = c.execute("SELECT loan, loan_due_date, loan_penalty FROM users WHERE user_id = ?", (user_id,)).fetchone()
     
     if not user_data or user_data[0] == 0:
-        return  # No loan, no penalty
+        return
 
     loan, due_date, penalty = user_data
 
@@ -471,7 +462,7 @@ def check_and_apply_loan_penalty(conn, user_id):
 
     if today > due_date_obj:
         days_overdue = (today - due_date_obj).days
-        penalty_amount = round(loan * 0.01 * days_overdue, 2)  # 1% penalty per day
+        penalty_amount = round(loan * 0.01 * days_overdue, 2)
 
         new_loan = loan + penalty_amount
         new_penalty = penalty + penalty_amount
@@ -482,11 +473,11 @@ def check_and_apply_loan_penalty(conn, user_id):
         print(f"⚠ User {user_id} has an overdue loan! Added ${penalty_amount:.2f} penalty.")
 
 def calculate_investment_return(risk_rate, amount):
-    success_rate = max(0.1, min(1, 1 - risk_rate))  # Higher risk means lower success chance
+    success_rate = max(0.1, min(1, 1 - risk_rate))
     success = random.random() <= success_rate
 
     if success:
-        return round(amount * random.uniform(risk_rate, risk_rate * 2), 2)  # High risk => high return
+        return round(amount * random.uniform(risk_rate, risk_rate * 2), 2)
     else:
         return -amount
 
@@ -504,12 +495,12 @@ def check_and_update_investments(conn, user_id):
         end_date_obj = datetime.datetime.strptime(end_date, "%Y-%m-%d %H:%M:%S")
 
         if now >= end_date_obj:
-            risk_level = float(risk_level)  # Ensure that risk_level is treated as a float
+            risk_level = float(risk_level)
 
-            success = random.random() <= max(0.1, min(1, 1 - risk_level))  # Higher risk = lower success chance
+            success = random.random() <= max(0.1, min(1, 1 - risk_level))
 
             if success:
-                profit = round(amount * random.uniform(1 + risk_level, 1 + (risk_level * 2)), 2)  # Calculate profit
+                profit = round(amount * random.uniform(1 + risk_level, 1 + (risk_level * 2)), 2)
                 outcome = "profit"
             else:
                 profit = -amount
@@ -628,7 +619,7 @@ def register_user(conn, username, password):
                     0,    # Default outgoing transfers
                     None, # Default last transaction time
                     None,
-                    None,
+                    datetime.datetime.strftime(datetime.datetime.now() - datetime.timedelta(weeks=4), "%Y-%m-%d"),
                     0,
                     1,
                     1,
@@ -668,7 +659,7 @@ def init_db(conn):
                   outgoing_transfers INTEGER DEFAULT 0,
                   last_transaction_time DATETIME DEFAULT NULL,
                   email TEXT,
-                  last_daily_reward_claimed TIMESTAMP DEFAULT NULL,
+                  last_daily_reward_claimed TEXT,
                   login_streak INTEGER DEFAULT 0,
                   show_main_balance_on_leaderboard INTEGER DEFAULT 1,
                   show_savings_balance_on_leaderboard INTEGER DEFAULT 1,
@@ -861,6 +852,38 @@ def init_db(conn):
             PRIMARY KEY (user_id, country_id),
             FOREIGN KEY (user_id) REFERENCES users(user_id),
             FOREIGN KEY (country_id) REFERENCES country_lands(country_id)
+            );''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS quizzes (
+            quiz_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            question TEXT NOT NULL,
+            option_a TEXT DEFAULT NULL,
+            option_b TEXT DEFAULT NULL,
+            option_c TEXT DEFAULT NULL,
+            option_d TEXT DEFAULT NULL,
+            correct_option TEXT NOT NULL,
+            quiz_type TEXT NOT NULL CHECK(quiz_type IN ('mcq', 'text', 'number')),
+            cash_prize REAL NOT NULL,
+            date_added DATE DEFAULT CURRENT_DATE
+            );)''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS quiz_attempts (
+            user_id INTEGER NOT NULL,
+            quiz_id INTEGER NOT NULL,
+            is_correct BOOLEAN NOT NULL,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (user_id, quiz_id),
+            FOREIGN KEY (user_id) REFERENCES users(user_id),
+            FOREIGN KEY (quiz_id) REFERENCES quizzes(quiz_id)
+            );''')
+
+    c.execute('''CREATE TABLE IF NOT EXISTS news (
+            news_id INTEGER PRIMARY KEY NOT NULL,
+            title TEXT NOT NULL,
+            content TEXT,
+            likes INTEGER DEFAULT 0,
+            dislikes INTEGER DEFAULT 0,
+            created TEXT NOT NULL
             );''')
 
     conn.commit()
@@ -1096,10 +1119,9 @@ def country_details_dialog(conn, user_id, country_id):
     owned_shares = user_shares[0] if user_shares else 0
     balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
-    # Calculate max buyable shares based on available shares and user's balance
     max_buyable_shares = min(
-        balance // share_price,  # Maximum shares user can afford
-        available_shares  # Maximum shares available for purchase
+        balance // share_price,
+        available_shares
     )
 
     c1, c2 = st.columns(2)
@@ -1217,6 +1239,69 @@ def country_details_dialog(conn, user_id, country_id):
         )
     else:
         st.info("No shareholders yet! Be the first to invest in this country.")
+
+@st.dialog("News & Events & Announcements")
+def news_dialog(conn, user_id):
+    c = conn.cursor()
+    news_data = c.execute("SELECT * FROM news").fetchall()
+
+    for new in news_data:
+        st.subheader(new[1])
+        st.text("")
+        st.write(new[2])
+        st.divider()
+
+@st.dialog("📅 Weekly Quiz")
+def quiz_dialog_view(conn, user_id):
+    c = conn.cursor()
+
+    quiz = c.execute("""
+        SELECT quiz_id, question, option_a, option_b, option_c, option_d, correct_option, quiz_type, cash_prize
+        FROM quizzes
+        ORDER BY date_added DESC
+        LIMIT 1
+    """).fetchone()
+
+    if not quiz:
+        st.warning("No quiz available yet. Check back next Monday!")
+        return
+
+    quiz_id, question, option_a, option_b, option_c, option_d, correct_option, quiz_type, cash_prize = quiz
+
+    already_attempted = c.execute("""
+        SELECT * FROM quiz_attempts WHERE user_id = ? AND quiz_id = ?
+    """, (user_id, quiz_id)).fetchone()
+
+    if already_attempted:
+        st.warning("❌ You have already attempted this quiz.")
+        return
+
+    st.subheader("🎯 Answer the Weekly Quiz")
+    st.write(f"**{question}**")
+
+    if quiz_type == "mcq":
+        options = {"A": option_a, "B": option_b, "C": option_c, "D": option_d}
+        user_answer = st.radio("Choose an answer:", list(options.keys()), format_func=lambda x: f"{x}: {options[x]}")
+    elif quiz_type == "text":
+        user_answer = st.text_input("Your Answer")
+    elif quiz_type == "number":
+        user_answer = st.number_input("Your Answer", step=1.0)
+
+    if st.button("Submit Answer", use_container_width=True):
+        is_correct = str(user_answer).strip().lower() == correct_option.strip().lower()
+
+        c.execute("INSERT INTO quiz_attempts (user_id, quiz_id, is_correct) VALUES (?, ?, ?)", 
+                  (user_id, quiz_id, is_correct))
+
+        if is_correct:
+            c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (cash_prize, user_id))
+            st.success(f"✅ Correct! You won 💰 ${cash_prize}!")
+        else:
+            st.error(f"❌ Wrong! The correct answer was: **{correct_option}**.")
+
+        conn.commit()
+        time.sleep(2)
+        st.rerun()
 
 @st.dialog("Privacy Policy", width="large")
 def privacy_policy_dialog():
@@ -1880,10 +1965,34 @@ def savings_view(conn, user_id):
 def dashboard(conn, user_id):
     c = conn.cursor()
     check_and_update_investments(conn, user_id)
+    streak = c.execute("SELECT login_streak FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
+    balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+    savings = c.execute("SELECT balance FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
+    real_estates_worth = c.execute("SELECT SUM(price) FROM real_estate WHERE user_id = ?", (user_id,)).fetchone()[0]
+    user_shares = c.execute("""
+        SELECT ucs.shares_owned, cl.total_worth
+        FROM user_country_shares ucs
+        JOIN country_lands cl ON ucs.country_id = cl.country_id
+        WHERE ucs.user_id = ?
+    """, (user_id,)).fetchall()
+    
+    total_country_worth = sum((shares / 100) * total for shares, total in user_shares)
+
+    user_stocks = c.execute("""
+        SELECT us.quantity, s.price
+        FROM user_stocks us
+        JOIN stocks s ON us.stock_id = s.stock_id
+        WHERE us.user_id = ?
+    """, (user_id,)).fetchall()
+    
+    total_stock_worth = sum(quantity * price for quantity, price in user_stocks)
+
+    total_worth = balance + savings + real_estates_worth + total_country_worth + total_stock_worth - c.execute("SELECT loan FROM users WHERE user_id = ?", (user_id,)).fetchall()[0]
+    
     now = datetime.datetime.now()
-    days_ahead = (6 - now.weekday()) % 7  # Days until next Sunday (0 = Monday, 6 = Sunday)
-    if days_ahead == 0:  # If today is Sunday, return time left until next Sunday
+    days_ahead = (6 - now.weekday()) % 7
+    if days_ahead == 0:
         days_ahead = 7
     
     next_sunday = now + datetime.timedelta(days=days_ahead)
@@ -1899,20 +2008,27 @@ def dashboard(conn, user_id):
     distribute_dividends(conn)
 
     st.header(f"Welcome, {st.session_state.username}!", divider="rainbow")
-    st.subheader("Daily Reward")
-    if st.button("🎁     Claim Reward     🎁", use_container_width = True):
+    c1, c2, c3 = st.columns(3)
+
+    if c1.button("Weekly Quiz", use_container_width=True):
+        quiz_dialog_view(conn, user_id)
+    if c2.button("News & Events", use_container_width=True):
+        news_dialog(conn, user_id)
+    if c3.button("🎁     Claim Reward     🎁", use_container_width = True):
         claim_daily_reward(conn, user_id)
         st.rerun()
     
-    streak = c.execute("SELECT login_streak FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
-
-    balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     has_savings = c.execute("SELECT has_savings_account FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     if has_savings:
         savings_balance = c.execute("SELECT balance FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
 
     for _ in range(4):
         st.write("")
+
+    c1, c2, c3 = st.columns([1, 2, 1])
+    with c2:
+        st.write("Total Worth", help = "(Balance + Savings + Stocks Worth + Real Estate Worth + Country Lands Worth) - Loans")
+        st.title(f":green[${format_number(total_worth)}]")
 
     c1, c2, c3 = st.columns(3)
 
@@ -2749,7 +2865,7 @@ def bank_view(conn, user_id):
 
         c1, c2, c3 = st.columns([2, 1, 2])
         c2.subheader(f":green[${format_number(gov_funds)}]")
-        st.caption(f":green[${format_currency(gov_funds)}]")
+        st.caption(f":green[${format_number(gov_funds)}]")
         st.divider()
         st.subheader(f"Inflation: :red[{format_number(inflation_rate * -100)}%]")
 
@@ -2777,13 +2893,13 @@ def bank_view(conn, user_id):
                 today = datetime.date.today()
                 
                 if today > due_date_obj:
-                    st.error(f"⚠ **Your loan is overdue!** You now owe **${format_currency(loan)}** with a total penalty of **${format_currency(penalty)}**.")
+                    st.error(f"⚠ **Your loan is overdue!** You now owe **${format_number(loan)}** with a total penalty of **${format_number(penalty)}**.")
                 else:
                     st.info(f"📅 [You Have an Active Loan!] **Due:** {due_date}")
         
         st.session_state.amt = balance
         st.divider()
-        st.warning(f"[Max Borrow] :green[${format_currency(st.session_state.amt)}] $||$ :green[{format_number(st.session_state.amt)}]")
+        st.warning(f"[Max Borrow] :green[${format_number(st.session_state.amt)}] $||$ :green[{format_number(st.session_state.amt)}]")
         st.subheader("Borrow Loan")
         borrow_amount = st.number_input("A", label_visibility="collapsed", min_value=0.0, max_value=float(st.session_state.amt), step=100.0)
         if st.button(f"Borrow :red[${format_number(borrow_amount)}]", use_container_width=True):
@@ -3410,6 +3526,91 @@ def buy_property(conn, user_id, property_id):
 
 def admin_panel(conn):
     c = conn.cursor()
+
+    st.header("News & Events & Announcements")
+    with st.expander("Add New"):
+        with st.form(key= "news"):
+            st.subheader("News Creation")
+            news_id = st.text_input("Quiz ID", value = f"{random.randint(100000000, 999999999)}", disabled = True, help = "ID must be unique")
+            title = st.text_input("A", label_visibility = "collapsed", placeholder = "Title")
+            content = st.text_input("A", label_visibility = "collapsed", placeholder = "Content")
+      
+            st.divider()
+            
+            if st.form_submit_button("Add to News", use_container_width = True):
+                existing_news_ids = c.execute("SELECT new_id FROM news").fetchall()
+                if news_id not in existing_news_ids:
+                    with st.spinner("Creating news..."):
+                        c.execute("INSERT INTO news (new_id, title, content) VALUES (?, ?, ?)", (news_id, title, content))
+                        conn.commit()
+                    st.rerun()
+                else:
+                    st.error("Duplicate new_id")
+
+    st.header("Manage News", divider = "rainbow")
+    with st.spinner("Loading news..."):
+        quiz_data = c.execute("SELECT new_id, title, content, likes, dislikes FROM news").fetchall()
+   
+    df = pd.DataFrame(quiz_data, columns = ["ID", "Title", "Content", "Likes", "Dislikes"])
+    edited_df = st.data_editor(df, key = "news", num_rows = "fixed", use_container_width = True, hide_index = True)
+    if st.button("Update News", use_container_width = True):
+        for _, row in edited_df.iterrows():
+            c.execute("UPDATE OR IGNORE title = ?, content = ?, likes = ?, dislikes = ? WHERE new_id = ?", (row["Title"], row["Content"], row["Likes"], row["Dislikes"], row["ID"]))
+        conn.commit()
+        st.rerun()
+
+    news_id_to_delete = st.number_input("Enter News ID to Delete", min_value = 0, step = 1)
+    if st.button("Delete News", use_container_width = True):
+        with st.spinner("Processing..."):
+            c.execute("DELETE FROM news WHERE new_id = ?", (news_id_to_delete,))
+        conn.commit()
+        st.rerun()
+    
+    st.header("Weekly Quizzes")
+    with st.expander("New Quiz Creation"):
+        with st.form(key= "quiz"):
+            st.subheader("New Quiz Creation")
+            quiz_id = st.text_input("Quiz ID", value = f"{random.randint(100000000, 999999999)}", disabled = True, help = "Quiz ID must be unique")
+            question = st.text_input("A", label_visibility = "collapsed", placeholder = "Question")
+            option_a = st.text_input("A", label_visibility = "collapsed", placeholder = "Option A - leave empty for non-MCQ questions")
+            option_b = st.text_input("A", label_visibility = "collapsed", placeholder = "Option B - leave empty for non-MCQ questions")
+            option_c = st.text_input("A", label_visibility = "collapsed", placeholder = "Option C - leave empty for non-MCQ questions")
+            option_d = st.text_input("A", label_visibility = "collapsed", placeholder = "Option D - leave empty for non-MCQ questions")
+            correct_option = st.text_input("A", label_visibility = "collapsed", placeholder = "Answer")
+            quiz_type = st.selectbox("A", label_visibility = "collapsed", placeholder = "Quiz Type", options = ["mcq", "text", "number"])         
+            cash_prize = st.number_input("A", label_visibility = "collapsed", placeholder = "Cash Prize", min_value=0.0, value=None)
+      
+            st.divider()
+            
+            if st.form_submit_button("Add Quiz", use_container_width = True):
+                existing_quiz_ids = c.execute("SELECT quiz_id FROM quizzes").fetchall()
+                if quiz_id not in existing_quiz_ids:
+                    with st.spinner("Creating quiz..."):
+                        c.execute("INSERT INTO quizzes (quiz_id, question, option_a, option_b, option_c, option_d, correct_option, quiz_type, cash_prize) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (quiz_id, question, option_a, option_b, option_c, option_d, correct_option, quiz_type, cash_prize))
+                        conn.commit()
+                    st.rerun()
+                else:
+                    st.error("Duplicate item_id")
+
+    st.header("Manage Quizzes", divider = "rainbow")
+    with st.spinner("Loading quizzes..."):
+        quiz_data = c.execute("SELECT quiz_id, question, option_a, option_b, option_c, option_d, correct_option, quiz_type, cash_prize FROM marketplace_items").fetchall()
+   
+    df = pd.DataFrame(quiz_data, columns = ["Quiz ID", "Question", "Option A", "Option B", "Option C", "Option D", "Answer", "Quiz Type", "Cash Prize"])
+    edited_df = st.data_editor(df, key = "quiez_table", num_rows = "fixed", use_container_width = True, hide_index = True)
+    if st.button("Update Quizzes", use_container_width = True):
+        for _, row in edited_df.iterrows():
+            c.execute("UPDATE OR IGNORE quizzes SET question = ?, option_a = ?, option_b = ?, option_c = ?, option_d = ?, correct_option = ?, quiz_type = ?, cash_prize = ? WHERE quiz_id = ?", (row["Question"], row["Option A"], row["Option B"], row["Option C"], row["Option D"], row["Answer"], row["Quiz Type"], row["Cash Prize"], row["Quiz ID"]))
+        conn.commit()
+        st.rerun()
+
+    quiz_id_to_delete = st.number_input("Enter Quiz ID to Delete", min_value = 0, step = 1)
+    if st.button("Delete Quiz", use_container_width = True):
+        with st.spinner("Processing..."):
+            c.execute("DELETE FROM quizzes WHERE quiz_id = ?", (quiz_id_to_delete,))
+        conn.commit()
+        st.rerun()
+
     st.header("Marketplace Items", divider = "rainbow")
 
     with st.expander("New Item Creation"):
@@ -3622,12 +3823,12 @@ def admin_panel(conn):
 
     st.header("Manage Real Estates", divider = "rainbow")
     with st.spinner("Loading PrimeEstates™..."):
-        estate_data = c.execute("SELECT property_id, region, type, price, rent_income, demand_factor, image_url, latitude, longitude, sold, username FROM real_estate").fetchall()
-    df = pd.DataFrame(estate_data, columns = ["Estate ID", "Region", "Title", "Price", "Rent Income", "Demand Factor", "Image Path", "Latitude", "Longitude", "Sold", "Username"])
+        estate_data = c.execute("SELECT property_id, region, type, price, rent_income, demand_factor, image_url, latitude, longitude, sold, username, user_id FROM real_estate").fetchall()
+    df = pd.DataFrame(estate_data, columns = ["Estate ID", "Region", "Title", "Price", "Rent Income", "Demand Factor", "Image Path", "Latitude", "Longitude", "Sold", "Username", "User ID"])
     edited_df = st.data_editor(df, key = "estate_table", num_rows = "fixed", use_container_width = True, hide_index = True)
     if st.button("Update Estates", use_container_width = True):
         for _, row in edited_df.iterrows():
-            c.execute("UPDATE OR IGNORE real_estate SET region = ?, type = ?, price = ?, rent_income = ?, demand_factor = ?, image_url = ?, latitude = ?, longitude = ?, sold = ?, username = ? WHERE property_id = ?", (row["Region"], row["Title"], row["Price"], row["Rent Income"], row["Demand Factor"], row["Image Path"], row["Latitude"], row["Longitude"], row["Sold"], row["Username"], row["Estate ID"]))
+            c.execute("UPDATE OR IGNORE real_estate SET region = ?, type = ?, price = ?, rent_income = ?, demand_factor = ?, image_url = ?, latitude = ?, longitude = ?, sold = ?, username = ?, user_id = ? WHERE property_id = ?", (row["Region"], row["Title"], row["Price"], row["Rent Income"], row["Demand Factor"], row["Image Path"], row["Latitude"], row["Longitude"], row["Sold"], row["Username"], row["User ID"], row["Estate ID"]))
         conn.commit()
         st.rerun()
 
@@ -4049,17 +4250,12 @@ def main(conn):
             
             st.text("")
             c1, c2, c3 = st.columns([1, 1, 1])
-            with c2:
-                c1, c2 = st.columns(2)
-                if c1.button("[ Privacy Policy", type = "tertiary"):
+            if c2.button("[ Privacy Policy & Terms of Use ]", type = "tertiary"):
                     privacy_policy_dialog()
 
-                c2.button("Terms of Use ]", type = "tertiary")
             st.write('<div style="position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); color: slategray; text-align: center;"><marquee>Simple and educational bank / finance simulator by Ege. Specifically built for IB Computer Science IA. All rights of this "game" is reserved.</marquee></div>', unsafe_allow_html=True)
 
-    elif st.session_state.logged_in:
-        st.sidebar.write(f"# Welcome, **{st.session_state.username}**!")
-        
+    elif st.session_state.logged_in:        
         with st.sidebar:
             balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (st.session_state.user_id,)).fetchone()[0]
             st.sidebar.write(f"Vault   |   :green[${format_number(balance)}]")
