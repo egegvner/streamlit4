@@ -2028,29 +2028,32 @@ def dashboard(conn, user_id):
     for _ in range(4):
         st.write("")
 
-    c1, c2, c3 = st.columns([2, 2, 1])
-    with c2:
-        st.write("Total Worth", help = "(Balance + Savings + Stocks Worth + Real Estate Worth + Country Lands Worth) - Loans")
-        st.title(f":green[${format_number(total_worth)}]")
+    st.text("")
+    st.text("")
+    st.text("")
 
-    st.text("")
-    st.text("")
-    st.text("")
-    
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3, c4, c5 = st.columns(5)
 
     with c1:
         st.write("Vault")
         st.subheader(f":green[${format_number(balance, 2)}]")
-
+    
     with c2:
+        st.write("Total Worth", help = "(Balance + Savings + Stocks Worth + Real Estate Worth + Country Lands Worth) - Loans")
+        st.subheader(f":green[${format_number(total_worth)}]")
+
+    with c3:
         st.write("Savings")
         if has_savings:
             st.subheader(f":green[${format_number(savings_balance, 2)}]")
         else:
             st.subheader(f":red[Not owned]")
 
-    with c3:
+    with c4:
+        st.write("Active Loans")
+        st.subheader(f":red[${format_number(loan)}]")
+
+    with c5:
         st.write("Login Streak")
         st.subheader(f":green[{streak}] :orange[day]" if streak == 1 else f":blue[{streak}] :orange[days]")
 
