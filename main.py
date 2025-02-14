@@ -265,7 +265,7 @@ def claim_daily_reward(conn, user_id):
         last_claimed_date = datetime.datetime.strptime(last_claimed, "%Y-%m-%d")
         if last_claimed_date.date() == datetime.datetime.today().date():
             st.toast("You've already claimed your daily reward today!")
-            time.sleep(3)
+            time.sleep(2)
         else:
             streak = c.execute("SELECT login_streak FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
             new_streak = streak + 1 if last_claimed else 1
@@ -3546,31 +3546,31 @@ def admin_panel(conn):
             st.divider()
             
             if st.form_submit_button("Add to News", use_container_width = True):
-                existing_news_ids = c.execute("SELECT new_id FROM news").fetchall()
+                existing_news_ids = c.execute("SELECT news_id FROM news").fetchall()
                 if news_id not in existing_news_ids:
                     with st.spinner("Creating news..."):
-                        c.execute("INSERT INTO news (new_id, title, content) VALUES (?, ?, ?)", (news_id, title, content))
+                        c.execute("INSERT INTO news (news_id, title, content) VALUES (?, ?, ?)", (news_id, title, content))
                         conn.commit()
                     st.rerun()
                 else:
-                    st.error("Duplicate new_id")
+                    st.error("Duplicate news_id")
 
     st.header("Manage News", divider = "rainbow")
     with st.spinner("Loading news..."):
-        quiz_data = c.execute("SELECT new_id, title, content, likes, dislikes FROM news").fetchall()
+        quiz_data = c.execute("SELECT news_id, title, content, likes, dislikes FROM news").fetchall()
    
     df = pd.DataFrame(quiz_data, columns = ["ID", "Title", "Content", "Likes", "Dislikes"])
     edited_df = st.data_editor(df, key = "news", num_rows = "fixed", use_container_width = True, hide_index = True)
     if st.button("Update News", use_container_width = True):
         for _, row in edited_df.iterrows():
-            c.execute("UPDATE OR IGNORE title = ?, content = ?, likes = ?, dislikes = ? WHERE new_id = ?", (row["Title"], row["Content"], row["Likes"], row["Dislikes"], row["ID"]))
+            c.execute("UPDATE OR IGNORE title = ?, content = ?, likes = ?, dislikes = ? WHERE news_id = ?", (row["Title"], row["Content"], row["Likes"], row["Dislikes"], row["ID"]))
         conn.commit()
         st.rerun()
 
     news_id_to_delete = st.number_input("Enter News ID to Delete", min_value = 0, step = 1)
     if st.button("Delete News", use_container_width = True):
         with st.spinner("Processing..."):
-            c.execute("DELETE FROM news WHERE new_id = ?", (news_id_to_delete,))
+            c.execute("DELETE FROM news WHERE news_id = ?", (news_id_to_delete,))
         conn.commit()
         st.rerun()
     
