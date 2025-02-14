@@ -1988,11 +1988,10 @@ def dashboard(conn, user_id):
     """, (user_id,)).fetchall()
     
     total_stock_worth = sum(quantity * price for quantity, price in user_stocks)
-    loan = c.execute("SELECT loan FROM users WHERE user_id = ?", (user_id,)).fetchall()[0]
+    loan = c.execute("SELECT loan FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     if not loan:
         loan = 0.0
-    st.toast(loan)
-    total_worth = balance + savings + real_estates_worth + total_country_worth + total_stock_worth
+    total_worth = balance + savings + real_estates_worth + total_country_worth + total_stock_worth - loan
     
     now = datetime.datetime.now()
     days_ahead = (6 - now.weekday()) % 7
@@ -2029,11 +2028,15 @@ def dashboard(conn, user_id):
     for _ in range(4):
         st.write("")
 
-    c1, c2, c3 = st.columns([1, 2, 1])
+    c1, c2, c3 = st.columns([2, 2, 1])
     with c2:
         st.write("Total Worth", help = "(Balance + Savings + Stocks Worth + Real Estate Worth + Country Lands Worth) - Loans")
         st.title(f":green[${format_number(total_worth)}]")
 
+    st.text("")
+    st.text("")
+    st.text("")
+    
     c1, c2, c3 = st.columns(3)
 
     with c1:
