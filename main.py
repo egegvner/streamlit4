@@ -2011,13 +2011,14 @@ def dashboard(conn, user_id):
     distribute_dividends(conn)
 
     st.header(f"Welcome, {st.session_state.username}!", divider="rainbow")
+    st.text("")
     c1, c2, c3 = st.columns(3)
 
-    if c1.button("Weekly Quiz", use_container_width=True):
+    if c1.button("Weekly Quiz", use_container_width=True, type="primary"):
         quiz_dialog_view(conn, user_id)
-    if c2.button("News & Events", use_container_width=True):
+    if c2.button("News & Events", use_container_width=True, type="primary"):
         news_dialog(conn, user_id)
-    if c3.button("🎁     Claim Reward     🎁", use_container_width = True):
+    if c3.button("🎁     Claim Reward     🎁", use_container_width = True, type="primary"):
         claim_daily_reward(conn, user_id)
         st.rerun()
     
@@ -2028,8 +2029,6 @@ def dashboard(conn, user_id):
     for _ in range(4):
         st.write("")
 
-    st.text("")
-    st.text("")
     st.text("")
 
     c1, c2, c3, c4, c5 = st.columns(5)
