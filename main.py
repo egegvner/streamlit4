@@ -827,6 +827,7 @@ def init_db(conn):
             longitude TEXT NOT NULL,
             sold INTEGER DEFAULT 0,
             is_owned INTEGER DEFAULT 0,
+            user_id INTEGER DEFAULT NULL,
             username TEXT DEFAULT NULL
             );''')
 
