@@ -1273,12 +1273,17 @@ def quiz_dialog_view(conn, user_id):
     """, (user_id, quiz_id)).fetchone()
 
     if already_attempted:
-        st.warning("❌ You have already attempted this quiz.")
+        st.warning("❌ You have already attempted this quiz. Come back next Monday!")
         return
 
     st.subheader("🎯 Answer the Weekly Quiz")
+    st.divider()
+    st.text("")
     st.write(f"**{question}**")
-
+    st.text("")
+    st.text("")
+    st.write(f"Reward: :green[${cash_prize}]")
+    st.text("")
     if quiz_type == "mcq":
         options = {"A": option_a, "B": option_b, "C": option_c, "D": option_d}
         user_answer = st.radio("Choose an answer:", list(options.keys()), format_func=lambda x: f"{x}: {options[x]}")
@@ -1288,20 +1293,25 @@ def quiz_dialog_view(conn, user_id):
         user_answer = st.number_input("Your Answer", step=1.0)
 
     if st.button("Submit Answer", use_container_width=True):
-        is_correct = str(user_answer).strip().lower() == correct_option.strip().lower()
-
-        c.execute("INSERT INTO quiz_attempts (user_id, quiz_id, is_correct) VALUES (?, ?, ?)", 
-                  (user_id, quiz_id, is_correct))
-
-        if is_correct:
-            c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (cash_prize, user_id))
-            st.success(f"✅ Correct! You won 💰 ${cash_prize}!")
+        if already_attempted:
+            st.warning("❌ You have already attempted this quiz. Come back next Monday!")
+        
         else:
-            st.error(f"❌ Wrong! The correct answer was: **{correct_option}**.")
+            with st.spinner("Hmmm..."):
+                is_correct = str(user_answer).strip().lower() == correct_option.strip().lower()
 
-        conn.commit()
-        time.sleep(2)
-        st.rerun()
+                c.execute("INSERT INTO quiz_attempts (user_id, quiz_id, is_correct) VALUES (?, ?, ?)", 
+                        (user_id, quiz_id, is_correct))
+                
+                time.sleep(2)
+
+            if is_correct:
+                c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (cash_prize, user_id))
+                st.success(f"✅ Correct! You won 💰 ${cash_prize}!")
+            else:
+                st.error(f"❌ Wrong! The correct answer was: **{correct_option}**.")
+
+            conn.commit()
 
 @st.dialog("Privacy Policy", width="large")
 def privacy_policy_dialog():
