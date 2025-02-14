@@ -1656,9 +1656,6 @@ def inventory_view(conn, user_id):
     with t3:
         st_autorefresh(interval=30000, key="p")
 
-        if "portofolio_value" not in st.session_state:
-            st.session_state.portofolio_value = 0
-
         st.header("📊 My Portfolio", divider="rainbow")
 
         user_stocks = c.execute("""
@@ -4134,8 +4131,7 @@ def main(conn):
                 st.session_state.current_menu = "Manage Pending Transfers"
                 st.rerun()
             
-            c1, c2 = st.columns(2)
-            if c1.button("Inventory & Holdings", type="secondary", use_container_width=True):
+            if st.button("Inventory & Holdings", type="secondary", use_container_width=True):
                 st.session_state.current_menu = "Inventory"
                 st.rerun()
 
