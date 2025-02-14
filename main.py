@@ -1307,11 +1307,17 @@ def quiz_dialog_view(conn, user_id):
             if is_correct:
                 c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (cash_prize, user_id))
                 c.execute("UPDATE quizzes SET total_plays = total_plays + 1, correct_answers = correct_answers + 1 WHERE quiz_id = ?", (quiz_id,))
-                st.success(f"✅ Correct! You won 💰 ${cash_prize}!")
+                c1, c2 = st.columns(2)
+                c1.success(f"✅ Correct! Won ${cash_prize}!")
+                if c2.button("Quit"):
+                    st.rerun()
             else:
-                st.error(f"❌ Wrong! The correct answer was: **{correct_option}**.")
                 c.execute("UPDATE quizzes SET total_plays = total_plays + 1, wrong_answers = wrong_answers + 1 WHERE quiz_id = ?", (quiz_id,))
-
+                c1, c2 = st.columns(2)
+                st.error(f"❌ Wrong! Answer: **{correct_option}**")
+                 if c2.button("Quit"):
+                    st.rerun()
+                     
             conn.commit()
 
 @st.dialog("Privacy Policy", width="large")
