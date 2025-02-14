@@ -3545,11 +3545,11 @@ def admin_panel(conn):
       
             st.divider()
             
-            if st.form_submit_button("Add to News", use_container_width = True):
+            if st.form_submit_button("Publish", use_container_width = True):
                 existing_news_ids = c.execute("SELECT news_id FROM news").fetchall()
                 if news_id not in existing_news_ids:
                     with st.spinner("Creating news..."):
-                        c.execute("INSERT INTO news (news_id, title, content) VALUES (?, ?, ?)", (news_id, title, content))
+                        c.execute("INSERT INTO news (news_id, title, content, created) VALUES (?, ?, ?, ?)", (news_id, title, content, datetime.datetime.strftime(datetime.datetime.now(), "%Y-%m-%d")))
                         conn.commit()
                     st.rerun()
                 else:
@@ -3557,13 +3557,13 @@ def admin_panel(conn):
 
     st.header("Manage News", divider = "rainbow")
     with st.spinner("Loading news..."):
-        quiz_data = c.execute("SELECT news_id, title, content, likes, dislikes FROM news").fetchall()
+        quiz_data = c.execute("SELECT news_id, title, content, likes, dislikes, created FROM news").fetchall()
    
-    df = pd.DataFrame(quiz_data, columns = ["ID", "Title", "Content", "Likes", "Dislikes"])
+    df = pd.DataFrame(quiz_data, columns = ["ID", "Title", "Content", "Likes", "Dislikes", "Published"])
     edited_df = st.data_editor(df, key = "news", num_rows = "fixed", use_container_width = True, hide_index = True)
     if st.button("Update News", use_container_width = True):
         for _, row in edited_df.iterrows():
-            c.execute("UPDATE OR IGNORE title = ?, content = ?, likes = ?, dislikes = ? created = ? WHERE news_id = ?", (row["Title"], row["Content"], row["Likes"], row["Dislikes"], datetime.datetime.strftime(datetime.datetime.now() - datetime.timedelta(weeks=4), "%Y-%m-%d"), row["ID"]))
+            c.execute("UPDATE OR IGNORE title = ?, content = ?, likes = ?, dislikes = ? created = ? WHERE news_id = ?", (row["Title"], row["Content"], row["Likes"], row["Dislikes"], row["ID"]))
         conn.commit()
         st.rerun()
 
