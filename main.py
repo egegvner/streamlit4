@@ -2014,11 +2014,11 @@ def dashboard(conn, user_id):
     st.text("")
     c1, c2, c3 = st.columns(3)
 
-    if c1.button("Weekly Quiz", use_container_width=True, type="primary"):
+    if c1.button("Weekly Quiz", use_container_width=True):
         quiz_dialog_view(conn, user_id)
-    if c2.button("News & Events", use_container_width=True, type="primary"):
+    if c2.button("News & Events", use_container_width=True):
         news_dialog(conn, user_id)
-    if c3.button("🎁     Claim Reward     🎁", use_container_width = True, type="primary"):
+    if c3.button("🎁     Claim Reward     🎁", use_container_width = True):
         claim_daily_reward(conn, user_id)
         st.rerun()
     
@@ -2026,9 +2026,8 @@ def dashboard(conn, user_id):
     if has_savings:
         savings_balance = c.execute("SELECT balance FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
 
-    for _ in range(4):
-        st.write("")
-
+    st.text("")
+    st.text("")
     st.text("")
 
     c1, c2, c3, c4, c5 = st.columns(5)
