@@ -2581,7 +2581,7 @@ def stocks_view(conn, user_id):
             hours, remainder = divmod(time_left.seconds, 3600)
             minutes, seconds = divmod(remainder, 60)
             with st.container(border=True):
-                st.write(f"Next Divided Payout In :orange[{days}] Day, :orange[{hours}] Hours, :orange[{minutes}] Minutes.")
+                st.write(f"Next Dividend Payout In :orange[{days}] Day, :orange[{hours}] Hours, :orange[{minutes}] Minutes.")
 
         with c2:
             st.subheader(f"{name} ({symbol})")
