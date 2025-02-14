@@ -1306,11 +1306,11 @@ def quiz_dialog_view(conn, user_id):
 
             if is_correct:
                 c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (cash_prize, user_id))
-                c.execute("UPDATE quizzes SET total_plays = total_plays + 1, correct_answers = correct_answers + 1 WHERE quizz_id = ?", (quiz_id,))
+                c.execute("UPDATE quizzes SET total_plays = total_plays + 1, correct_answers = correct_answers + 1 WHERE quiz_id = ?", (quiz_id,))
                 st.success(f"✅ Correct! You won 💰 ${cash_prize}!")
             else:
                 st.error(f"❌ Wrong! The correct answer was: **{correct_option}**.")
-                c.execute("UPDATE quizzes SET total_plays = total_plays + 1, wrong_answers = wrong_answers + 1 WHERE quizz_id = ?", (quiz_id,))
+                c.execute("UPDATE quizzes SET total_plays = total_plays + 1, wrong_answers = wrong_answers + 1 WHERE quiz_id = ?", (quiz_id,))
 
             conn.commit()
 
