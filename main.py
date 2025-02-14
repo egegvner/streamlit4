@@ -3602,7 +3602,7 @@ def admin_panel(conn):
 
     st.header("Manage Quizzes", divider = "rainbow")
     with st.spinner("Loading quizzes..."):
-        quiz_data = c.execute("SELECT quiz_id, question, option_a, option_b, option_c, option_d, correct_option, quiz_type, cash_prize FROM marketplace_items").fetchall()
+        quiz_data = c.execute("SELECT quiz_id, question, option_a, option_b, option_c, option_d, correct_option, quiz_type, cash_prize FROM quizzes").fetchall()
    
     df = pd.DataFrame(quiz_data, columns = ["Quiz ID", "Question", "Option A", "Option B", "Option C", "Option D", "Answer", "Quiz Type", "Cash Prize"])
     edited_df = st.data_editor(df, key = "quiez_table", num_rows = "fixed", use_container_width = True, hide_index = True)
