@@ -866,6 +866,7 @@ def init_db(conn):
             cash_prize REAL NOT NULL,
             correct_answers INTEGER DEFAULT 0,
             wrong_answers INTEGER DEFAULT 0,
+            total_plays INTEGER DEFAULT 0,
             date_added DATE DEFAULT CURRENT_DATE
             );''')
 
@@ -4453,5 +4454,6 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
 
 if __name__ == "__main__":
     conn = get_db_connection()
+    conn.cursor().execute("ALTER TABLE quizzes ADD COLUMN total_plays INTEGER DEFAULT 0;")
     init_db(conn)
     main(conn)
