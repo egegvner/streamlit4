@@ -864,6 +864,8 @@ def init_db(conn):
             correct_option TEXT NOT NULL,
             quiz_type TEXT NOT NULL CHECK(quiz_type IN ('mcq', 'text', 'number')),
             cash_prize REAL NOT NULL,
+            correct_answers INTEGER DEFAULT 0,
+            wrong_answers INTEGER DEFAULT 0,
             date_added DATE DEFAULT CURRENT_DATE
             );''')
 
@@ -1303,9 +1305,11 @@ def quiz_dialog_view(conn, user_id):
 
             if is_correct:
                 c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (cash_prize, user_id))
+                c.execute("UPDATE quizzes SET total_plays = total_plays + 1, correct_answers = correct_answers + 1 WHERE quizz_id = ?", (quiz_id,))
                 st.success(f"✅ Correct! You won 💰 ${cash_prize}!")
             else:
                 st.error(f"❌ Wrong! The correct answer was: **{correct_option}**.")
+                c.execute("UPDATE quizzes SET total_plays = total_plays + 1, wrong_answers = wrong_answers + 1 WHERE quizz_id = ?", (quiz_id,))
 
             conn.commit()
 
@@ -3608,13 +3612,13 @@ def admin_panel(conn):
 
     st.header("Manage Quizzes", divider = "rainbow")
     with st.spinner("Loading quizzes..."):
-        quiz_data = c.execute("SELECT quiz_id, question, option_a, option_b, option_c, option_d, correct_option, quiz_type, cash_prize FROM quizzes").fetchall()
+        quiz_data = c.execute("SELECT quiz_id, question, option_a, option_b, option_c, option_d, correct_option, quiz_type, cash_prize, correct_answers, wrong_answers FROM quizzes").fetchall()
    
-    df = pd.DataFrame(quiz_data, columns = ["Quiz ID", "Question", "Option A", "Option B", "Option C", "Option D", "Answer", "Quiz Type", "Cash Prize"])
+    df = pd.DataFrame(quiz_data, columns = ["Quiz ID", "Question", "Option A", "Option B", "Option C", "Option D", "Answer", "Quiz Type", "Cash Prize", "Correct Answers", "Wrong Answers"])
     edited_df = st.data_editor(df, key = "quiez_table", num_rows = "fixed", use_container_width = True, hide_index = True)
     if st.button("Update Quizzes", use_container_width = True):
         for _, row in edited_df.iterrows():
-            c.execute("UPDATE OR IGNORE quizzes SET question = ?, option_a = ?, option_b = ?, option_c = ?, option_d = ?, correct_option = ?, quiz_type = ?, cash_prize = ? WHERE quiz_id = ?", (row["Question"], row["Option A"], row["Option B"], row["Option C"], row["Option D"], row["Answer"], row["Quiz Type"], row["Cash Prize"], row["Quiz ID"]))
+            c.execute("UPDATE OR IGNORE quizzes SET question = ?, option_a = ?, option_b = ?, option_c = ?, option_d = ?, correct_option = ?, quiz_type = ?, cash_prize = ?, correct_answers = ?, wrong_answers = ? WHERE quiz_id = ?", (row["Question"], row["Option A"], row["Option B"], row["Option C"], row["Option D"], row["Answer"], row["Quiz Type"], row["Cash Prize"], row["Correct Answers"], row["Wrong Answers"], row["Quiz ID"]))
         conn.commit()
         st.rerun()
 
@@ -4449,5 +4453,7 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
 
 if __name__ == "__main__":
     conn = get_db_connection()
+    conn.cursor().execute("ALTER TABLE quizzes ADD COLUMN correct_answers INTEGER DEFAULT 0;")
+    conn.cursor().execute("ALTER TABLE quizzes ADD COLUMN wrong_answers INTEGER DEFAULT 0;")
     init_db(conn)
     main(conn)
