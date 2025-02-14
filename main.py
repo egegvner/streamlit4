@@ -3420,6 +3420,7 @@ def admin_panel(conn):
             description = st.text_input("A", label_visibility = "collapsed", placeholder = "Description")
             rarity = st.selectbox("A", label_visibility = "collapsed", placeholder = "Description", options = ["Common", "Uncommon", "Rare", "Epic", "Ultimate"])         
             price = st.text_input("A", label_visibility = "collapsed", placeholder = "Price")
+            stock = st.number_input("Ab", label_visibility = "collapsed", placeholder = "Stock", min_value=0, value=None)
             boost_type = st.text_input("A", label_visibility = "collapsed", placeholder = "Boost Type")
             boost_value = st.text_input("A", label_visibility = "collapsed", placeholder = "Boost Value")
             img = st.text_input("A", label_visibility = "collapsed", placeholder = "Image Path (LOCAL ONLY)")
@@ -3430,7 +3431,7 @@ def admin_panel(conn):
                 existing_item_ids = c.execute("SELECT item_id FROM marketplace_items").fetchall()
                 if item_id not in existing_item_ids:
                     with st.spinner("Creating item..."):
-                        c.execute("INSERT INTO marketplace_items (item_id, name, description, rarity, price, stock, boost_type, boost_value, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (item_id, name, description, rarity, price, boost_type, boost_value, img))
+                        c.execute("INSERT INTO marketplace_items (item_id, name, description, rarity, price, stock, boost_type, boost_value, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (item_id, name, description, rarity, price, stock, boost_type, boost_value, img))
                         conn.commit()
                     st.rerun()
                 else:
