@@ -1991,7 +1991,8 @@ def dashboard(conn, user_id):
     loan = c.execute("SELECT loan FROM users WHERE user_id = ?", (user_id,)).fetchall()[0]
     if not loan:
         loan = 0.0
-    total_worth = balance + savings + real_estates_worth + total_country_worth + total_stock_worth - loan
+    st.toast(loan)
+    total_worth = balance + savings + real_estates_worth + total_country_worth + total_stock_worth
     
     now = datetime.datetime.now()
     days_ahead = (6 - now.weekday()) % 7
