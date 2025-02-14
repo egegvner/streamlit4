@@ -1278,9 +1278,7 @@ def quiz_dialog_view(conn, user_id):
 
     st.subheader("🎯 Answer the Weekly Quiz")
     st.divider()
-    st.text("")
-    st.write(f"**{question}**")
-    st.text("")
+    st.write(f"**{question}**", unsafe_allow_html=True)
     st.text("")
     st.write(f"Reward: :green[${cash_prize}]")
     st.text("")
