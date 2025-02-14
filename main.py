@@ -292,7 +292,6 @@ def claim_daily_reward(conn, user_id):
         conn.commit()
         time.sleep(3)
 
-@st.fragment()
 def update_stock_prices(conn):
     c = conn.cursor()
     now = datetime.datetime.now()
@@ -336,6 +335,7 @@ def update_stock_prices(conn):
                 "UPDATE stocks SET price = ?, open_price = ?, close_price = ?, last_updated = ? WHERE stock_id = ?",
                 (current_price, open_price, close_price, now.strftime("%Y-%m-%d %H:%M:%S"), stock_id)
             )
+            
         except Exception as e:
             print(f"Error updating stock {stock_id}: {e}")
             continue
@@ -428,7 +428,6 @@ def distribute_dividends(conn):
             st.toast(f"💰 Dividend Payout: Received :green[${total_dividend}]")
 
     conn.commit()
-
 
 def update_inflation(conn):
     c = conn.cursor()
