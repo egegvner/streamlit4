@@ -1970,6 +1970,7 @@ def dashboard(conn, user_id):
     balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     savings = c.execute("SELECT balance FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
     real_estates_worth = c.execute("SELECT SUM(price) FROM real_estate WHERE user_id = ?", (user_id,)).fetchone()[0]
+
     user_shares = c.execute("""
         SELECT ucs.shares_owned, cl.total_worth
         FROM user_country_shares ucs
@@ -1987,8 +1988,10 @@ def dashboard(conn, user_id):
     """, (user_id,)).fetchall()
     
     total_stock_worth = sum(quantity * price for quantity, price in user_stocks)
-
-    total_worth = balance + savings + real_estates_worth + total_country_worth + total_stock_worth - c.execute("SELECT loan FROM users WHERE user_id = ?", (user_id,)).fetchall()[0]
+    loan = c.execute("SELECT loan FROM users WHERE user_id = ?", (user_id,)).fetchall()[0]
+    if not loan:
+        loan = 0.0
+    total_worth = balance + savings + real_estates_worth + total_country_worth + total_stock_worth - loan
     
     now = datetime.datetime.now()
     days_ahead = (6 - now.weekday()) % 7
