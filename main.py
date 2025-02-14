@@ -1275,12 +1275,10 @@ def quiz_dialog_view(conn, user_id):
     if already_attempted:
         st.warning("❌ You have already attempted this quiz. Come back next Monday!")
         return
-
-    st.subheader("🎯 Answer the Weekly Quiz")
-    st.divider()
+    
     st.write(f"**{question}**", unsafe_allow_html=True)
     st.text("")
-    st.write(f"Reward: :green[${cash_prize}]")
+    st.subheader(f"Reward: :green[${cash_prize}]")
     st.text("")
     if quiz_type == "mcq":
         options = {"A": option_a, "B": option_b, "C": option_c, "D": option_d}
