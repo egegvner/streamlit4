@@ -865,7 +865,7 @@ def init_db(conn):
             quiz_type TEXT NOT NULL CHECK(quiz_type IN ('mcq', 'text', 'number')),
             cash_prize REAL NOT NULL,
             date_added DATE DEFAULT CURRENT_DATE
-            );)''')
+            );''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS quiz_attempts (
             user_id INTEGER NOT NULL,
