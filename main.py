@@ -1248,13 +1248,13 @@ def country_details_dialog(conn, user_id, country_id):
 def news_dialog(conn, user_id):
     c = conn.cursor()
     
-    news_data = c.execute("SELECT * FROM news ORDER BY created DESC").fetchall()
+    news_data = c.execute("SELECT news_id, title, content, likes, dislikes, created, category FROM news ORDER BY created DESC").fetchall()
 
     tab1, tab2, tab3 = st.tabs(["📰 News", "📢 Announcements", "🌍 Global News"])
 
     with tab1:
         for new in news_data:
-            if new[3] == "News":
+            if new[6] == "News":
                 st.subheader(new[1])
                 st.text("")
                 st.write(new[2])
@@ -1262,7 +1262,7 @@ def news_dialog(conn, user_id):
 
     with tab2:
         for new in news_data:
-            if new[3] == "Announcements":
+            if new[6] == "Announcements":
                 st.subheader(new[1])
                 st.text("")
                 st.write(new[2])
@@ -1270,7 +1270,7 @@ def news_dialog(conn, user_id):
 
     with tab3:
         for new in news_data:
-            if new[3] == "Global News":
+            if new[6] == "Global News":
                 st.subheader(new[1])
                 st.text("")
                 st.write(new[2])
