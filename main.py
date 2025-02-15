@@ -2091,7 +2091,7 @@ def dashboard(conn, user_id):
         st.subheader(f":green[${format_number(balance, 2)}]")
     
     with c2:
-        st.write("Total Worth", help = "(Balance + Savings + Stocks Worth + Real Estate Worth + Country Lands Worth) - Loans")
+        st.write("Total Worth")
         st.subheader(f":green[${format_number(total_worth)}]")
 
     with c3:
