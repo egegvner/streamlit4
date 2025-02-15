@@ -887,16 +887,14 @@ def init_db(conn):
             category TEXT NOT NULL
             );''')
 
-
     c.execute('''CREATE TABLE IF NOT EXISTS user_news_read (
             user_id INTEGER NOT NULL,
             news_id INTEGER NOT NULL,
-            PRIMARY KEY (user_id, news_id),
             FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
             FOREIGN KEY (news_id) REFERENCES news(news_id) ON DELETE CASCADE
             );''')
 
-    c.execute('''CREATE TABLE IF NOT EXISTS user_reactions (
+    c.execute('''CREATE TABLE IF NOT EXISTS user_news_reactions (
             user_id INTEGER,
             news_id INTEGER,
             PRIMARY KEY (user_id, news_id)
@@ -1270,47 +1268,36 @@ def country_details_dialog(conn, user_id, country_id):
     else:
         st.info("No shareholders yet! Be the first to invest in this country.")
 
-import streamlit as st
-
 @st.dialog("News & Events & Announcements")
 def news_dialog(conn, user_id):
     c = conn.cursor()
-
     news_data = c.execute("SELECT news_id, title, content, likes, dislikes, created, category FROM news ORDER BY created DESC").fetchall()
-
-    if 'user_interactions' not in st.session_state:
-        st.session_state.user_interactions = {}
-
-    tab1, tab2, tab3 = st.tabs(["📰 News", "📢 Announcements", "🌍 Global News"])
+    tab1, tab2, tab3 = st.tabs(["📢 Announcements", "⏳ Events", "🌍 Global News"])
 
     def handle_like_dislike(news_id, action):
-        user = c.execute("SELECT news_id FROM user_reactions WHERE user_id = ?", (user_id,)).fetchone()
-        if not user:
-            if action == "like":
-                c.execute("UPDATE news SET likes = likes + 1 WHERE news_id = ?", (news_id,))
-            elif action == "dislike":
-                c.execute("UPDATE news SET dislikes = dislikes + 1 WHERE news_id = ?", (news_id,))
-            conn.commit()
-            c.execute("INSERT INTO user_reactions (user_id, news_id) VALUES (?, ?)", (user_id, news_id))
-            st.rerun()
-        else:
-            return
+        if action == "like":
+            c.execute("UPDATE news SET likes = likes + 1 WHERE news_id = ?", (news_id,))
+            c.execute("INSERT INTO user_news_reactions (user_id, news_id) VALUES (?, ?)", (user_id, news_id))
+        elif action == "dislike":
+            c.execute("UPDATE news SET dislikes = dislikes + 1 WHERE news_id = ?", (news_id,))
+            c.execute("INSERT INTO user_news_reactions (user_id, news_id) VALUES (?, ?)", (user_id, news_id))
+        conn.commit()
+        st.rerun()
 
     def render_news(news_item):
         st.subheader(news_item[1])
         st.text("")
         st.write(news_item[2])
         st.caption(f":gray[{news_item[5]}]")
-        user = c.execute("SELECT news_id FROM user_reactions WHERE user_id = ?", (user_id,)).fetchone()
-        if not user:
-            user = 0
-        else:
-            user = user[0]
-        
+        user_reacted_news = c.execute("SELECT news_id FROM user_news_reactions WHERE user_id = ?", (user_id,)).fetchall()
+        if not user_reacted_news:
+            user_reacted_news = [0]
+
+        flat = [x[0] for x in user_reacted_news]
         col1, col2 = st.columns(2)
-        if col1.button(f"{news_item[3]}", icon=":material/thumb_up:", key=f"like_{news_item[0]}", disabled=not user, use_container_width=True):
+        if col1.button(f"{news_item[3]}", icon=":material/thumb_up:", key=f"like_{news_item[0]}", disabled=True if news_item[0] in flat else False, use_container_width=True):
             handle_like_dislike(news_item[0], "like")
-        if col2.button(f"{news_item[4]}", icon=":material/thumb_down:", key=f"dislike_{news_item[0]}", disabled=not user, use_container_width=True):
+        if col2.button(f"{news_item[4]}", icon=":material/thumb_down:", key=f"dislike_{news_item[0]}", disabled=True if news_item[0] in flat else False, use_container_width=True):
             handle_like_dislike(news_item[0], "dislike")
 
         st.divider()
@@ -4659,6 +4646,5 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
 
 if __name__ == "__main__":
     conn = get_db_connection()
-    conn.cursor().execute("DROP TABLE user_reactions;")
     init_db(conn)
     main(conn)
