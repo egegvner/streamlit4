@@ -1255,9 +1255,24 @@ def country_details_dialog(conn, user_id, country_id):
 def news_dialog(conn, user_id):
     c = conn.cursor()
 
+    # Fetch news data
     news_data = c.execute("SELECT news_id, title, content, likes, dislikes, created, category FROM news ORDER BY created DESC").fetchall()
 
+    # Initialize session state for tracking user interactions
+    if 'user_interactions' not in st.session_state:
+        st.session_state.user_interactions = {}
+
     tab1, tab2, tab3 = st.tabs(["📰 News", "📢 Announcements", "🌍 Global News"])
+
+    def handle_like_dislike(news_id, action):
+        if news_id not in st.session_state.user_interactions:
+            if action == "like":
+                c.execute("UPDATE news SET likes = likes + 1 WHERE news_id = ?", (news_id,))
+            elif action == "dislike":
+                c.execute("UPDATE news SET dislikes = dislikes + 1 WHERE news_id = ?", (news_id,))
+            conn.commit()
+            st.session_state.user_interactions[news_id] = action
+            st.rerun()  # Rerun the app to reflect the updated likes/dislikes
 
     with tab1:
         for new in news_data:
@@ -1266,31 +1281,17 @@ def news_dialog(conn, user_id):
                 st.text("")
                 st.write(new[2])
                 st.caption(f":gray[{new[5]}]")
-                c1, c2 = st.columns(2)
 
-                # Check if the user has already liked or disliked this post
-                user_reaction = c.execute("SELECT reaction FROM user_reactions WHERE user_id = ? AND news_id = ?", (user_id, new[0])).fetchone()
+                # Like/Dislike buttons
+                col1, col2 = st.columns(2)
+                liked = st.session_state.user_interactions.get(new[0]) == "like"
+                disliked = st.session_state.user_interactions.get(new[0]) == "dislike"
 
-                # If the user has no previous reaction
-                if user_reaction is None:
-                    if c1.button(f"{new[3]}", key=f"like_{new[0]}", use_container_width=True):
-                        c.execute("UPDATE news SET likes = likes + 1 WHERE news_id = ?", (new[0],))
-                        c.execute("INSERT INTO user_reactions (user_id, news_id, reaction) VALUES (?, ?, ?)", (user_id, new[0], "like"))
-                    if c2.button(f"{new[4]}", key=f"dislike_{new[0]}", use_container_width=True):
-                        c.execute("UPDATE news SET dislikes = dislikes + 1 WHERE news_id = ?", (new[0],))
-                        c.execute("INSERT INTO user_reactions (user_id, news_id, reaction) VALUES (?, ?, ?)", (user_id, new[0], "dislike"))
-                else:
-                    # User has already reacted, so show the option to change reaction
-                    if user_reaction[0] == "like":
-                        if c2.button(f"{new[4]}", key=f"dislike_{new[0]}", use_container_width=True):
-                            c.execute("UPDATE news SET likes = likes - 1 WHERE news_id = ?", (new[0],))
-                            c.execute("UPDATE news SET dislikes = dislikes + 1 WHERE news_id = ?", (new[0],))
-                            c.execute("UPDATE user_reactions SET reaction = 'dislike' WHERE user_id = ? AND news_id = ?", (user_id, new[0]))
-                    elif user_reaction[0] == "dislike":
-                        if c1.button(f"{new[3]}", key=f"like_{new[0]}", use_container_width=True):
-                            c.execute("UPDATE news SET dislikes = dislikes - 1 WHERE news_id = ?", (new[0],))
-                            c.execute("UPDATE news SET likes = likes + 1 WHERE news_id = ?", (new[0],))
-                            c.execute("UPDATE user_reactions SET reaction = 'like' WHERE user_id = ? AND news_id = ?", (user_id, new[0]))
+                if col1.button("👍 Like", key=f"like_{new[0]}", disabled=liked or disliked, use_container_width=True):
+                    handle_like_dislike(new[0], "like")
+                if col2.button("👎 Dislike", key=f"dislike_{new[0]}", disabled=liked or disliked, use_container_width=True):
+                    handle_like_dislike(new[0], "dislike")
+
                 st.divider()
 
     with tab2:
@@ -1300,31 +1301,6 @@ def news_dialog(conn, user_id):
                 st.text("")
                 st.write(new[2])
                 st.caption(f":gray[{new[5]}]")
-                c1, c2 = st.columns(2)
-
-                # Check if the user has already liked or disliked this post
-                user_reaction = c.execute("SELECT reaction FROM user_reactions WHERE user_id = ? AND news_id = ?", (user_id, new[0])).fetchone()
-
-                # If the user has no previous reaction
-                if user_reaction is None:
-                    if c1.button(f"{new[3]}", key=f"like_{new[0]}", use_container_width=True):
-                        c.execute("UPDATE news SET likes = likes + 1 WHERE news_id = ?", (new[0],))
-                        c.execute("INSERT INTO user_reactions (user_id, news_id, reaction) VALUES (?, ?, ?)", (user_id, new[0], "like"))
-                    if c2.button(f"{new[4]}", key=f"dislike_{new[0]}", use_container_width=True):
-                        c.execute("UPDATE news SET dislikes = dislikes + 1 WHERE news_id = ?", (new[0],))
-                        c.execute("INSERT INTO user_reactions (user_id, news_id, reaction) VALUES (?, ?, ?)", (user_id, new[0], "dislike"))
-                else:
-                    # User has already reacted, so show the option to change reaction
-                    if user_reaction[0] == "like":
-                        if c2.button(f"{new[4]}", key=f"dislike_{new[0]}", use_container_width=True):
-                            c.execute("UPDATE news SET likes = likes - 1 WHERE news_id = ?", (new[0],))
-                            c.execute("UPDATE news SET dislikes = dislikes + 1 WHERE news_id = ?", (new[0],))
-                            c.execute("UPDATE user_reactions SET reaction = 'dislike' WHERE user_id = ? AND news_id = ?", (user_id, new[0]))
-                    elif user_reaction[0] == "dislike":
-                        if c1.button(f"{new[3]}", key=f"like_{new[0]}", use_container_width=True):
-                            c.execute("UPDATE news SET dislikes = dislikes - 1 WHERE news_id = ?", (new[0],))
-                            c.execute("UPDATE news SET likes = likes + 1 WHERE news_id = ?", (new[0],))
-                            c.execute("UPDATE user_reactions SET reaction = 'like' WHERE user_id = ? AND news_id = ?", (user_id, new[0]))
                 st.divider()
 
     with tab3:
@@ -1334,33 +1310,7 @@ def news_dialog(conn, user_id):
                 st.text("")
                 st.write(new[2])
                 st.caption(f":gray[{new[5]}]")
-                c1, c2 = st.columns(2)
-
-                # Check if the user has already liked or disliked this post
-                user_reaction = c.execute("SELECT reaction FROM user_reactions WHERE user_id = ? AND news_id = ?", (user_id, new[0])).fetchone()
-
-                # If the user has no previous reaction
-                if user_reaction is None:
-                    if c1.button(f"{new[3]}", key=f"like_{new[0]}", use_container_width=True):
-                        c.execute("UPDATE news SET likes = likes + 1 WHERE news_id = ?", (new[0],))
-                        c.execute("INSERT INTO user_reactions (user_id, news_id, reaction) VALUES (?, ?, ?)", (user_id, new[0], "like"))
-                    if c2.button(f"{new[4]}", key=f"dislike_{new[0]}", use_container_width=True):
-                        c.execute("UPDATE news SET dislikes = dislikes + 1 WHERE news_id = ?", (new[0],))
-                        c.execute("INSERT INTO user_reactions (user_id, news_id, reaction) VALUES (?, ?, ?)", (user_id, new[0], "dislike"))
-                else:
-                    # User has already reacted, so show the option to change reaction
-                    if user_reaction[0] == "like":
-                        if c2.button(f"{new[4]}", key=f"dislike_{new[0]}", use_container_width=True):
-                            c.execute("UPDATE news SET likes = likes - 1 WHERE news_id = ?", (new[0],))
-                            c.execute("UPDATE news SET dislikes = dislikes + 1 WHERE news_id = ?", (new[0],))
-                            c.execute("UPDATE user_reactions SET reaction = 'dislike' WHERE user_id = ? AND news_id = ?", (user_id, new[0]))
-                    elif user_reaction[0] == "dislike":
-                        if c1.button(f"{new[3]}", key=f"like_{new[0]}", use_container_width=True):
-                            c.execute("UPDATE news SET dislikes = dislikes - 1 WHERE news_id = ?", (new[0],))
-                            c.execute("UPDATE news SET likes = likes + 1 WHERE news_id = ?", (new[0],))
-                            c.execute("UPDATE user_reactions SET reaction = 'like' WHERE user_id = ? AND news_id = ?", (user_id, new[0]))
                 st.divider()
-
 
 @st.dialog("📅 Weekly Quiz")
 def quiz_dialog_view(conn, user_id):
