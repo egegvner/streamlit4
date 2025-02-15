@@ -2457,6 +2457,23 @@ def buy_blackmarket_item(conn, buyer_id, item_id, item_number, seller_id, price)
     
     conn.commit()
 
+def adjust_stock_prices(conn, stock_id, quantity, action):
+    c = conn.cursor()
+    
+    price, stock_amount = c.execute("SELECT price, stock_amount FROM stocks WHERE stock_id = ?", (stock_id,)).fetchone()
+    
+    elasticity_factor = 0.01
+    
+    if action == "buy":
+        price_change = (quantity / stock_amount) * elasticity_factor * price
+    elif action == "sell":
+        price_change = -(quantity / stock_amount) * elasticity_factor * price
+    
+    new_price = price + price_change
+    c.execute("UPDATE stocks SET price = ? WHERE stock_id = ?", (new_price, stock_id))
+    
+    conn.commit()
+
 def buy_stock(conn, user_id, stock_id, quantity):
     c = conn.cursor()
 
@@ -2489,7 +2506,8 @@ def buy_stock(conn, user_id, stock_id, quantity):
 
     c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, stock_id, quantity, timestamp) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)", (random.randint(100000000, 999999999), user_id, f"Buy Stock ({symbol})", cost, stock_id, quantity))
     c.execute("UPDATE stocks SET stock_amount = stock_amount - ? WHERE stock_id = ?", (quantity, stock_id))
-    
+    adjust_stock_prices(conn, stock_id, quantity, "buy")
+
     conn.commit()
     st.toast(f"Purchased :blue[{format_number(quantity)}] shares for :green[${format_number(cost, 2)}]")
 
@@ -2519,6 +2537,7 @@ def sell_stock(conn, user_id, stock_id, quantity):
     c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, stock_id, quantity) VALUES (?, ?, ?, ?, ?, ?)", (random.randint(100000000, 999999999), user_id, f"Sell Stock ({symbol})", net_profit, stock_id, quantity))
     c.execute("UPDATE users SET balance = balance - ? WHERE username = 'Government'", (profit,))
     c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (net_profit, user_id))
+    adjust_stock_prices(conn, stock_id, quantity, "buy")
 
     conn.commit()
     st.toast(f"Sold :blue[{format_number(quantity)}] shares for :green[${format_number(net_profit, 2)}]") 
@@ -4648,5 +4667,6 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
 
 if __name__ == "__main__":
     conn = get_db_connection()
+    conn.cursor().execute("DROP TABLE user_reactions;")
     init_db(conn)
     main(conn)
