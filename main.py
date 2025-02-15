@@ -890,6 +890,13 @@ def init_db(conn):
             category TEXT NOT NULL
             );''')
 
+    c.execute('''CREATE TABLE IF NOT EXISTS user_reactions (
+            user_id INTEGER,
+            news_id INTEGER,
+            reaction TEXT,
+            PRIMARY KEY (user_id, news_id)
+        );''')
+
     conn.commit()
     return conn, c
     
@@ -1247,9 +1254,7 @@ def country_details_dialog(conn, user_id, country_id):
 @st.dialog("News & Events & Announcements")
 def news_dialog(conn, user_id):
     c = conn.cursor()
-    
     news_data = c.execute("SELECT news_id, title, content, likes, dislikes, created, category FROM news ORDER BY created DESC").fetchall()
-
     tab1, tab2, tab3 = st.tabs(["📰 News", "📢 Announcements", "🌍 Global News"])
 
     with tab1:
@@ -1259,6 +1264,29 @@ def news_dialog(conn, user_id):
                 st.text("")
                 st.write(new[2])
                 st.caption(f":gray[{new[5]}]")
+
+                c1, c2 = st.columns(2)
+
+                user_reaction = c.execute("""
+                    SELECT reaction FROM user_reactions WHERE user_id = ? AND news_id = ?
+                """, (user_id, new[0])).fetchone()
+
+                if user_reaction:
+                    current_reaction = user_reaction[0]
+                    if c1.button("Unlike", icon="thumb_up", use_container_width=True) and current_reaction == "dislike":
+                        c.execute("UPDATE news SET likes = likes + 1, dislikes = dislikes - 1 WHERE news_id = ?", (new[0],))
+                        c.execute("UPDATE user_reactions SET reaction = 'like' WHERE user_id = ? AND news_id = ?", (user_id, new[0]))
+                    elif c2.button("Undo Like", icon="thumb_down", use_container_width=True) and current_reaction == "like":
+                        c.execute("UPDATE news SET dislikes = dislikes + 1, likes = likes - 1 WHERE news_id = ?", (new[0],))
+                        c.execute("UPDATE user_reactions SET reaction = 'dislike' WHERE user_id = ? AND news_id = ?", (user_id, new[0]))
+                else:
+                    if c1.button("Like", icon="thumb_up", use_container_width=True):
+                        c.execute("UPDATE news SET likes = likes + 1 WHERE news_id = ?", (new[0],))
+                        c.execute("INSERT INTO user_reactions (user_id, news_id, reaction) VALUES (?, ?, 'like')", (user_id, new[0]))
+                    elif c2.button("Dislike", icon="thumb_down", use_container_width=True):
+                        c.execute("UPDATE news SET dislikes = dislikes + 1 WHERE news_id = ?", (new[0],))
+                        c.execute("INSERT INTO user_reactions (user_id, news_id, reaction) VALUES (?, ?, 'dislike')", (user_id, new[0]))
+
                 st.divider()
 
     with tab2:
@@ -1268,6 +1296,29 @@ def news_dialog(conn, user_id):
                 st.text("")
                 st.write(new[2])
                 st.caption(f":gray[{new[5]}]")
+
+                c1, c2 = st.columns(2)
+
+                user_reaction = c.execute("""
+                    SELECT reaction FROM user_reactions WHERE user_id = ? AND news_id = ?
+                """, (user_id, new[0])).fetchone()
+
+                if user_reaction:
+                    current_reaction = user_reaction[0]
+                    if c1.button("Unlike", icon="thumb_up", use_container_width=True) and current_reaction == "dislike":
+                        c.execute("UPDATE news SET likes = likes + 1, dislikes = dislikes - 1 WHERE news_id = ?", (new[0],))
+                        c.execute("UPDATE user_reactions SET reaction = 'like' WHERE user_id = ? AND news_id = ?", (user_id, new[0]))
+                    elif c2.button("Undo Like", icon="thumb_down", use_container_width=True) and current_reaction == "like":
+                        c.execute("UPDATE news SET dislikes = dislikes + 1, likes = likes - 1 WHERE news_id = ?", (new[0],))
+                        c.execute("UPDATE user_reactions SET reaction = 'dislike' WHERE user_id = ? AND news_id = ?", (user_id, new[0]))
+                else:
+                    if c1.button("Like", icon="thumb_up", use_container_width=True):
+                        c.execute("UPDATE news SET likes = likes + 1 WHERE news_id = ?", (new[0],))
+                        c.execute("INSERT INTO user_reactions (user_id, news_id, reaction) VALUES (?, ?, 'like')", (user_id, new[0]))
+                    elif c2.button("Dislike", icon="thumb_down", use_container_width=True):
+                        c.execute("UPDATE news SET dislikes = dislikes + 1 WHERE news_id = ?", (new[0],))
+                        c.execute("INSERT INTO user_reactions (user_id, news_id, reaction) VALUES (?, ?, 'dislike')", (user_id, new[0]))
+
                 st.divider()
 
     with tab3:
@@ -1277,6 +1328,29 @@ def news_dialog(conn, user_id):
                 st.text("")
                 st.write(new[2])
                 st.caption(f":gray[{new[5]}]")
+
+                c1, c2 = st.columns(2)
+
+                user_reaction = c.execute("""
+                    SELECT reaction FROM user_reactions WHERE user_id = ? AND news_id = ?
+                """, (user_id, new[0])).fetchone()
+
+                if user_reaction:
+                    current_reaction = user_reaction[0]
+                    if c1.button("Unlike", icon="thumb_up", use_container_width=True) and current_reaction == "dislike":
+                        c.execute("UPDATE news SET likes = likes + 1, dislikes = dislikes - 1 WHERE news_id = ?", (new[0],))
+                        c.execute("UPDATE user_reactions SET reaction = 'like' WHERE user_id = ? AND news_id = ?", (user_id, new[0]))
+                    elif c2.button("Undo Like", icon="thumb_down", use_container_width=True) and current_reaction == "like":
+                        c.execute("UPDATE news SET dislikes = dislikes + 1, likes = likes - 1 WHERE news_id = ?", (new[0],))
+                        c.execute("UPDATE user_reactions SET reaction = 'dislike' WHERE user_id = ? AND news_id = ?", (user_id, new[0]))
+                else:
+                    if c1.button("Like", icon="thumb_up", use_container_width=True):
+                        c.execute("UPDATE news SET likes = likes + 1 WHERE news_id = ?", (new[0],))
+                        c.execute("INSERT INTO user_reactions (user_id, news_id, reaction) VALUES (?, ?, 'like')", (user_id, new[0]))
+                    elif c2.button("Dislike", icon="thumb_down", use_container_width=True):
+                        c.execute("UPDATE news SET dislikes = dislikes + 1 WHERE news_id = ?", (new[0],))
+                        c.execute("INSERT INTO user_reactions (user_id, news_id, reaction) VALUES (?, ?, 'dislike')", (user_id, new[0]))
+
                 st.divider()
 
 @st.dialog("📅 Weekly Quiz")
