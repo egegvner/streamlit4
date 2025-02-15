@@ -1466,28 +1466,28 @@ def leaderboard(c):
             }
 
             .first { 
-                border: 2px solid gold; 
+                border: 1px solid gold; 
                 font-size: 30px; 
                 padding: 20px; 
                 background-color: transparent; 
             }
 
             .second { 
-                border: 2px solid silver; 
+                border: 1px solid silver; 
                 font-size: 25px; 
                 padding: 15px; 
                 background-color: transparent; 
             }
 
             .third { 
-                border: 2px solid #cd7f32; 
+                border: 1px solid #cd7f32; 
                 font-size: 22px; 
                 padding: 12px; 
                 background-color: transparent; 
             }
 
             .other { 
-                border: 2px solid #444; 
+                border: 1px solid #444; 
                 font-size: 15px; 
                 padding: 8px; 
                 background-color: transparent; 
@@ -2167,7 +2167,7 @@ def dashboard(conn, user_id):
 
     with c5:
         st.write("Login Streak")
-        st.subheader(f":green[{streak}] day" if streak == 1 else f":blue[{streak}] days")
+        st.subheader(f":green[{streak}] :orange[day]" if streak == 1 else f":blue[{streak}] :orange[days]")
 
     st.text("")
     st.text("")
