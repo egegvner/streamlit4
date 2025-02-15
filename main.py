@@ -1258,6 +1258,7 @@ def news_dialog(conn, user_id):
                 st.subheader(new[1])
                 st.text("")
                 st.write(new[2])
+                st.caption(f":gray[{new[5]}]")
                 st.divider()
 
     with tab2:
@@ -1266,6 +1267,7 @@ def news_dialog(conn, user_id):
                 st.subheader(new[1])
                 st.text("")
                 st.write(new[2])
+                st.caption(f":gray[{new[5]}]")
                 st.divider()
 
     with tab3:
@@ -1274,6 +1276,7 @@ def news_dialog(conn, user_id):
                 st.subheader(new[1])
                 st.text("")
                 st.write(new[2])
+                st.caption(f":gray[{new[5]}]")
                 st.divider()
 
 @st.dialog("📅 Weekly Quiz")
