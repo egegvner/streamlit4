@@ -4229,7 +4229,7 @@ def settings(conn, username):
 
     if last_change:
         try:
-            last_change = datetime.datetime.strptime(last_change.split('.')[0], '%Y-%m-%d %H:%M:%S')  # Remove microseconds if present
+            last_change = datetime.datetime.strptime(last_change.split('.')[0], '%Y-%m-%d %H:%M:%S')
         except ValueError as e:
             st.error(f"Error parsing last_change: {e}")
             last_change = None
@@ -4239,7 +4239,11 @@ def settings(conn, username):
     time_since_change = (datetime.datetime.now() - last_change).total_seconds() if last_change else None
     disable_button = (time_since_change is not None and time_since_change < 7 * 24 * 3600) or balance < 10000
     st.write(f"Current Username: `{current_username}`")
-    st.write(f"Next change available at :blue[{(last_change + datetime.timedelta(days=7)).strftime('%A, %d %B')}]")
+    if last_change:
+        next_change = (last_change + datetime.timedelta(days=7)).strftime('%A, %d %B')
+        st.write(f"Next change available at :blue[{next_change}]")
+    else:
+        st.write("Next change available: N/A (No previous change record)")
     new_username = st.text_input("s", label_visibility="collapsed", placeholder="New username")
     if st.button("Update Username for :green[$10K]", use_container_width=True, disabled=True if disable_button or new_username == "" else False):
         with st.spinner("Updating..."):
