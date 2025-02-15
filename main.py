@@ -1274,43 +1274,42 @@ def news_dialog(conn, user_id):
             st.session_state.user_interactions[news_id] = action
             st.rerun()  # Rerun the app to reflect the updated likes/dislikes
 
+    def render_news(news_item):
+        """Helper function to render news items with like/dislike buttons."""
+        st.subheader(news_item[1])
+        st.text("")
+        st.write(news_item[2])
+        st.caption(f":gray[{news_item[5]}]")
+
+        # Like/Dislike buttons
+        col1, col2 = st.columns(2)
+        liked = st.session_state.user_interactions.get(news_item[0]) == "like"
+        disliked = st.session_state.user_interactions.get(news_item[0]) == "dislike"
+
+        if col1.button("👍 Like", key=f"like_{news_item[0]}", disabled=liked or disliked, use_container_width=True):
+            handle_like_dislike(news_item[0], "like")
+        if col2.button("👎 Dislike", key=f"dislike_{news_item[0]}", disabled=liked or disliked, use_container_width=True):
+            handle_like_dislike(news_item[0], "dislike")
+
+        st.divider()
+
+    # Render News tab
     with tab1:
         for new in news_data:
             if new[6] == "News":
-                st.subheader(new[1])
-                st.text("")
-                st.write(new[2])
-                st.caption(f":gray[{new[5]}]")
+                render_news(new)
 
-                # Like/Dislike buttons
-                col1, col2 = st.columns(2)
-                liked = st.session_state.user_interactions.get(new[0]) == "like"
-                disliked = st.session_state.user_interactions.get(new[0]) == "dislike"
-
-                if col1.button("👍 Like", key=f"like_{new[0]}", disabled=liked or disliked, use_container_width=True):
-                    handle_like_dislike(new[0], "like")
-                if col2.button("👎 Dislike", key=f"dislike_{new[0]}", disabled=liked or disliked, use_container_width=True):
-                    handle_like_dislike(new[0], "dislike")
-
-                st.divider()
-
+    # Render Announcements tab
     with tab2:
         for new in news_data:
             if new[6] == "Announcements":
-                st.subheader(new[1])
-                st.text("")
-                st.write(new[2])
-                st.caption(f":gray[{new[5]}]")
-                st.divider()
+                render_news(new)
 
+    # Render Global News tab
     with tab3:
         for new in news_data:
             if new[6] == "Global News":
-                st.subheader(new[1])
-                st.text("")
-                st.write(new[2])
-                st.caption(f":gray[{new[5]}]")
-                st.divider()
+                render_news(new)
 
 @st.dialog("📅 Weekly Quiz")
 def quiz_dialog_view(conn, user_id):
