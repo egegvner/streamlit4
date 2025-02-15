@@ -1428,9 +1428,12 @@ def privacy_policy_dialog():
     if st.button("I accept privacy policy", type = "primary", use_container_width = True, disabled = True if not constent else False):
         st.rerun()
 
+import streamlit as st
+
 def leaderboard(c):
     tab1, tab2, tab3 = st.tabs(["💰 VAULT", "🏦 SAVINGS", "🌎 TOTAL WORTH"])
-    
+
+    # Custom CSS for leaderboard frames
     st.markdown('''
         <style>
             button[data-baseweb="tab"] {
@@ -1438,9 +1441,22 @@ def leaderboard(c):
                 margin: 0;
                 width: 100%;
             }
+            .leaderboard-frame {
+                border-radius: 10px;
+                padding: 10px;
+                margin: 5px 0;
+                text-align: center;
+                font-weight: bold;
+                color: white;
+            }
+            .first { background-color: gold; font-size: 30px; padding: 20px; }
+            .second { background-color: silver; font-size: 25px; padding: 15px; }
+            .third { background-color: #cd7f32; font-size: 22px; padding: 12px; }
+            .other { background-color: #444; font-size: 18px; padding: 8px; }
         </style>
     ''', unsafe_allow_html=True)
 
+    # Database queries
     balance_data = c.execute("""
         SELECT username, visible_name, balance 
         FROM users 
@@ -1482,20 +1498,31 @@ def leaderboard(c):
         ORDER BY total_worth DESC
     """).fetchall()
 
+    def display_leaderboard(data, title):
+        st.subheader(title)
+        medals = ["🥇", "🥈", "🥉"]
+
+        for idx, (username, visible_name, *balances) in enumerate(data, start=1):
+            display_name = visible_name or username
+            score = balances[-1]  # Last value in tuple is the relevant balance
+            medal = medals[idx - 1] if idx <= 3 else ""
+            class_name = "first" if idx == 1 else "second" if idx == 2 else "third" if idx == 3 else "other"
+
+            st.markdown(
+                f'<div class="leaderboard-frame {class_name}">{medal} {idx}. {display_name}: ${score:,.2f}</div>',
+                unsafe_allow_html=True,
+            )
+
+    # Display leaderboards in each tab
     with tab1:
-        st.subheader("💰 Vault Leaderboard")
-        for idx, (username, visible_name, balance) in enumerate(balance_data, start=1):
-            st.write(f"**{idx}. {visible_name or username}:** ${balance:,.2f}")
+        display_leaderboard(balance_data, "💰 Vault Leaderboard")
 
     with tab2:
-        st.subheader("🏦 Savings Leaderboard")
-        for idx, (username, visible_name, savings_balance) in enumerate(savings_balance_data, start=1):
-            st.write(f"**{idx}. {visible_name or username}:** ${savings_balance:,.2f}")
+        display_leaderboard(savings_balance_data, "🏦 Savings Leaderboard")
 
     with tab3:
-        st.subheader("🌎 Total Worth Leaderboard")
-        for idx, (username, visible_name, balance, savings_balance, real_estate_worth, country_worth, stock_worth, total_loans, total_worth) in enumerate(total_worth_data, start=1):
-            st.write(f"**{idx}. {visible_name or username}:** ${total_worth:,.2f}")
+        display_leaderboard(total_worth_data, "🌎 Total Worth Leaderboard")
+
 
 @st.dialog("Item Options")
 def inventory_item_options(conn, user_id, item_id):
