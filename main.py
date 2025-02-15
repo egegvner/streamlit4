@@ -903,7 +903,7 @@ def init_db(conn):
     return conn, c
 
 def check_unread_news(conn, user_id):
-    c = conn.cursor
+    c = conn.cursor()
     unread_news = c.execute("""
         SELECT news_id FROM news
         WHERE news_id NOT IN (SELECT news_id FROM user_news_read WHERE user_id = ?)
