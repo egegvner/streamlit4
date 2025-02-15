@@ -1462,7 +1462,7 @@ def leaderboard(c):
             .right {
                 text-align: right;
                 min-width: 100px;
-                color: rgb(60, 179, 113)
+                color: rgb(50, 218, 125)
             }
 
             .first { 
