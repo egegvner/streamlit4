@@ -1291,7 +1291,7 @@ def news_dialog(conn, user_id):
         st.caption(f":gray[{news_item[5]}]")
         user_reacted_news = c.execute("SELECT news_id FROM user_news_reactions WHERE user_id = ?", (user_id,)).fetchall()
         if not user_reacted_news:
-            user_reacted_news = [0]
+            user_reacted_news = [(0,), (1,)]
 
         flat = [x[0] for x in user_reacted_news]
         col1, col2 = st.columns(2)
