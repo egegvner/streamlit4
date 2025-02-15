@@ -1461,7 +1461,8 @@ def leaderboard(c):
 
             .right {
                 text-align: right;
-                min-width: 100px; /* Ensures proper spacing */
+                min-width: 100px;
+                color: lime
             }
 
             .first { 
