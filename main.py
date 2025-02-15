@@ -3673,27 +3673,28 @@ def admin_panel(conn):
     c = conn.cursor()
 
     st.header("News & Events & Announcements")
-    with st.form(key="news"):
-        st.subheader("News Creation")
-        news_id = st.text_input("News ID", value=f"{random.randint(100000000, 999999999)}", disabled=True, help="ID must be unique")
-        title = st.text_input("Title", label_visibility="collapsed", placeholder="Title")
-        content = st.text_area("Content", label_visibility="collapsed", placeholder="Content")
-        category = st.selectbox("Select Category", options=["News", "Announcements", "Global News"])
-
-        st.divider()
-
-        if st.form_submit_button("Publish", use_container_width=True):
-            existing_news_ids = c.execute("SELECT news_id FROM news").fetchall()
-            if news_id not in existing_news_ids:
-                with st.spinner("Creating news..."):
-                    c.execute(
-                        "INSERT INTO news (news_id, title, content, category, created) VALUES (?, ?, ?, ?, ?)",
-                        (news_id, title, content, category, datetime.datetime.strftime(datetime.datetime.now(), "%Y-%m-%d"))
-                    )
-                    conn.commit()
-                st.rerun()
-            else:
-                st.error("Duplicate news_id")
+    with st.expander("Publish New"):
+        with st.form(key="news"):
+            st.subheader("News Creation")
+            news_id = st.text_input("News ID", value=f"{random.randint(100000000, 999999999)}", disabled=True, help="ID must be unique")
+            title = st.text_input("Title", label_visibility="collapsed", placeholder="Title")
+            content = st.text_area("Content", label_visibility="collapsed", placeholder="Content")
+            category = st.selectbox("Select Category", options=["News", "Announcements", "Global News"])
+    
+            st.divider()
+    
+            if st.form_submit_button("Publish", use_container_width=True):
+                existing_news_ids = c.execute("SELECT news_id FROM news").fetchall()
+                if news_id not in existing_news_ids:
+                    with st.spinner("Creating news..."):
+                        c.execute(
+                            "INSERT INTO news (news_id, title, content, category, created) VALUES (?, ?, ?, ?, ?)",
+                            (news_id, title, content, category, datetime.datetime.strftime(datetime.datetime.now(), "%Y-%m-%d"))
+                        )
+                        conn.commit()
+                    st.rerun()
+                else:
+                    st.error("Duplicate news_id")
 
     st.header("Manage News", divider = "rainbow")
     with st.spinner("Loading news..."):
