@@ -960,13 +960,13 @@ def transfer_to_savings_dialog(conn, user_id):
             c.execute("UPDATE savings SET balance = balance + ? WHERE user_id = ?", (net, user_id))
             conn.commit()
             new_savings_balance = c.execute("SELECT balance FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
-            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, "Transfer To Savings", amount))
+            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, "Transfer To Savings", net))
             c.execute("UPDATE users SET balance = balance + ? WHERE username = 'Government'", (tax,))
             conn.commit()
             update_last_transaction_time(conn, user_id)
             with st.spinner("Processing..."):
                 time.sleep(random.uniform(1, 2))
-                st.success(f"Successfully transferred ${amount:.2f}")
+                st.success(f"Successfully transferred ${format_number(net)}")
             st.session_state.withdraw_value = 0.0
             time.sleep(1)
             st.rerun()
@@ -1065,14 +1065,14 @@ def transfer_to_vault_dialog(conn, user_id):
             c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (net, user_id))
             c.execute("UPDATE savings SET balance = balance - ? WHERE user_id = ?", (amount, user_id))
 
-            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Withdraw from Savings to Vault", amount))
+            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Withdraw from Savings to Vault", net))
             c.execute("UPDATE users SET balance = balance + ? WHERE username = 'Government'", (tax,))
             conn.commit()
 
             update_last_transaction_time(conn, user_id)
             with st.spinner("Processing..."):
                 time.sleep(random.uniform(1, 2))
-            st.success(f"Successfully transferred ${format_number(net, 2)} to vault.")
+            st.success(f"Successfully transferred ${format_number(net)} to vault.")
             time.sleep(1.5)
             st.session_state.withdraw_from_savings_value = 0.0
             st.rerun()
@@ -3102,7 +3102,7 @@ def repay_loan(conn, user_id, amount):
     c.execute("UPDATE users SET credit_score = credit_score + 20 WHERE user_id = ?", (user_id,))
     
     conn.commit()
-    st.toast(f"✅ Loan repaid. Remaining debt: ${format_number(new_loan)}.")
+    st.toast(f"✅ Loan repaid. Remaining debt: :red[${format_number(new_loan)}].")
     time.sleep(2.5)
     st.session_state.repay = 0.0
     st.rerun()
@@ -3122,7 +3122,7 @@ def bank_view(conn, user_id):
     df = get_inflation_history(c)
     gov_funds = c.execute("SELECT balance FROM users WHERE username = 'Government'").fetchone()[0]
     inflation_rate = c.execute("SELECT inflation_rate FROM inflation_history ORDER BY date DESC LIMIT 1").fetchone()
-    inflation_rate = inflation_rate[0] if inflation_rate else 0.01  # Default 1% interest
+    inflation_rate = inflation_rate[0] if inflation_rate else 0.01
 
     t1, t2 = st.tabs(["Economy", "Loans & Repayments"])
     st.markdown('''
