@@ -3061,8 +3061,9 @@ def borrow_money(conn, user_id, amount, base_interest_rate):
     c.execute("UPDATE users SET credit_score = credit_score - 10 WHERE user_id = ?", (user_id,))
     
     conn.commit()
-    st.toast(f"✅ Borrowed ${amount:.2f}. Due Date: {due_date}. You owe ${new_loan:.2f}.")
+    st.toast(f"✅ Borrowed ${format_number(amount)}. Due Date: {due_date}.")
     time.sleep(2.5)
+    st.rerun()
 
 def repay_loan(conn, user_id, amount):
     c = conn.cursor()
@@ -3104,6 +3105,7 @@ def repay_loan(conn, user_id, amount):
     st.toast(f"✅ Loan repaid. Remaining debt: ${format_number(new_loan)}.")
     time.sleep(2.5)
     st.session_state.repay = 0.0
+    st.rerun()
 
 def bank_view(conn, user_id):
     update_inflation(conn)
