@@ -1449,30 +1449,30 @@ def leaderboard(c):
                 font-weight: bold;
                 color: white;
             }
-            .first { 
-    border: 3px solid gold; 
-    font-size: 30px; 
-    padding: 20px; 
-    background-color: transparent; 
+    .first { 
+        border: 2px solid gold; 
+        font-size: 30px; 
+        padding: 20px; 
+        background-color: transparent; 
     }
 
     .second { 
-        border: 3px solid silver; 
+        border: 2px solid silver; 
         font-size: 25px; 
         padding: 15px; 
         background-color: transparent; 
     }
 
     .third { 
-        border: 3px solid #cd7f32; 
+        border: 2px solid #cd7f32; 
         font-size: 22px; 
         padding: 12px; 
         background-color: transparent; 
     }
 
     .other { 
-        border: 3px solid #444; 
-        font-size: 18px; 
+        border: 2px solid #444; 
+        font-size: 15px; 
         padding: 8px; 
         background-color: transparent; 
     }
