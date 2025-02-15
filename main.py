@@ -1429,48 +1429,84 @@ def privacy_policy_dialog():
         st.rerun()
 
 def leaderboard(c):
-    tab1, tab2= st.tabs(["💰 VAULT", "🏦 SAVINGS"])
-    st.markdown('''<style>
-                        button[data-baseweb="tab"] {
-                        font-size: 24px;
-                        margin: 0;
-                        width: 100%;
-                        }
-                        </style>
-                ''', unsafe_allow_html=True)
+    tab1, tab2, tab3 = st.tabs(["💰 VAULT", "🏦 SAVINGS", "🌎 TOTAL WORTH"])
+    
+    st.markdown('''
+        <style>
+            button[data-baseweb="tab"] {
+                font-size: 24px;
+                margin: 0;
+                width: 100%;
+            }
+        </style>
+    ''', unsafe_allow_html=True)
 
     balance_data = c.execute("""
-        SELECT username, visible_name, balance FROM users 
+        SELECT username, visible_name, balance 
+        FROM users 
         WHERE show_main_balance_on_leaderboard = 1 
         ORDER BY balance DESC
     """).fetchall()
 
     savings_balance_data = c.execute("""
         SELECT u.username, u.visible_name, s.balance 
-        FROM users u JOIN savings s ON u.user_id = s.user_id 
+        FROM users u 
+        LEFT JOIN savings s ON u.user_id = s.user_id 
         WHERE u.show_savings_balance_on_leaderboard = 1 
         ORDER BY s.balance DESC
     """).fetchall()
 
-    def format_leaderboard(data):
-        return [
-            {"Rank": idx + 1, "Name": user[1] if user[1] else user[0], "Balance": f"${format_number(user[2], 2)}"}
-            for idx, user in enumerate(data)
-        ]
+    total_worth_data = c.execute("""
+        SELECT 
+            u.username, 
+            u.visible_name, 
+            u.balance, 
+            IFNULL(s.balance, 0) AS savings_balance,
+            IFNULL(SUM(r.price), 0) AS real_estate_worth,
+            IFNULL(SUM(cs.shares_owned * cl.share_price), 0) AS country_worth,
+            IFNULL(SUM(us.quantity * st.current_price), 0) AS stock_worth,
+            IFNULL(u.loan, 0) + IFNULL(u.loan_penalty, 0) AS total_loans
+        FROM users u
+        LEFT JOIN savings s ON u.user_id = s.user_id
+        LEFT JOIN real_estate r ON u.user_id = r.user_id AND r.is_owned = 1
+        LEFT JOIN user_country_shares cs ON u.user_id = cs.user_id
+        LEFT JOIN country_lands cl ON cs.country_id = cl.country_id
+        LEFT JOIN user_stocks us ON u.user_id = us.user_id
+        LEFT JOIN stocks st ON us.stock_id = st.stock_id
+        WHERE u.show_main_balance_on_leaderboard = 1
+        GROUP BY u.user_id
+        ORDER BY (u.balance + savings_balance + real_estate_worth + country_worth + stock_worth - total_loans) DESC
+    """).fetchall()
+
+    def format_leaderboard(data, column_name):
+        return pd.DataFrame([
+            {
+                "Name": user[1] if user[1] else user[0],
+                column_name: f"${format_number(user[2], 2)}"
+            }
+            for user in data
+        ])
+
+    def format_total_worth(data):
+        return pd.DataFrame([
+            {
+                "Name": user[1] if user[1] else user[0],
+                "Total Worth": f"${format_number(user[2] + user[3] + user[4] + user[5] + user[6] - user[7], 2)}"
+            }
+            for user in data
+        ])
 
     with tab1:
-        st.text("")
-        st.text("")
-
         st.header("💰 Vault Ranking", divider="rainbow")
-        st.table(format_leaderboard(balance_data) if balance_data else ["No users found."])
+        st.dataframe(format_leaderboard(balance_data, "Balance")) if balance_data else st.write("No users found.")
 
     with tab2:
-        st.text("")
-        st.text("")
-
         st.header("🏦 Savings Balance Ranking", divider="rainbow")
-        st.table(format_leaderboard(savings_balance_data) if savings_balance_data else ["No users found."])
+        st.dataframe(format_leaderboard(savings_balance_data, "Savings Balance")) if savings_balance_data else st.write("No users found.")
+
+    with tab3:
+        st.header("🌎 Total Worth Ranking", divider="rainbow")
+        st.dataframe(format_total_worth(total_worth_data)) if total_worth_data else st.write("No users found.")
 
 @st.dialog("Item Options")
 def inventory_item_options(conn, user_id, item_id):
@@ -2008,6 +2044,7 @@ def dashboard(conn, user_id):
     loan = c.execute("SELECT loan FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     if not loan:
         loan = 0.0
+
     total_worth = balance + savings + real_estates_worth + total_country_worth + total_stock_worth - loan
     
     now = datetime.datetime.now()
