@@ -1293,6 +1293,8 @@ def news_dialog(conn, user_id):
             conn.commit()
             c.execute("INSERT INTO user_reactions (user_id, news_id) VALUES (?, ?)", (user_id, news_id))
             st.rerun()
+        else:
+            return
 
     def render_news(news_item):
         st.subheader(news_item[1])
@@ -1306,9 +1308,9 @@ def news_dialog(conn, user_id):
             user = user[0]
         
         col1, col2 = st.columns(2)
-        if col1.button(f"{news_item[3]}", icon=":material/thumb_up:", key=f"like_{news_item[0]}", disabled=user, use_container_width=True):
+        if col1.button(f"{news_item[3]}", icon=":material/thumb_up:", key=f"like_{news_item[0]}", disabled=not user, use_container_width=True):
             handle_like_dislike(news_item[0], "like")
-        if col2.button(f"{news_item[4]}", icon=":material/thumb_down:", key=f"dislike_{news_item[0]}", disabled=user, use_container_width=True):
+        if col2.button(f"{news_item[4]}", icon=":material/thumb_down:", key=f"dislike_{news_item[0]}", disabled=not user, use_container_width=True):
             handle_like_dislike(news_item[0], "dislike")
 
         st.divider()
