@@ -890,13 +890,6 @@ def init_db(conn):
             category TEXT NOT NULL
             );''')
 
-    c.execute('''CREATE TABLE IF NOT EXISTS user_reactions (
-            user_id INTEGER,
-            news_id INTEGER,
-            reaction TEXT,
-            PRIMARY KEY (user_id, news_id)
-        );''')
-
     conn.commit()
     return conn, c
     
@@ -1259,7 +1252,7 @@ def news_dialog(conn, user_id):
     if 'user_interactions' not in st.session_state:
         st.session_state.user_interactions = {}
 
-    tab1, tab2, tab3 = st.tabs(["📰 News", "📢 Announcements", "🌍 Global News"])
+    tab1, tab2, tab3 = st.tabs(["📢 Announcements", "⏳ Events", "🌍 Global News"])
 
     def handle_like_dislike(news_id, action):
         if news_id not in st.session_state.user_interactions:
@@ -1289,12 +1282,12 @@ def news_dialog(conn, user_id):
 
     with tab1:
         for new in news_data:
-            if new[6] == "News":
+            if new[6] == "Announcements":
                 render_news(new)
 
     with tab2:
         for new in news_data:
-            if new[6] == "Announcements":
+            if new[6] == "Events":
                 render_news(new)
 
     with tab3:
@@ -3705,7 +3698,7 @@ def admin_panel(conn):
             news_id = st.text_input("News ID", value=f"{random.randint(100000000, 999999999)}", disabled=True, help="ID must be unique")
             title = st.text_input("Title", label_visibility="collapsed", placeholder="Title")
             content = st.text_area("Content", label_visibility="collapsed", placeholder="Content")
-            category = st.selectbox("Select Category", options=["News", "Announcements", "Global News"])
+            category = st.selectbox("Select Category", options=["Announcements", "Events", "Global News"])
 
             st.divider()
 
