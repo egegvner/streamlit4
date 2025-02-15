@@ -886,7 +886,8 @@ def init_db(conn):
             content TEXT,
             likes INTEGER DEFAULT 0,
             dislikes INTEGER DEFAULT 0,
-            created TEXT NOT NULL
+            created TEXT NOT NULL,
+            category TEXT NOT NULL
             );''')
 
     conn.commit()
@@ -1246,13 +1247,34 @@ def country_details_dialog(conn, user_id, country_id):
 @st.dialog("News & Events & Announcements")
 def news_dialog(conn, user_id):
     c = conn.cursor()
-    news_data = c.execute("SELECT * FROM news").fetchall()
+    
+    news_data = c.execute("SELECT * FROM news ORDER BY created DESC").fetchall()
 
-    for new in news_data:
-        st.subheader(new[1])
-        st.text("")
-        st.write(new[2])
-        st.divider()
+    tab1, tab2, tab3 = st.tabs(["📰 News", "📢 Announcements", "🌍 Global News"])
+
+    with tab1:
+        for new in news_data:
+            if new[3] == "News":
+                st.subheader(new[1])
+                st.text("")
+                st.write(new[2])
+                st.divider()
+
+    with tab2:
+        for new in news_data:
+            if new[3] == "Announcements":
+                st.subheader(new[1])
+                st.text("")
+                st.write(new[2])
+                st.divider()
+
+    with tab3:
+        for new in news_data:
+            if new[3] == "Global News":
+                st.subheader(new[1])
+                st.text("")
+                st.write(new[2])
+                st.divider()
 
 @st.dialog("📅 Weekly Quiz")
 def quiz_dialog_view(conn, user_id):
@@ -3651,24 +3673,27 @@ def admin_panel(conn):
     c = conn.cursor()
 
     st.header("News & Events & Announcements")
-    with st.expander("Add New"):
-        with st.form(key= "news"):
-            st.subheader("News Creation")
-            news_id = st.text_input("Quiz ID", value = f"{random.randint(100000000, 999999999)}", disabled = True, help = "ID must be unique")
-            title = st.text_input("A", label_visibility = "collapsed", placeholder = "Title")
-            content = st.text_input("A", label_visibility = "collapsed", placeholder = "Content")
-      
-            st.divider()
-            
-            if st.form_submit_button("Publish", use_container_width = True):
-                existing_news_ids = c.execute("SELECT news_id FROM news").fetchall()
-                if news_id not in existing_news_ids:
-                    with st.spinner("Creating news..."):
-                        c.execute("INSERT INTO news (news_id, title, content, created) VALUES (?, ?, ?, ?)", (news_id, title, content, datetime.datetime.strftime(datetime.datetime.now(), "%Y-%m-%d")))
-                        conn.commit()
-                    st.rerun()
-                else:
-                    st.error("Duplicate news_id")
+    with st.form(key="news"):
+        st.subheader("News Creation")
+        news_id = st.text_input("News ID", value=f"{random.randint(100000000, 999999999)}", disabled=True, help="ID must be unique")
+        title = st.text_input("Title", label_visibility="collapsed", placeholder="Title")
+        content = st.text_area("Content", label_visibility="collapsed", placeholder="Content")
+        category = st.selectbox("Select Category", options=["News", "Announcements", "Global News"])
+
+        st.divider()
+
+        if st.form_submit_button("Publish", use_container_width=True):
+            existing_news_ids = c.execute("SELECT news_id FROM news").fetchall()
+            if news_id not in existing_news_ids:
+                with st.spinner("Creating news..."):
+                    c.execute(
+                        "INSERT INTO news (news_id, title, content, category, created) VALUES (?, ?, ?, ?, ?)",
+                        (news_id, title, content, category, datetime.datetime.strftime(datetime.datetime.now(), "%Y-%m-%d"))
+                    )
+                    conn.commit()
+                st.rerun()
+            else:
+                st.error("Duplicate news_id")
 
     st.header("Manage News", divider = "rainbow")
     with st.spinner("Loading news..."):
@@ -4562,5 +4587,6 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
 
 if __name__ == "__main__":
     conn = get_db_connection()
+    conn.cursor().execute("ALTER TABLE news ADD COLUMN category TEXT NOT NULL;")
     init_db(conn)
     main(conn)
