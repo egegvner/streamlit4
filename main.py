@@ -2629,7 +2629,7 @@ def stocks_view(conn, user_id):
                     st.session_state.selected_game_stock = stocks[i][0]
                     st.rerun()
         
-        c1, c2 = st.columns([2.3, 1.5])
+        c1, c2 = st.columns([2.1, 1.5])
 
         with c1:
             if len(history) > 1:
