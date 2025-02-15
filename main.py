@@ -1429,6 +1429,8 @@ def privacy_policy_dialog():
         st.rerun()
 
 def leaderboard(c):
+    st.header("Ranking", divider="rainbow")
+    st.text("")
     tab1, tab2, tab3 = st.tabs(["💰 VAULT", "🏦 SAVINGS", "🌎 TOTAL WORTH"])
 
     st.markdown('''
@@ -1537,8 +1539,7 @@ def leaderboard(c):
         ORDER BY total_worth DESC
     """).fetchall()
 
-    def display_leaderboard(data, title):
-        st.subheader(title)
+    def display_leaderboard(data):
         medals = ["🥇", "🥈", "🥉"]
 
         for idx, (username, visible_name, *balances) in enumerate(data, start=1):
@@ -1560,13 +1561,13 @@ def leaderboard(c):
             )
 
     with tab1:
-        display_leaderboard(balance_data, "💰 Vault Leaderboard")
+        display_leaderboard(balance_data)
 
     with tab2:
-        display_leaderboard(savings_balance_data, "🏦 Savings Leaderboard")
+        display_leaderboard(savings_balance_data)
 
     with tab3:
-        display_leaderboard(total_worth_data, "🌎 Total Worth Leaderboard")
+        display_leaderboard(total_worth_data)
 
 @st.dialog("Item Options")
 def inventory_item_options(conn, user_id, item_id):
