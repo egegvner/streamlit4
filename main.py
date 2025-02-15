@@ -2167,7 +2167,7 @@ def dashboard(conn, user_id):
 
     with c5:
         st.write("Login Streak")
-        st.subheader(f":green[{streak}] :orange[day]" if streak == 1 else f":blue[{streak}] :orange[days]")
+        st.subheader(f":green[{streak}] day" if streak == 1 else f":blue[{streak}] days")
 
     st.text("")
     st.text("")
