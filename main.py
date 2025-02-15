@@ -890,9 +890,32 @@ def init_db(conn):
             category TEXT NOT NULL
             );''')
 
+
+    c.execute('''CREATE TABLE IF NOT EXISTS user_news_read (
+            user_id INTEGER NOT NULL,
+            news_id INTEGER NOT NULL,
+            PRIMARY KEY (user_id, news_id),
+            FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+            FOREIGN KEY (news_id) REFERENCES news(news_id) ON DELETE CASCADE
+            );''')
+
     conn.commit()
     return conn, c
+
+def check_unread_news(conn, user_id):
+    c = conn.user
+    unread_news = c.execute("""
+        SELECT news_id FROM news
+        WHERE news_id NOT IN (SELECT news_id FROM user_news_read WHERE user_id = ?)
+    """, (user_id,)).fetchall()
     
+    return len(unread_news) > 0
+
+def mark_news_as_read(conn, user_id, news_id):
+    c = conn.cursor()
+    c.execute("INSERT OR IGNORE INTO user_news_read (user_id, news_id) VALUES (?, ?)", (user_id, news_id))
+    conn.commit()
+
 @st.dialog("Transfer to Savings", width = "small")
 def transfer_to_savings_dialog(conn, user_id):
 
@@ -1258,8 +1281,10 @@ def news_dialog(conn, user_id):
         if news_id not in st.session_state.user_interactions:
             if action == "like":
                 c.execute("UPDATE news SET likes = likes + 1 WHERE news_id = ?", (news_id,))
+                mark_news_as_read(user_id, new[0])
             elif action == "dislike":
                 c.execute("UPDATE news SET dislikes = dislikes + 1 WHERE news_id = ?", (news_id,))
+                mark_news_as_read(user_id, new[0])
             conn.commit()
             st.session_state.user_interactions[news_id] = action
 
@@ -2166,14 +2191,45 @@ def dashboard(conn, user_id):
 
     distribute_dividends(conn)
 
+    has_unread_news = check_unread_news(user_id)
+
+    if has_unread_news:
+        st.markdown("""
+            <style>
+                .news-button {
+                    position: relative;
+                    display: inline-block;
+                    padding: 10px 20px;
+                    background-color: #f1f1f1;
+                    border: 1px solid #ccc;
+                    border-radius: 5px;
+                }
+                .news-button .red-dot {
+                    position: absolute;
+                    top: -5px;
+                    right: -5px;
+                    width: 12px;
+                    height: 12px;
+                    border-radius: 50%;
+                    background-color: red;
+                }
+            </style>
+        """, unsafe_allow_html=True)
+
     st.header(f"Welcome, {st.session_state.username}!", divider="rainbow")
     st.text("")
     c1, c2, c3 = st.columns(3)
 
     if c1.button("Weekly Quiz", use_container_width=True):
         quiz_dialog_view(conn, user_id)
-    if c2.button("News & Events", use_container_width=True):
-        news_dialog(conn, user_id)
+
+    with c2.expander("News"):
+        c2.markdown('<div class="news-button">News<div class="red-dot"></div></div>', unsafe_allow_html=True)
+        if c2.button("News", key="news_button"):
+            news_dialog(conn, user_id)
+        else:
+            if c2.button("News"):
+                news_dialog(conn, user_id)
     if c3.button("🎁     Claim Reward     🎁", use_container_width = True):
         claim_daily_reward(conn, user_id)
         st.rerun()
