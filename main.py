@@ -3809,6 +3809,9 @@ def buy_property(conn, user_id, property_id):
         st.error(f"Error purchasing property: {e}")
         return False
 
+def membership_view(conn, user_id):
+    st.write("Coming soon.")
+
 def admin_panel(conn):
     c = conn.cursor()
 
@@ -4628,6 +4631,10 @@ def main(conn):
                 st.session_state.current_menu = "Inventory"
                 st.rerun()
 
+            if st.button("Membership", type="secondary", use_container_width=True):
+                st.session_state.current_menu = "Membership"
+                st.rerun()
+
             if st.button("✨ **AI Insights** ✨", type="primary", use_container_width=True):
                 st.session_state.current_menu = "AI Insights"
                 st.rerun()
@@ -4688,6 +4695,9 @@ def main(conn):
 
         elif st.session_state.current_menu == "Investments":
             investments_view(conn, st.session_state.user_id)
+
+        elif st.session_state.current_menu == "Membership":
+            membership_view(conn, st.session_state.user_id)
         
         elif st.session_state.current_menu == "Blackmarket":
             blackmarket_view(conn, st.session_state.user_id)
