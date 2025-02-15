@@ -1514,25 +1514,53 @@ def leaderboard(c):
                 font-weight: bold;
                 color: white;
             }
+
             .leaderboard-row {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
                 width: 100%;
             }
+
             .left {
                 text-align: left;
                 flex-grow: 1;
             }
+
             .right {
                 text-align: right;
                 min-width: 100px;
                 color: rgb(50, 218, 125)
             }
-            .first { border: 1px solid gold; font-size: 30px; padding: 20px; background-color: transparent; }
-            .second { border: 1px solid silver; font-size: 25px; padding: 15px; background-color: transparent; }
-            .third { border: 1px solid #cd7f32; font-size: 22px; padding: 12px; background-color: transparent; }
-            .other { border: 1px solid #444; font-size: 15px; padding: 8px; background-color: transparent; }
+
+            .first { 
+                border: 1px solid gold; 
+                font-size: 30px; 
+                padding: 20px; 
+                background-color: transparent; 
+            }
+
+            .second { 
+                border: 1px solid silver; 
+                font-size: 25px; 
+                padding: 15px; 
+                background-color: transparent; 
+            }
+
+            .third { 
+                border: 1px solid #cd7f32; 
+                font-size: 22px; 
+                padding: 12px; 
+                background-color: transparent; 
+            }
+
+            .other { 
+                border: 1px solid #444; 
+                font-size: 15px; 
+                padding: 8px; 
+                background-color: transparent; 
+            }
+
         </style>
     ''', unsafe_allow_html=True)
 
@@ -1551,43 +1579,38 @@ def leaderboard(c):
         ORDER BY savings_balance DESC
     """).fetchall()
 
-    total_worth_data = []
-    users = c.execute("SELECT user_id, username, visible_name FROM users WHERE show_main_balance_on_leaderboard = 1").fetchall()
-    
-    for user_id, username, visible_name in users:
-        balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
-        savings = c.execute("SELECT IFNULL(balance, 0) FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
-        real_estates_worth = c.execute("SELECT IFNULL(SUM(price), 0) FROM real_estate WHERE user_id = ?", (user_id,)).fetchone()[0]
-        
-        user_shares = c.execute("""
-            SELECT ucs.shares_owned, cl.total_worth
-            FROM user_country_shares ucs
-            JOIN country_lands cl ON ucs.country_id = cl.country_id
-            WHERE ucs.user_id = ?
-        """, (user_id,)).fetchall()
-        total_country_worth = sum((shares / 100) * total for shares, total in user_shares)
-        
-        user_stocks = c.execute("""
-            SELECT us.quantity, s.price
-            FROM user_stocks us
-            JOIN stocks s ON us.stock_id = s.stock_id
-            WHERE us.user_id = ?
-        """, (user_id,)).fetchall()
-        total_stock_worth = sum(quantity * price for quantity, price in user_stocks)
-        
-        loan = c.execute("SELECT IFNULL(loan, 0) FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
-        
-        total_worth = balance + savings + real_estates_worth + total_country_worth + total_stock_worth - loan
-        
-        total_worth_data.append((username, visible_name, total_worth))
-    
-    total_worth_data.sort(key=lambda x: x[2], reverse=True)
-    
+    total_worth_data = c.execute("""
+        SELECT 
+            u.username, 
+            u.visible_name, 
+            u.balance, 
+            IFNULL(s.balance, 0) AS savings_balance,
+            IFNULL(SUM(up.rent_income), 0) AS real_estate_worth,
+            IFNULL(SUM(cs.shares_owned * cl.share_price), 0) AS country_worth,
+            IFNULL(SUM(us.quantity * st.price), 0) AS stock_worth,
+            IFNULL(u.loan, 0) + IFNULL(u.loan_penalty, 0) AS total_loans,
+            (u.balance + IFNULL(s.balance, 0) + IFNULL(SUM(up.rent_income), 0) + 
+             IFNULL(SUM(cs.shares_owned * cl.share_price), 0) + 
+             IFNULL(SUM(us.quantity * st.price), 0) - 
+             (IFNULL(u.loan, 0) + IFNULL(u.loan_penalty, 0))) AS total_worth
+        FROM users u
+        LEFT JOIN savings s ON u.user_id = s.user_id
+        LEFT JOIN user_properties up ON u.user_id = up.user_id
+        LEFT JOIN user_country_shares cs ON u.user_id = cs.user_id
+        LEFT JOIN country_lands cl ON cs.country_id = cl.country_id
+        LEFT JOIN user_stocks us ON u.user_id = us.user_id
+        LEFT JOIN stocks st ON us.stock_id = st.stock_id
+        WHERE u.show_main_balance_on_leaderboard = 1
+        GROUP BY u.user_id
+        ORDER BY total_worth DESC
+    """).fetchall()
+
     def display_leaderboard(data):
         medals = ["🥇", "🥈", "🥉"]
 
-        for idx, (username, visible_name, score) in enumerate(data, start=1):
+        for idx, (username, visible_name, *balances) in enumerate(data, start=1):
             display_name = visible_name or username
+            score = balances[-1]
             medal = medals[idx - 1] if idx <= 3 else ""
             class_name = "first" if idx == 1 else "second" if idx == 2 else "third" if idx == 3 else "other"
 
