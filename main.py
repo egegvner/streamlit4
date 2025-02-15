@@ -1449,14 +1449,37 @@ def leaderboard(c):
                 font-weight: bold;
                 color: white;
             }
-            .first { background-color: gold; font-size: 30px; padding: 20px; }
-            .second { background-color: silver; font-size: 25px; padding: 15px; }
-            .third { background-color: #cd7f32; font-size: 22px; padding: 12px; }
-            .other { background-color: #444; font-size: 18px; padding: 8px; }
+            .first { 
+    border: 3px solid gold; 
+    font-size: 30px; 
+    padding: 20px; 
+    background-color: transparent; 
+    }
+
+    .second { 
+        border: 3px solid silver; 
+        font-size: 25px; 
+        padding: 15px; 
+        background-color: transparent; 
+    }
+
+    .third { 
+        border: 3px solid #cd7f32; 
+        font-size: 22px; 
+        padding: 12px; 
+        background-color: transparent; 
+    }
+
+    .other { 
+        border: 3px solid #444; 
+        font-size: 18px; 
+        padding: 8px; 
+        background-color: transparent; 
+    }
+
         </style>
     ''', unsafe_allow_html=True)
 
-    # Database queries
     balance_data = c.execute("""
         SELECT username, visible_name, balance 
         FROM users 
