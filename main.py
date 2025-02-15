@@ -1183,14 +1183,12 @@ def country_details_dialog(conn, user_id, country_id):
 
             if st.button("💰 Buy Shares", use_container_width=True, disabled=True if shares_to_buy == 0 or total_cost > balance else False):
                 with st.spinner("Processing transaction..."):
-                    # Update available shares
                     c.execute("""
                         UPDATE country_lands 
                         SET available_shares = available_shares - ? 
                         WHERE country_id = ?
                     """, (shares_to_buy, country_id))
                     
-                    # Update or insert user shares
                     existing_shares = c.execute("""
                         SELECT shares_owned FROM user_country_shares 
                         WHERE user_id = ? AND country_id = ?
@@ -1208,7 +1206,6 @@ def country_details_dialog(conn, user_id, country_id):
                             VALUES (?, ?, ?)
                         """, (user_id, country_id, shares_to_buy))
 
-                    # Update user balance
                     c.execute("""
                         UPDATE users 
                         SET balance = balance - ? 
@@ -1278,9 +1275,11 @@ def news_dialog(conn, user_id):
         if action == "like":
             c.execute("UPDATE news SET likes = likes + 1 WHERE news_id = ?", (news_id,))
             c.execute("INSERT INTO user_news_reactions (user_id, news_id) VALUES (?, ?)", (user_id, news_id))
+            c.execute("INSERT INTO user_news_read (user_id, news_id) VALUES (?, ?)", (user_id, news_id))
         elif action == "dislike":
             c.execute("UPDATE news SET dislikes = dislikes + 1 WHERE news_id = ?", (news_id,))
             c.execute("INSERT INTO user_news_reactions (user_id, news_id) VALUES (?, ?)", (user_id, news_id))
+            c.execute("INSERT INTO user_news_read (user_id, news_id) VALUES (?, ?)", (user_id, news_id))
         conn.commit()
         st.rerun()
 
