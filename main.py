@@ -3719,7 +3719,7 @@ def admin_panel(conn):
         with st.form(key= "quiz"):
             st.subheader("New Quiz Creation")
             quiz_id = st.text_input("Quiz ID", value = f"{random.randint(100000000, 999999999)}", disabled = True, help = "Quiz ID must be unique")
-            question = st.text_input("A", label_visibility = "collapsed", placeholder = "Question")
+            question = st.text_area("A", label_visibility = "collapsed", placeholder = "Question")
             option_a = st.text_input("A", label_visibility = "collapsed", placeholder = "Option A - leave empty for non-MCQ questions")
             option_b = st.text_input("A", label_visibility = "collapsed", placeholder = "Option B - leave empty for non-MCQ questions")
             option_c = st.text_input("A", label_visibility = "collapsed", placeholder = "Option C - leave empty for non-MCQ questions")
@@ -4587,6 +4587,5 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
 
 if __name__ == "__main__":
     conn = get_db_connection()
-    conn.cursor().execute("ALTER TABLE news ADD COLUMN category TEXT NOT NULL;")
     init_db(conn)
     main(conn)
