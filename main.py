@@ -4648,6 +4648,5 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
 
 if __name__ == "__main__":
     conn = get_db_connection()
-    conn.cursor().execute("DROP TABLE user_reactions;")
     init_db(conn)
     main(conn)
