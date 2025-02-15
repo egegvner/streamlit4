@@ -1281,10 +1281,10 @@ def news_dialog(conn, user_id):
         if news_id not in st.session_state.user_interactions:
             if action == "like":
                 c.execute("UPDATE news SET likes = likes + 1 WHERE news_id = ?", (news_id,))
-                mark_news_as_read(user_id, new[0])
+                mark_news_as_read(conn, user_id, new[0])
             elif action == "dislike":
                 c.execute("UPDATE news SET dislikes = dislikes + 1 WHERE news_id = ?", (news_id,))
-                mark_news_as_read(user_id, new[0])
+                mark_news_as_read(conn, user_id, new[0])
             conn.commit()
             st.session_state.user_interactions[news_id] = action
 
@@ -2191,7 +2191,7 @@ def dashboard(conn, user_id):
 
     distribute_dividends(conn)
 
-    has_unread_news = check_unread_news(user_id)
+    has_unread_news = check_unread_news(conn, user_id)
 
     if has_unread_news:
         st.markdown("""
