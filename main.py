@@ -30,7 +30,7 @@ if "current_menu" not in st.session_state:
     st.session_state.current_menu = "Dashboard"
 
 previous_layout = st.session_state.get("previous_layout", "centered")
-current_layout = "wide" if st.session_state.current_menu == "Blackmarket" or st.session_state.current_menu == "Investments" or st.session_state.current_menu == "Bank" or st.session_state.current_menu == "Stocks" or st.session_state.current_menu == "Char" or st.session_state.current_menu == "Transaction History" or st.session_state.current_menu == "Inventory" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "Real Estate" or st.session_state.current_menu == "Chat" else "centered"
+current_layout = "wide" if st.session_state.current_menu == "Blackmarket" or st.session_state.current_menu == "Investments" or st.session_state.current_menu == "Stocks" or st.session_state.current_menu == "Char" or st.session_state.current_menu == "Transaction History" or st.session_state.current_menu == "Inventory" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "Real Estate" or st.session_state.current_menu == "Chat" else "centered"
 
 if previous_layout != current_layout:
     st.session_state.previous_layout = current_layout
@@ -665,6 +665,7 @@ def init_db(conn):
                   loan REAL DEFAULT 0,
                   loan_due_date DATETIME DEFAULT NULL,
                   loan_penalty REAL DEFAULT 0,
+                  loan_start_date,
                   credit_score INTEGER DEFAULT 600
                   );''')
 
@@ -1576,38 +1577,19 @@ def leaderboard(c):
         ORDER BY savings_balance DESC
     """).fetchall()
 
-    total_worth_data = c.execute("""
-        SELECT 
-            u.username, 
-            u.visible_name, 
-            u.balance, 
-            IFNULL(s.balance, 0) AS savings_balance,
-            IFNULL(SUM(up.rent_income), 0) AS real_estate_worth,
-            IFNULL(SUM(cs.shares_owned * cl.share_price), 0) AS country_worth,
-            IFNULL(SUM(us.quantity * st.price), 0) AS stock_worth,
-            IFNULL(u.loan, 0) + IFNULL(u.loan_penalty, 0) AS total_loans,
-            (u.balance + IFNULL(s.balance, 0) + IFNULL(SUM(up.rent_income), 0) + 
-             IFNULL(SUM(cs.shares_owned * cl.share_price), 0) + 
-             IFNULL(SUM(us.quantity * st.price), 0) - 
-             (IFNULL(u.loan, 0) + IFNULL(u.loan_penalty, 0))) AS total_worth
-        FROM users u
-        LEFT JOIN savings s ON u.user_id = s.user_id
-        LEFT JOIN user_properties up ON u.user_id = up.user_id
-        LEFT JOIN user_country_shares cs ON u.user_id = cs.user_id
-        LEFT JOIN country_lands cl ON cs.country_id = cl.country_id
-        LEFT JOIN user_stocks us ON u.user_id = us.user_id
-        LEFT JOIN stocks st ON us.stock_id = st.stock_id
-        WHERE u.show_main_balance_on_leaderboard = 1
-        GROUP BY u.user_id
-        ORDER BY total_worth DESC
-    """).fetchall()
-
+    total_worth_data = []
+    users = c.execute("SELECT user_id, username, visible_name FROM users WHERE show_main_balance_on_leaderboard = 1").fetchall()
+    for user_id, username, visible_name in users:
+        total_worth = calculate_total_worth(c, user_id)
+        total_worth_data.append((username, visible_name, total_worth))
+    
+    total_worth_data.sort(key=lambda x: x[2], reverse=True)
+    
     def display_leaderboard(data):
         medals = ["🥇", "🥈", "🥉"]
 
-        for idx, (username, visible_name, *balances) in enumerate(data, start=1):
+        for idx, (username, visible_name, score) in enumerate(data, start=1):
             display_name = visible_name or username
-            score = balances[-1]
             medal = medals[idx - 1] if idx <= 3 else ""
             class_name = "first" if idx == 1 else "second" if idx == 2 else "third" if idx == 3 else "other"
 
@@ -1631,6 +1613,7 @@ def leaderboard(c):
 
     with tab3:
         display_leaderboard(total_worth_data)
+
 
 @st.dialog("Item Options")
 def inventory_item_options(conn, user_id, item_id):
@@ -2143,7 +2126,7 @@ def dashboard(conn, user_id):
     c = conn.cursor()
     check_and_update_investments(conn, user_id)
     streak = c.execute("SELECT login_streak FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
-
+    credit_score = c.execute("SELECT credit_score FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     has_savings = c.execute("SELECT has_savings_account FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     if has_savings:
@@ -2216,30 +2199,39 @@ def dashboard(conn, user_id):
     st.text("")
     st.text("")
 
-    c1, c2, c3, c4, c5 = st.columns(5)
+    c1, c2, c3, c4, c5, c6 = st.columns(6)
 
     with c1:
         st.write("Vault")
         st.subheader(f":green[${format_number(balance, 2)}]")
-    
-    with c2:
-        st.write("Total Worth")
-        st.subheader(f":green[${format_number(total_worth)}]")
 
-    with c3:
+    with c2:
         st.write("Savings")
         if has_savings:
             st.subheader(f":green[${format_number(savings_balance, 2)}]")
         else:
             st.subheader(f":red[Not owned]")
 
+    with c3:
+        st.write("Total Worth")
+        st.subheader(f":green[${format_number(total_worth)}]")
+
     with c4:
         st.write("Active Loans")
         st.subheader(f":red[${format_number(loan)}]")
 
     with c5:
+        st.write("Credit Score")
+        if credit_score < 300:
+            st.subheader(f":red[{credit_score}]")
+        elif credit_score >= 300 and credit_score < 900:
+            st.subheader(f":orange[{credit_score}]")
+        else:
+            st.subheader(f":green[{credit_score}]")
+
+    with c6:
         st.write("Login Streak")
-        st.subheader(f":green[{streak}] day" if streak == 1 else f":blue[{streak}] days")
+        st.subheader(f":blue[{streak}]")
 
     st.text("")
     st.text("")
@@ -2483,7 +2475,7 @@ def buy_stock(conn, user_id, stock_id, quantity):
         c.execute("INSERT INTO user_stocks (user_id, stock_id, quantity, avg_buy_price) VALUES (?, ?, ?, ?)", 
                   (user_id, stock_id, quantity, price))
 
-    c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, stock_id, quantity, timestamp) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)", (random.randint(100000000, 999999999), user_id, f"Buy Stock ({symbol})", cost, stock_id, quantity))
+    c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, stock_id, quantity, timestamp) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)", (random.randint(100000000000, 999999999999), user_id, f"Buy Stock ({symbol})", cost, stock_id, quantity))
     c.execute("UPDATE stocks SET stock_amount = stock_amount - ? WHERE stock_id = ?", (quantity, stock_id))
     adjust_stock_prices(conn, stock_id, quantity, "buy")
 
@@ -2513,7 +2505,7 @@ def sell_stock(conn, user_id, stock_id, quantity):
                   (new_quantity, user_id, stock_id))
         c.execute("UPDATE stocks SET stock_amount = stock_amount + ? WHERE stock_id = ?", (quantity, stock_id))
 
-    c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, stock_id, quantity) VALUES (?, ?, ?, ?, ?, ?)", (random.randint(100000000, 999999999), user_id, f"Sell Stock ({symbol})", net_profit, stock_id, quantity))
+    c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, stock_id, quantity) VALUES (?, ?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Sell Stock ({symbol})", net_profit, stock_id, quantity))
     c.execute("UPDATE users SET balance = balance - ? WHERE username = 'Government'", (profit,))
     c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (net_profit, user_id))
     adjust_stock_prices(conn, stock_id, quantity, "buy")
@@ -2986,49 +2978,129 @@ def blackmarket_view(conn, user_id):
 
         st.divider()
 
-def borrow_money(conn, user_id, amount, interest_rate):
-    c = conn.cursor()
-
-    current_loan = c.execute("SELECT loan FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+def calculate_total_worth(c, user_id):
+    balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+    has_savings = c.execute("SELECT has_savings_account FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+    savings = c.execute("SELECT balance FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0] if has_savings else 0
+    real_estates_worth = c.execute("SELECT SUM(price) FROM real_estate WHERE user_id = ?", (user_id,)).fetchone()[0] or 0
     
-    if current_loan > 0:
-        st.toast("❌ You must repay your existing loan first!")
+    user_shares = c.execute("""
+        SELECT ucs.shares_owned, cl.total_worth
+        FROM user_country_shares ucs
+        JOIN country_lands cl ON ucs.country_id = cl.country_id
+        WHERE ucs.user_id = ?
+    """, (user_id,)).fetchall()
+    
+    total_country_worth = sum((shares / 100) * total for shares, total in user_shares)
+    
+    user_stocks = c.execute("""
+        SELECT us.quantity, s.price
+        FROM user_stocks us
+        JOIN stocks s ON us.stock_id = s.stock_id
+        WHERE us.user_id = ?
+    """, (user_id,)).fetchall()
+    
+    total_stock_worth = sum(quantity * price for quantity, price in user_stocks)
+    loan = c.execute("SELECT loan FROM users WHERE user_id = ?", (user_id,)).fetchone()[0] or 0.0
+    
+    return balance + savings + real_estates_worth + total_country_worth + total_stock_worth - loan
+
+def get_adjusted_interest_rate(credit_score, base_interest_rate):
+    if credit_score > 1000:
+        return [base_interest_rate * 0.05, "5%"]
+    elif credit_score > 800:
+        return [base_interest_rate * 0.30, "30%"]
+    elif credit_score > 600:
+        return [base_interest_rate * 0.60, "60%"]
+    elif credit_score > 400:
+        return [base_interest_rate * 0.90, "90%"]
+    elif credit_score > 200:
+        return [base_interest_rate * 1.50, "150%"]
+    else:
+        return [base_interest_rate * 3.00, "300%"]
+
+def get_max_borrow(credit_score, total_worth):
+    if credit_score > 1000:
+        return total_worth * 3.0
+    elif credit_score > 750:
+        return total_worth * 2.0
+    elif credit_score > 500:
+        return total_worth * 1.0
+    elif credit_score > 250:
+        return total_worth * 0.5
+    else:
+        return total_worth * 0.2
+
+def borrow_money(conn, user_id, amount, base_interest_rate):
+    c = conn.cursor()
+    credit_score = c.execute("SELECT credit_score FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+    interest_rate = get_adjusted_interest_rate(credit_score, base_interest_rate)[0]
+    
+    rejection_chance = max(0, (400 - credit_score) / 400)
+    if random.random() < rejection_chance:
+        st.toast("❌ Loan application denied due to low credit score!")
+        time.sleep(2.5)
         return
 
+    current_loan = c.execute("SELECT loan FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+    if current_loan > 0:
+        st.toast("❌ You must repay your existing loan first!")
+        time.sleep(2.5)
+        return
+    
+    due_date = (datetime.date.today() + datetime.timedelta(days=7)).strftime("%Y-%m-%d")
+    c.execute("UPDATE users SET loan_start_date = ? WHERE user_id = ?", (datetime.date.today().strftime("%Y-%m-%d"), user_id))
     new_loan = round(amount * (1 + interest_rate), 2)
-    due_date = (datetime.date.today() + datetime.timedelta(days=7)).strftime("%Y-%m-%d")  # Due in 7 days
-
+    
     c.execute("UPDATE users SET balance = balance - ? WHERE username = 'Government'", (amount,))
     c.execute("UPDATE users SET loan = ?, loan_due_date = ?, balance = balance + ? WHERE user_id = ?", 
               (new_loan, due_date, amount, user_id))
-    c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000, 999999999), user_id, "Borrow Loan", amount))
+    c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", 
+              (random.randint(100000000, 999999999), user_id, "Borrow Loan", amount))
+    
+    c.execute("UPDATE users SET credit_score = credit_score - 10 WHERE user_id = ?", (user_id,))
+    
     conn.commit()
-
     st.toast(f"✅ Borrowed ${amount:.2f}. Due Date: {due_date}. You owe ${new_loan:.2f}.")
     time.sleep(2.5)
-    
+
 def repay_loan(conn, user_id, amount):
     c = conn.cursor()
-    
-    user_data = c.execute("SELECT loan, balance FROM users WHERE user_id = ?", (user_id,)).fetchone()
-    loan, balance = user_data if user_data else (0, 0)
+    user_data = c.execute("SELECT loan, balance, loan_due_date, loan_start_date FROM users WHERE user_id = ?", (user_id,)).fetchone()
+    loan, balance, loan_due_date, loan_start_date = user_data if user_data else (0, 0, None, None)
     
     if loan <= 0:
         st.toast("✅ You have no outstanding loans!")
+        time.sleep(2.5)
         return
-
     if balance < amount:
         st.toast("❌ Insufficient balance to repay!")
+        time.sleep(2.5)
         return
-
+    
+    if (datetime.datetime.today().date() - datetime.datetime.strptime(loan_start_date, "%Y-%m-%d").date()).days < 2:
+        st.toast("❌ You must wait at least 2 days before repaying the loan!")
+        time.sleep(2.5)
+        return
+    
+    loan_start_date_obj = datetime.datetime.strptime(loan_start_date, "%Y-%m-%d")
+    if (datetime.datetime.today() - loan_start_date_obj).days < 7:
+        fee = amount * 0.05
+        amount += fee
+        st.toast(f"⚠ Early repayment fee of ${fee:.2f} applied!")
+        time.sleep(2)
+    
     new_loan = max(0, loan - amount)
     new_balance = balance - amount
-
+    
     c.execute("UPDATE users SET balance = balance + ? WHERE username = 'Government'", (amount,))
     c.execute("UPDATE users SET loan = ?, balance = ? WHERE user_id = ?", (new_loan, new_balance, user_id))
-    c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000, 999999999), user_id, "Repay Loan", amount))
-    conn.commit()
+    c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", 
+              (random.randint(100000000, 999999999), user_id, "Repay Loan", amount))
     
+    c.execute("UPDATE users SET credit_score = credit_score + 20 WHERE user_id = ?", (user_id,))
+    
+    conn.commit()
     st.toast(f"✅ Loan repaid. Remaining debt: ${format_number(new_loan)}.")
     time.sleep(2.5)
     st.session_state.repay = 0.0
@@ -3070,7 +3142,7 @@ def bank_view(conn, user_id):
         c2.subheader(f":green[${format_number(gov_funds)}]")
         st.caption(f":green[${format_number(gov_funds)}]")
         st.divider()
-        st.subheader(f"Inflation: :red[{format_number(inflation_rate * -100)}%]")
+        st.subheader(f"Inflation: :red[{format_number(inflation_rate * 100)}%]")
 
         if not df.empty:
             df["Date"] = pd.to_datetime(df["Date"])
@@ -3081,14 +3153,24 @@ def bank_view(conn, user_id):
 
     with t2:
         with st.container(border=True):
-            user_data = c.execute("SELECT balance, loan, loan_due_date, loan_penalty FROM users WHERE user_id = ?", (user_id,)).fetchone()
-            balance, loan, due_date, penalty = user_data if user_data else (0, None, None, 0)
+            user_data = c.execute("SELECT balance, loan, loan_due_date, loan_penalty, credit_score FROM users WHERE user_id = ?", (user_id,)).fetchone()
+            total_worth = calculate_total_worth(c, user_id)
+            max_borrow = get_max_borrow(user_data[4], total_worth)
+            balance, loan, due_date, penalty, credit_score = user_data if user_data else (0, None, None, 0)
 
             interest_rate = max(0.001, inflation_rate + 0.01)
+            
+            with st.container(border=True):
+                st.write(f"📊 **[Inflation]** :red[{format_number(inflation_rate * 100)}%]")
+            if credit_score > 1000:
+                st.write(f"🪙 **[Credit Score]** :green[{credit_score}]")
+            elif credit_score < 1000 and credit_score > 400:
+                st.write(f"🪙 **[Credit Score]** :orange[{credit_score}]")
+            else:
+                st.write(f"🪙 **[Credit Score]** :red[{credit_score}]")
 
-            st.write(f"📊 **[Inflation]** :red[{format_number(inflation_rate * -100)}%]")
-            st.write(f"💳 **[Loan Interest]** :red[{format_number(interest_rate * 100)}% / day]")
-            st.write(f"💰 **[Balance]** :green[${format_number(balance)}]")
+            st.write(f"📈 **[Default Interest]** :red[{format_number(interest_rate * 100)}% / day]")
+            st.write(f"📉 **[CreditScore - Based Interest]** :red[{format_number(get_adjusted_interest_rate(credit_score, interest_rate)[0] * 100)}% / day] | :blue[{get_adjusted_interest_rate(credit_score, interest_rate)[1]}] of default")
             st.write(f"💳 **[Loan Debt]** :red[${format_number(loan)}]")
 
             if loan > 0 and due_date:
@@ -3100,9 +3182,9 @@ def bank_view(conn, user_id):
                 else:
                     st.info(f"📅 [You Have an Active Loan!] **Due:** {due_date}")
         
-        st.session_state.amt = balance
+        st.session_state.amt = max_borrow
         st.divider()
-        st.warning(f"[Max Borrow] :green[${format_number(st.session_state.amt)}] $||$ :green[{format_number(st.session_state.amt)}]")
+        st.warning(f"[Max Borrow] :green[${format_number(st.session_state.amt)}]")
         st.subheader("Borrow Loan")
         borrow_amount = st.number_input("A", label_visibility="collapsed", min_value=0.0, max_value=float(st.session_state.amt), step=100.0)
         if st.button(f"Borrow :red[${format_number(borrow_amount)}]", use_container_width=True):
@@ -3110,7 +3192,6 @@ def bank_view(conn, user_id):
                 time.sleep(3)
                 borrow_money(conn, user_id, borrow_amount, interest_rate)
                 st.session_state.amt = 0.0
-                st.rerun()
 
         st.subheader("Repay Loan")
         c1, c2 = st.columns(2)
@@ -3124,7 +3205,6 @@ def bank_view(conn, user_id):
             with st.spinner("Processing loan..."):
                 time.sleep(3)
                 repay_loan(conn, user_id, st.session_state.repay)
-                st.rerun()
                 
 def investments_view(conn, user_id):
     st.header("📈 Investments", divider="rainbow")
@@ -4646,5 +4726,6 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
 
 if __name__ == "__main__":
     conn = get_db_connection()
+    conn.cursor().execute("ALTER TABLE users ADD COLUMN loan_start_date TEXT DEFAULT NULL;")
     init_db(conn)
     main(conn)
