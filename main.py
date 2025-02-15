@@ -1254,11 +1254,8 @@ def country_details_dialog(conn, user_id, country_id):
 @st.dialog("News & Events & Announcements")
 def news_dialog(conn, user_id):
     c = conn.cursor()
-
-    # Fetch news data
     news_data = c.execute("SELECT news_id, title, content, likes, dislikes, created, category FROM news ORDER BY created DESC").fetchall()
 
-    # Initialize session state for tracking user interactions
     if 'user_interactions' not in st.session_state:
         st.session_state.user_interactions = {}
 
@@ -1272,40 +1269,34 @@ def news_dialog(conn, user_id):
                 c.execute("UPDATE news SET dislikes = dislikes + 1 WHERE news_id = ?", (news_id,))
             conn.commit()
             st.session_state.user_interactions[news_id] = action
-            st.rerun()  # Rerun the app to reflect the updated likes/dislikes
 
     def render_news(news_item):
-        """Helper function to render news items with like/dislike buttons."""
         st.subheader(news_item[1])
         st.text("")
         st.write(news_item[2])
         st.caption(f":gray[{news_item[5]}]")
 
-        # Like/Dislike buttons
         col1, col2 = st.columns(2)
         liked = st.session_state.user_interactions.get(news_item[0]) == "like"
         disliked = st.session_state.user_interactions.get(news_item[0]) == "dislike"
 
-        if col1.button("👍 Like", key=f"like_{news_item[0]}", disabled=liked or disliked, use_container_width=True):
+        if col1.button(f"{news_item[3]}", icon=":material/thumb_up:", key=f"like_{news_item[0]}", disabled=liked or disliked, use_container_width=True):
             handle_like_dislike(news_item[0], "like")
-        if col2.button("👎 Dislike", key=f"dislike_{news_item[0]}", disabled=liked or disliked, use_container_width=True):
+        if col2.button(f"{news_item[4]}", icon=":material/thumb_down:", key=f"dislike_{news_item[0]}", disabled=liked or disliked, use_container_width=True):
             handle_like_dislike(news_item[0], "dislike")
 
         st.divider()
 
-    # Render News tab
     with tab1:
         for new in news_data:
             if new[6] == "News":
                 render_news(new)
 
-    # Render Announcements tab
     with tab2:
         for new in news_data:
             if new[6] == "Announcements":
                 render_news(new)
 
-    # Render Global News tab
     with tab3:
         for new in news_data:
             if new[6] == "Global News":
