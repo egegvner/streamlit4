@@ -4646,6 +4646,5 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
 
 if __name__ == "__main__":
     conn = get_db_connection()
-    conn.cursor().execute("ALTER TABLE users ADD COLUMN credit_score INTEGER DEFAULT 600;")
     init_db(conn)
     main(conn)
