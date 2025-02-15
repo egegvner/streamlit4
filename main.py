@@ -903,7 +903,7 @@ def init_db(conn):
     return conn, c
 
 def check_unread_news(conn, user_id):
-    c = conn.cursor()
+    c = conn.cursor
     unread_news = c.execute("""
         SELECT news_id FROM news
         WHERE news_id NOT IN (SELECT news_id FROM user_news_read WHERE user_id = ?)
@@ -2193,53 +2193,15 @@ def dashboard(conn, user_id):
 
     has_unread_news = check_unread_news(conn, user_id)
 
-    if has_unread_news:
-        st.markdown("""
-            <style>
-                .news-button-wrapper {
-                    position: relative;
-                    display: inline-block;
-                }
-                .news-button-wrapper button {
-                    position: relative;
-                    padding: 10px 20px;
-                    background-color: #f1f1f1;
-                    border: 1px solid #ccc;
-                    border-radius: 5px;
-                    font-size: 16px;
-                }
-                .red-dot {
-                    position: absolute;
-                    top: -5px;
-                    right: -5px;
-                    width: 12px;
-                    height: 12px;
-                    border-radius: 50%;
-                    background-color: red;
-                }
-            </style>
-        """, unsafe_allow_html=True)
-
     st.header(f"Welcome, {st.session_state.username}!", divider="rainbow")
     st.text("")
     c1, c2, c3 = st.columns(3)
 
     if c1.button("Weekly Quiz", use_container_width=True):
         quiz_dialog_view(conn, user_id)
-
-    with c2:
-        news_button_html = '''
-            <div class="news-button-wrapper">
-                <button id="news_button">News</button>
-                <div class="red-dot"></div>
-            </div>
-        '''
-        c2.markdown(news_button_html, unsafe_allow_html=True)
-
-        if c2.button("News", key="news_button"):
-            news_dialog(conn, user_id)
-
-    if c3.button("🎁     Claim Reward     🎁", use_container_width=True):
+    if c2.button("News (1)" if has_unread_news else "News", use_container_width=True):
+        news_dialog(conn, user_id)
+    if c3.button("🎁 Claim Reward 🎁", use_container_width = True):
         claim_daily_reward(conn, user_id)
         st.rerun()
     
