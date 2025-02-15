@@ -1428,7 +1428,7 @@ def privacy_policy_dialog():
     if st.button("I accept privacy policy", type = "primary", use_container_width = True, disabled = True if not constent else False):
         st.rerun()
 
-def leaderboard(conn):
+def leaderboard(c):
     tab1, tab2, tab3 = st.tabs(["💰 VAULT", "🏦 SAVINGS", "🌎 TOTAL WORTH"])
     
     st.markdown('''
@@ -1441,9 +1441,6 @@ def leaderboard(conn):
         </style>
     ''', unsafe_allow_html=True)
 
-    c = conn.cursor()
-
-    # Fetch balance leaderboard
     balance_data = c.execute("""
         SELECT username, visible_name, balance 
         FROM users 
@@ -1451,7 +1448,6 @@ def leaderboard(conn):
         ORDER BY balance DESC
     """).fetchall()
 
-    # Fetch savings leaderboard
     savings_balance_data = c.execute("""
         SELECT u.username, u.visible_name, IFNULL(s.balance, 0) AS savings_balance 
         FROM users u 
@@ -1460,7 +1456,6 @@ def leaderboard(conn):
         ORDER BY savings_balance DESC
     """).fetchall()
 
-    # Fetch total worth leaderboard
     total_worth_data = c.execute("""
         SELECT 
             u.username, 
@@ -1487,7 +1482,6 @@ def leaderboard(conn):
         ORDER BY total_worth DESC
     """).fetchall()
 
-    # Display the leaderboards
     with tab1:
         st.subheader("💰 Vault Leaderboard")
         for idx, (username, visible_name, balance) in enumerate(balance_data, start=1):
