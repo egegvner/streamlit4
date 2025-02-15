@@ -1428,12 +1428,9 @@ def privacy_policy_dialog():
     if st.button("I accept privacy policy", type = "primary", use_container_width = True, disabled = True if not constent else False):
         st.rerun()
 
-import streamlit as st
-
 def leaderboard(c):
     tab1, tab2, tab3 = st.tabs(["💰 VAULT", "🏦 SAVINGS", "🌎 TOTAL WORTH"])
 
-    # Custom CSS for leaderboard frames
     st.markdown('''
         <style>
             button[data-baseweb="tab"] {
@@ -1449,33 +1446,51 @@ def leaderboard(c):
                 font-weight: bold;
                 color: white;
             }
-    .first { 
-        border: 2px solid gold; 
-        font-size: 30px; 
-        padding: 20px; 
-        background-color: transparent; 
-    }
 
-    .second { 
-        border: 2px solid silver; 
-        font-size: 25px; 
-        padding: 15px; 
-        background-color: transparent; 
-    }
+            .leaderboard-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                width: 100%;
+            }
 
-    .third { 
-        border: 2px solid #cd7f32; 
-        font-size: 22px; 
-        padding: 12px; 
-        background-color: transparent; 
-    }
+            .left {
+                text-align: left;
+                flex-grow: 1;
+            }
 
-    .other { 
-        border: 2px solid #444; 
-        font-size: 15px; 
-        padding: 8px; 
-        background-color: transparent; 
-    }
+            .right {
+                text-align: right;
+                min-width: 100px; /* Ensures proper spacing */
+            }
+
+            .first { 
+                border: 2px solid gold; 
+                font-size: 30px; 
+                padding: 20px; 
+                background-color: transparent; 
+            }
+
+            .second { 
+                border: 2px solid silver; 
+                font-size: 25px; 
+                padding: 15px; 
+                background-color: transparent; 
+            }
+
+            .third { 
+                border: 2px solid #cd7f32; 
+                font-size: 22px; 
+                padding: 12px; 
+                background-color: transparent; 
+            }
+
+            .other { 
+                border: 2px solid #444; 
+                font-size: 15px; 
+                padding: 8px; 
+                background-color: transparent; 
+            }
 
         </style>
     ''', unsafe_allow_html=True)
@@ -1527,16 +1542,22 @@ def leaderboard(c):
 
         for idx, (username, visible_name, *balances) in enumerate(data, start=1):
             display_name = visible_name or username
-            score = balances[-1]  # Last value in tuple is the relevant balance
+            score = balances[-1]
             medal = medals[idx - 1] if idx <= 3 else ""
             class_name = "first" if idx == 1 else "second" if idx == 2 else "third" if idx == 3 else "other"
 
             st.markdown(
-                f'<div class="leaderboard-frame {class_name}">{medal} {idx}. {display_name}: ${score:,.2f}</div>',
+                f'''
+                <div class="leaderboard-frame {class_name}">
+                    <div class="leaderboard-row">
+                        <span class="left">{medal} {idx}. {display_name}</span>
+                        <span class="right">${score:,.2f}</span>
+                    </div>
+                </div>
+                ''',
                 unsafe_allow_html=True,
             )
 
-    # Display leaderboards in each tab
     with tab1:
         display_leaderboard(balance_data, "💰 Vault Leaderboard")
 
@@ -1545,7 +1566,6 @@ def leaderboard(c):
 
     with tab3:
         display_leaderboard(total_worth_data, "🌎 Total Worth Leaderboard")
-
 
 @st.dialog("Item Options")
 def inventory_item_options(conn, user_id, item_id):
