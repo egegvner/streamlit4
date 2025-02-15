@@ -2196,15 +2196,19 @@ def dashboard(conn, user_id):
     if has_unread_news:
         st.markdown("""
             <style>
-                .news-button {
+                .news-button-wrapper {
                     position: relative;
                     display: inline-block;
+                }
+                .news-button-wrapper button {
+                    position: relative;
                     padding: 10px 20px;
                     background-color: #f1f1f1;
                     border: 1px solid #ccc;
                     border-radius: 5px;
+                    font-size: 16px;
                 }
-                .news-button .red-dot {
+                .red-dot {
                     position: absolute;
                     top: -5px;
                     right: -5px;
@@ -2223,14 +2227,19 @@ def dashboard(conn, user_id):
     if c1.button("Weekly Quiz", use_container_width=True):
         quiz_dialog_view(conn, user_id)
 
-    with c2.expander("News"):
-        c2.markdown('<div class="news-button">News<div class="red-dot"></div></div>', unsafe_allow_html=True)
+    with c2:
+        news_button_html = '''
+            <div class="news-button-wrapper">
+                <button id="news_button">News</button>
+                <div class="red-dot"></div>
+            </div>
+        '''
+        c2.markdown(news_button_html, unsafe_allow_html=True)
+
         if c2.button("News", key="news_button"):
             news_dialog(conn, user_id)
-        else:
-            if c2.button("News"):
-                news_dialog(conn, user_id)
-    if c3.button("🎁     Claim Reward     🎁", use_container_width = True):
+
+    if c3.button("🎁     Claim Reward     🎁", use_container_width=True):
         claim_daily_reward(conn, user_id)
         st.rerun()
     
