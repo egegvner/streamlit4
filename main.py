@@ -79,8 +79,9 @@ def write_stream(s, delay = 0, random_delay = False):
             yield i
             time.sleep(delay)
 
+@st.cache_resource
 def get_db_connection():
-    return sqlite3.connect("./bank-genova.db")
+    return sqlite3.connect("./bank-genova.db", check_same_thread = False)
 
 item_colors = {
         "Common":":gray",
@@ -4902,5 +4903,6 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
 
 if __name__ == "__main__":
     conn = get_db_connection()
+    conn.cursor().execute("ALTER TABLE users ADD COLUMN vip_tier TEXT DEFAULT 'NONE';")
     init_db(conn)
     main(conn)
