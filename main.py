@@ -26,7 +26,7 @@ ph = argon2.PasswordHasher(
     parallelism=4       # Number of parallel threads (default: 1)
 )    
 
-if "Dashboard" not in st.session_state:
+if "current_menu" not in st.session_state:
     st.session_state.current_menu = "Dashboard"
 
 previous_layout = st.session_state.get("previous_layout", "centered")
