@@ -682,6 +682,28 @@
       "longitude": 3.3212
     },
     {
+      "property_id": 600001028,
+      "region": "China",
+      "type": "BSB Library",
+      "price": 89600,
+      "rent_income": 8960,
+      "demand_factor": 0.90,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739448896/library-2_hxmdmi.jpg",
+      "latitude": 40.08182107988332,
+      "longitude": 116.51428347686488
+    },
+    {
+      "property_id": 600001099,
+      "region": "China",
+      "type": "The Dome",
+      "price": 126800,
+      "rent_income": 12680,
+      "demand_factor": 0.95,
+      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739685904/457133_main_o0q8m2.jpg",
+      "latitude": 40.08141801595062,
+      "longitude": 116.5139647512188
+    },
+    {
       "property_id": 600001001,
       "region": "France",
       "type": "Eiffel Tower",
@@ -1076,17 +1098,6 @@
       "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739543833/MrLupe_nciwu9.png",
       "latitude": 40.08193193050127,
       "longitude": 116.51332923576302
-    },
-    {
-      "property_id": 600001028,
-      "region": "China",
-      "type": "BSB Library",
-      "price": 89600,
-      "rent_income": 8960,
-      "demand_factor": 0.90,
-      "image_url": "https://res.cloudinary.com/triplet/image/upload/v1739448896/library-2_hxmdmi.jpg",
-      "latitude": 40.08182107988332,
-      "longitude": 116.51428347686488
     },
     {
       "property_id": 600001029,
