@@ -749,7 +749,8 @@ def init_db(conn):
                 last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 open_price REAL,
                 close_price REAL,
-                dividend_rate REAL DEFAULT 0.0
+                dividend_rate REAL DEFAULT 0.0,
+                change_rate REAL NOT NULL
                 );''')
     
     c.execute('''CREATE TABLE IF NOT EXISTS user_stocks (
