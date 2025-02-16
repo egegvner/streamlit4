@@ -26,9 +26,6 @@ ph = argon2.PasswordHasher(
     parallelism=4       # Number of parallel threads (default: 1)
 )    
 
-if "current_menu" not in st.session_state:
-    st.session_state.current_menu = "Dashboard"
-
 previous_layout = st.session_state.get("previous_layout", "centered")
 current_layout = "wide" if st.session_state.current_menu == "Blackmarket" or st.session_state.current_menu == "Investments" or st.session_state.current_menu == "Dashboard" or st.session_state.current_menu == "Stocks" or st.session_state.current_menu == "Transaction History" or st.session_state.current_menu == "Inventory" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "Real Estate" or st.session_state.current_menu == "Chat" else "centered"
 
