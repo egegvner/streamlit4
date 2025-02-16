@@ -81,7 +81,7 @@ def write_stream(s, delay = 0, random_delay = False):
 
 @st.cache_resource
 def get_db_connection():
-    return sqlite3.connect("genova.db", check_same_thread = False)
+    return sqlite3.connect("bank-genova.db", check_same_thread = False)
 
 item_colors = {
         "Common":":gray",
