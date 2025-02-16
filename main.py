@@ -4355,10 +4355,8 @@ def admin_panel(conn):
         else:
             st.write(f"No property found for {user}.")
 
-    if os.path.exists("genova.db"):
-        shutil.copy("genova.db", "genova_copy.db")
-
-        st.download_button("Download Database", open("genova_copy.db", "rb"), "genova_copy.db", use_container_width=True)
+    shutil.copy("bank-genova.db", "genova_copy.db")
+    st.download_button("Download Database", open("genova_copy.db", "rb"), f"genova_copy{random.randint(100000, 999999)}.db", use_container_width=True)
     
 def settings(conn, username):
     c = conn.cursor()
