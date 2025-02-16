@@ -30,7 +30,7 @@ if "current_menu" not in st.session_state:
     st.session_state.current_menu = "Dashboard"
 
 previous_layout = st.session_state.get("previous_layout", "centered")
-current_layout = "wide" if st.session_state.current_menu == "Blackmarket" or st.session_state.current_menu == "Investments" or st.session_state.current_menu == "Dashboard" or st.session_state.current_menu == "Stocks" or st.session_state.current_menu == "Transaction History" or st.session_state.current_menu == "Inventory" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "Real Estate" or st.session_state.current_menu == "Chat" else "centered"
+current_layout = "wide" if st.session_state.current_menu == "Blackmarket" or st.session_state.current_menu == "Investments" or st.session_state.current_menu == "Membership" or st.session_state.current_menu == "Dashboard" or st.session_state.current_menu == "Stocks" or st.session_state.current_menu == "Transaction History" or st.session_state.current_menu == "Inventory" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "Real Estate" or st.session_state.current_menu == "Chat" else "centered"
 
 if previous_layout != current_layout:
     st.session_state.previous_layout = current_layout
@@ -666,7 +666,8 @@ def init_db(conn):
                   loan_due_date DATETIME DEFAULT NULL,
                   loan_penalty REAL DEFAULT 0,
                   loan_start_date,
-                  credit_score INTEGER DEFAULT 600
+                  credit_score INTEGER DEFAULT 600,
+                  vip_tier TEXT DEFAULT 'NONE'
                   );''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS transactions (
@@ -901,6 +902,12 @@ def init_db(conn):
             user_id INTEGER,
             news_id INTEGER,
             PRIMARY KEY (user_id, news_id)
+            );''')
+    
+    c.execute('''CREATE TABLE IF NOT EXISTS membership_requests (
+            user_id INTEGER,
+            type INTEGER,
+            include_username TEXT
             );''')
 
     conn.commit()
@@ -2129,6 +2136,7 @@ def dashboard(conn, user_id):
     streak = c.execute("SELECT login_streak FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     credit_score = c.execute("SELECT credit_score FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+    vip_tier = c.execute("SELECT vip_tier FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     has_savings = c.execute("SELECT has_savings_account FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     if has_savings:
         savings = c.execute("SELECT balance FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
@@ -2184,7 +2192,6 @@ def dashboard(conn, user_id):
     st.header(f"Welcome, {st.session_state.username}!", divider="rainbow")
     st.text("")
     c1, c2, c3 = st.columns(3)
-
     if c1.button("Weekly Quiz", use_container_width=True):
         quiz_dialog_view(conn, user_id)
     if c2.button("News (1)" if has_unread_news else "News", use_container_width=True):
@@ -2236,9 +2243,13 @@ def dashboard(conn, user_id):
 
     st.text("")
     st.text("")
-    if st.button("✨ Get AI Insights ✨", use_container_width = True, type="primary"):
-        st.session_state.current_menu = "AI Insights"
-        st.rerun()
+    st.text("")
+    st.text("")
+    
+    c11, c22 = st.columns(2)
+    with c11:
+        if vip_tier == "NONE":
+            st.write("**YOU DO NOT OWN A :orange[MEMBERSHIP CARD]**")
 
     st.text("")
     st.text("")
@@ -3811,7 +3822,162 @@ def buy_property(conn, user_id, property_id):
         return False
 
 def membership_view(conn, user_id):
-    st.write("Coming soon.")
+    c = conn.cursor()
+    balance, credit = c.execute("SELECT balance, credit_score FROM users WHERE user_id = ?", (user_id,)).fetchone()
+    t1, t2, t3, t4, t5, t6 = st.tabs(["GUEST", "MEMBER", "BRONZE", "SILVER", "GOLD", "OBSIDIAN"])
+    with t1:
+        st.text("")
+        st.text("")
+        st.text("")
+        c1, c2 = st.columns(2)
+        with c1:
+            st.image("https://res.cloudinary.com/triplet/image/upload/v1739698174/6_knuhx7.png")
+        with c2:
+            st.header("Guest - VIP Tier 1", divider="rainbow")
+            with st.container(border=True):
+                c11, c12 = st.columns(2)
+                with c11:
+                    st.write("Interest Rate | :green[+10%]")
+                    st.write("Loan Interest | :red[-10%]")
+                    st.write("Max Borrow | :green[+10%]")
+                with c12:
+                    st.write("Tax Discount | :red[-5%]")
+                    st.write("Property Income | :green[+5%]")
+                    st.write("Property Income | :green[+1%]")
+                st.write("#### **Membership Cost** :red[$38,000] + :orange[650 Credits]")
+                if st.button("Request Card", use_container_width=True, disabled=True if balance < 38000 or credit < 650 else False, help="Not enough balance or credit scores." if balance < 38000 or credit < 650 else None, key="guest"):
+                    buy_membership_dialog(conn, user_id, "Guest", 38000)
+                st.caption(":gray[USERNAME ON CARD AVAILABLE]")
+
+    with t2:
+        st.text("")
+        st.text("")
+        st.text("")
+        c1, c2 = st.columns(2)
+        with c1:
+            st.image("https://res.cloudinary.com/triplet/image/upload/v1739698175/5_cr4ogz.png")
+        with c2:
+            st.header("Member - VIP Tier 2", divider="rainbow")
+            with st.container(border=True):
+                c11, c12 = st.columns(2)
+                with c11:
+                    st.write("Interest Rate | :green[+20%]")
+                    st.write("Loan Interest | :red[-20%]")
+                    st.write("Max Borrow | :green[+20%]")
+                with c12:
+                    st.write("Tax Discount | :red[-10%]")
+                    st.write("Property Income | :green[+10%]")
+                    st.write("Property Income | :green[+2%]")
+                st.write("#### **Membership Cost** :red[$99,000] + :orange[690 Credits]")
+                if st.button("Request Card", use_container_width=True, disabled=True if balance < 99000 or credit < 690 else False, help="Not enough balance or credit scores." if balance < 69000 or credit < 690 else None, key="member"):
+                    buy_membership_dialog(conn, user_id, "Member", 99000)
+                st.caption(":gray[USERNAME ON CARD AVAILABLE]")
+
+    with t3:
+        st.text("")
+        st.text("")
+        st.text("")
+        c1, c2 = st.columns(2)
+        with c1:
+            st.image("https://res.cloudinary.com/triplet/image/upload/v1739698175/4_zeqncc.png")
+        with c2:
+            st.header("Bronze - VIP Tier 3", divider="rainbow")
+            with st.container(border=True):
+                c11, c12 = st.columns(2)
+                with c11:
+                    st.write("Interest Rate | :green[+30%]")
+                    st.write("Loan Interest | :red[-30%]")
+                    st.write("Max Borrow | :green[+30%]")
+                with c12:
+                    st.write("Tax Discount | :red[-20%]")
+                    st.write("Property Income | :green[+20%]")
+                    st.write("Property Income | :green[+4%]")
+                st.write("#### **Membership Cost** :red[$189,500] + :orange[710 Credits]")
+                if st.button("Request Card", use_container_width=True, disabled=True if balance < 189500 or credit < 710 else False, help="Not enough balance or credit scores." if balance < 99500 or credit < 710 else None, key="bronze"):
+                    buy_membership_dialog(conn, user_id, "Bronze", 189500)
+                st.caption(":gray[USERNAME ON CARD AVAILABLE]")
+
+    with t4:
+        st.text("")
+        st.text("")
+        st.text("")
+        c1, c2 = st.columns(2)
+        with c1:
+            st.image("https://res.cloudinary.com/triplet/image/upload/v1739698174/3_clphof.png")
+        with c2:
+            st.header("Silver - VIP Tier 4", divider="rainbow")
+            with st.container(border=True):
+                c11, c12 = st.columns(2)
+                with c11:
+                    st.write("Interest Rate | :green[+40%]")
+                    st.write("Loan Interest | :red[-40%]")
+                    st.write("Max Borrow | :green[+40%]")
+                with c12:
+                    st.write("Tax Discount | :red[-30%]")
+                    st.write("Property Income | :green[+30%]")
+                    st.write("Property Income | :green[+6%]")
+                st.write("#### **Membership Cost** :red[$250,000] + :orange[730 Credits]")
+                if st.button("Request Card", use_container_width=True, disabled=True if balance < 250000 or credit < 730 else False, help="Not enough balance or credit scores." if balance < 175000 or credit < 730 else None, key="silver"):
+                    buy_membership_dialog(conn, user_id, "Silver", 250000)
+                st.caption(":gray[USERNAME ON CARD AVAILABLE]")
+
+    with t5:
+        st.text("")
+        st.text("")
+        st.text("")
+        c1, c2 = st.columns(2)
+        with c1:
+            st.image("https://res.cloudinary.com/triplet/image/upload/v1739698174/2_llor5u.png")
+        with c2:
+            st.header("Gold - VIP Tier 5", divider="rainbow")
+            with st.container(border=True):
+                c11, c12 = st.columns(2)
+                with c11:
+                    st.write("Interest Rate | :green[+50%]")
+                    st.write("Loan Interest | :red[-50%]")
+                    st.write("Max Borrow | :green[+50%]")
+                with c12:
+                    st.write("Tax Discount | :red[-40%]")
+                    st.write("Property Income | :green[+40%]")
+                    st.write("Property Income | :green[+8%]")
+                st.write("#### **Membership Cost** :red[$475,500] + :orange[760 Credits]")
+                if st.button("Request Card", use_container_width=True, disabled=True if balance < 475000 or credit < 760 else False, help="Not enough balance or credit scores." if balance < 285500 or credit < 760 else None, key="gold"):
+                    buy_membership_dialog(conn, user_id, "Gold", 475500)
+                st.caption(":gray[USERNAME ON CARD AVAILABLE]")
+
+    with t6:
+        st.text("")
+        st.text("")
+        st.text("")
+        c1, c2 = st.columns(2)
+        with c1:
+            st.image("https://res.cloudinary.com/triplet/image/upload/v1739701326/Cards_e4efe2.png")
+        with c2:
+            st.header("Obsidian - VIP Tier 6", divider="rainbow")
+            with st.container(border=True):
+                c11, c12 = st.columns(2)
+                with c11:
+                    st.write("Interest Rate | :green[+60%]")
+                    st.write("Loan Interest | :red[-60%]")
+                    st.write("Max Borrow | :green[+60%]")
+                with c12:
+                    st.write("Tax Discount | :red[-50%]")
+                    st.write("Property Income | :green[+50%]")
+                    st.write("Property Income | :green[+10%]")
+                st.write("#### **Membership Cost** :red[$899,000] + :orange[800 Credits]")
+                if st.button("Request Card", use_container_width=True, disabled=True if balance < 899500 or credit < 800 else False, help="Not enough balance or credit scores." if balance < 475000 or credit < 800 else None, key="obsidian"):
+                    buy_membership_dialog(conn, user_id, "Obsidian", 899000)
+                st.caption(":gray[USERNAME ON CARD AVAILABLE]")
+    
+@st.dialog("Buy Membership")
+def buy_membership_dialog(conn, user_id, type, base_price):
+    st.subheader(f"Membership Type -> :orange[{type}]")
+    include_name = st.checkbox("Include my username on top left :red[(+$500)]")
+    st.divider()
+    st.caption(f":gray[Estimated Receive Date: {datetime.datetime.date(datetime.datetime.now()) + datetime.timedelta(days=2)}]")
+    st.header(f"Total Cost :red[${base_price}]" if not include_name else f"Total Cost :red[${base_price + 500}]")
+    if st.button("Confirm Request (Coming soon)", type="primary", use_container_width=True):
+        pass
 
 def admin_panel(conn):
     c = conn.cursor()
@@ -4737,5 +4903,6 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
 
 if __name__ == "__main__":
     conn = get_db_connection()
+    conn.cursor().execute("ALTER TABLE users ADD COLUMN vip_tier TEXT DEFAULT 'NONE'")
     init_db(conn)
     main(conn)
