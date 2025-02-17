@@ -1908,10 +1908,7 @@ def inventory_view(conn, user_id):
                         st.rerun()
 
     with t3:
-        st_autorefresh(interval=10000, key="p")
-
-        if "portofolio_value" not in st.session_state:
-            st.session_state.portofolio_value = 0
+        st_autorefresh(interval=30000, key="ss")
 
         st.header("📊 My Portfolio", divider="rainbow")
 
