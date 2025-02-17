@@ -81,7 +81,7 @@ def write_stream(s, delay = 0, random_delay = False):
 
 @st.cache_resource
 def get_db_connection():
-    return sqlite3.connect("./bank-genova.db", check_same_thread=False, uri=True)
+    return sqlite3.connect("./bank-genova.db", check_same_thread=False, uri=False)
 
 item_colors = {
         "Common":":gray",
@@ -1770,7 +1770,7 @@ def marketplace_view(conn, user_id):
 def inventory_view(conn, user_id):
     c = conn.cursor()
 
-    t1, t2, t3 = st.tabs(["💠 GNFTs", "🏠 Properties", "Stocks"])
+    t1, t2, t3 = st.tabs(["💠 GNFTs", "🏠 Properties", "📈 Stocks"])
     st.markdown('''<style>
                         button[data-baseweb="tab"] {
                         font-size: 24px;
