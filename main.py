@@ -4912,4 +4912,4 @@ if __name__ == "__main__":
     init_db(conn)
     # main(conn)
     st.info("As so many things has gone wrong, we need to take some time to fix our game. Thank you for your co-operation")
-    st.image("https://res.cloudinary.com/triplet/image/upload/v1739784999/Bank_Genova_Inc_tbrndl.png")
+    st.image("https://res.cloudinary.com/triplet/image/upload/v1739785062/Bank_Genova_Inc_qrsltt.png")
