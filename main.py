@@ -4910,4 +4910,5 @@ if __name__ == "__main__":
     conn = get_db_connection()
 
     init_db(conn)
-    main(conn)
+    # main(conn)
+    st.info("As so many things has gone wrong, we need to take some time to fix our game. Thank you for your co-operation")
