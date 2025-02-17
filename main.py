@@ -78,9 +78,10 @@ def write_stream(s, delay = 0, random_delay = False):
         for i in s:
             yield i
             time.sleep(delay)
-            
+
+@st.cache_resource
 def get_db_connection():
-    return sqlite3.connect("./bank-genova.db", check_same_thread = False)
+    return sqlite3.connect("bank-genova.db", check_same_thread = False)
 
 item_colors = {
         "Common":":gray",
