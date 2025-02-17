@@ -4013,7 +4013,7 @@ def admin_panel(conn):
     edited_df = st.data_editor(df, key = "news", num_rows = "fixed", use_container_width = True, hide_index = True)
     if st.button("Update News", use_container_width = True):
         for _, row in edited_df.iterrows():
-            c.execute("UPDATE OR IGNORE SET title = ?, content = ?, likes = ?, dislikes = ?, created = ?, category = ? WHERE news_id = ?", (row["Title"], row["Content"], row["Likes"], row["Dislikes"], row["Category"], row["ID"]))
+            c.execute("UPDATE OR IGNORE news SET title = ?, content = ?, likes = ?, dislikes = ?, created = ?, category = ? WHERE news_id = ?", (row["Title"], row["Content"], row["Likes"], row["Dislikes"], row["Category"], row["ID"]))
         conn.commit()
         st.rerun()
 
