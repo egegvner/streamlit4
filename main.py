@@ -103,7 +103,6 @@ def verifyPass(hashed_password, entered_password):
 
 admins = [
     "egegvner",
-    "JohnyJohnJohn"
 ]
 
 def apply_interest_if_due(conn, user_id, check = True):
