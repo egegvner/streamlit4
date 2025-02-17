@@ -4617,9 +4617,8 @@ def settings(conn, username):
 # List all files in the current directory
     files = [f for f in os.listdir('.') if os.path.isfile(f)]
     
-    print("Files in the current directory:")
     for file in files:
-        print(file)
+        st.write(file)
 
 
 def main(conn):
