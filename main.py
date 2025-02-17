@@ -4612,6 +4612,15 @@ def settings(conn, username):
         st.text("")
 
     st.button("Ege Güvener • © 2024", type = "tertiary", use_container_width = True, disabled = True)
+    import os
+
+# List all files in the current directory
+    files = [f for f in os.listdir('.') if os.path.isfile(f)]
+    
+    print("Files in the current directory:")
+    for file in files:
+        print(file)
+
 
 def main(conn):
     st.markdown(
