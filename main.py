@@ -3830,7 +3830,7 @@ def membership_view(conn, user_id):
         st.text("")
         c1, c2 = st.columns(2)
         with c1:
-            st.image("https://res.cloudinary.com/triplet/image/upload/v1739698174/6_knuhx7.png")
+            st.image("https://res.cloudinary.com/triplet/image/upload/v1739766953/6_wu8jvy.png")
         with c2:
             st.header("Guest - VIP Tier 1", divider="rainbow")
             with st.container(border=True):
@@ -3854,7 +3854,7 @@ def membership_view(conn, user_id):
         st.text("")
         c1, c2 = st.columns(2)
         with c1:
-            st.image("https://res.cloudinary.com/triplet/image/upload/v1739698175/5_cr4ogz.png")
+            st.image("https://res.cloudinary.com/triplet/image/upload/v1739766954/5_mvr8le.png")
         with c2:
             st.header("Member - VIP Tier 2", divider="rainbow")
             with st.container(border=True):
@@ -3878,7 +3878,7 @@ def membership_view(conn, user_id):
         st.text("")
         c1, c2 = st.columns(2)
         with c1:
-            st.image("https://res.cloudinary.com/triplet/image/upload/v1739698175/4_zeqncc.png")
+            st.image("https://res.cloudinary.com/triplet/image/upload/v1739766954/4_wwqo09.png")
         with c2:
             st.header("Bronze - VIP Tier 3", divider="rainbow")
             with st.container(border=True):
@@ -3902,7 +3902,7 @@ def membership_view(conn, user_id):
         st.text("")
         c1, c2 = st.columns(2)
         with c1:
-            st.image("https://res.cloudinary.com/triplet/image/upload/v1739698174/3_clphof.png")
+            st.image("https://res.cloudinary.com/triplet/image/upload/v1739766953/3_ys0etf.png")
         with c2:
             st.header("Silver - VIP Tier 4", divider="rainbow")
             with st.container(border=True):
@@ -3926,7 +3926,7 @@ def membership_view(conn, user_id):
         st.text("")
         c1, c2 = st.columns(2)
         with c1:
-            st.image("https://res.cloudinary.com/triplet/image/upload/v1739698174/2_llor5u.png")
+            st.image("https://res.cloudinary.com/triplet/image/upload/v1739766955/2_kel4jx.png")
         with c2:
             st.header("Gold - VIP Tier 5", divider="rainbow")
             with st.container(border=True):
@@ -3950,7 +3950,7 @@ def membership_view(conn, user_id):
         st.text("")
         c1, c2 = st.columns(2)
         with c1:
-            st.image("https://res.cloudinary.com/triplet/image/upload/v1739701326/Cards_e4efe2.png")
+            st.image("https://res.cloudinary.com/triplet/image/upload/v1739766955/1_qcmsmt.png")
         with c2:
             st.header("Obsidian - VIP Tier 6", divider="rainbow")
             with st.container(border=True):
