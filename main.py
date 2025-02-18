@@ -4724,8 +4724,7 @@ def main(conn):
     elif st.session_state.logged_in:        
         with st.sidebar:
             balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (st.session_state.user_id,)).fetchone()[0]
-            st.sidebar.write(f"Vault   |   :green[${format_number(balance)}]")
-            st.sidebar.header(" ", divider="rainbow")
+            st.sidebar.write(f"Balance   |   :green[${balance}]")
 
         t1, t2 = st.sidebar.tabs(["🌐 Global", "💠 Personal"])
         st.markdown('''
@@ -4747,7 +4746,7 @@ def main(conn):
             if c2.button("Leaderboard", type="primary", use_container_width=True):
                 st.session_state.current_menu = "Leaderboard"
                 st.rerun()
-            
+
             if st.button("InvestSphere™", type="primary", use_container_width=True):
                 st.session_state.current_menu = "Investments"
                 st.rerun()
@@ -4908,6 +4907,16 @@ def add_column_if_not_exists(conn, table_name, column_name, column_type):
 
 if __name__ == "__main__":
     conn = get_db_connection()
+    st.markdown("""<style>
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
+                * {
+                    font-family: 'Inter', sans-serif;
+                }
+    
+                html, body, [class*="st-"] {
+            font-size: 13px !important;
+        }
+                </style""", unsafe_allow_html=True)
     init_db(conn)
     main(conn)
