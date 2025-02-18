@@ -1890,7 +1890,7 @@ def inventory_view(conn, user_id):
                         with st.spinner("Selling..."):
                             c.execute("DELETE FROM user_properties WHERE property_id = ?", (prop_id,))
                             c.execute("UPDATE real_estate SET sold = 0, is_owned = 0, username = NULL, user_id = 0 WHERE property_id = ?", (prop_id,))
-                            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Sell Property {region} (ID {prop_id})", (rent_income / 100) * 25))
+                            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Sell Property {type}", (rent_income / 100) * 25))
                             conn.commit()
                             time.sleep(3)
                         st.success("Sold property to the bank for 25% of its value.")
@@ -1905,7 +1905,7 @@ def inventory_view(conn, user_id):
                     if c4.button("**COLLECT RENT**", type="primary", key=f"rent_{prop_id}", use_container_width=True, disabled=not can_collect, help="Rent for this property has already been collected today." if not can_collect else None):
                         c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (rent_income, user_id))
                         c.execute("UPDATE user_properties SET last_collected = ? WHERE property_id = ?", (now.strftime("%Y-%m-%d %H:%M:%S"), prop_id))
-                        c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Collect Rent from Property {region} (ID {prop_id})", rent_income))
+                        c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Collect Rent from {type}", rent_income))
                         conn.commit()
                         st.toast(f"🎉 Collected :green[${format_number(rent_income)}]!")
                         time.sleep(1)
@@ -4964,5 +4964,4 @@ if __name__ == "__main__":
     </style>
 """, unsafe_allow_html=True)
     init_db(conn)
-    # conn.cursor().execute("ALTER TABLE user_properties ADD COLUMN last_collected DATETIME DEFAULT NULL;")
     main(conn)
