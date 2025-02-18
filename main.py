@@ -2280,11 +2280,22 @@ def dashboard(conn, user_id):
                 if transactions:
                     def create_transaction_row(transaction_type, timestamp, amount):
                         formatted_date = format_timestamp(timestamp)
+                        
+                        # Check for keywords in the transaction type
+                        if any(keyword in transaction_type for keyword in ["Buy", "Upgrade", "Repay", "Transfer to", "Gift", "Declined", "Purchase"]):
+                            amount_color = "red"
+                        elif any(keyword in transaction_type for keyword in ["Sell", "Dividend", "Collect", "Accepted", "Borrow"]):
+                            amount_color = "green"
+                        else:
+                            amount_color = "white"  # Default color if no keywords match
+
                         return f"""
                         <div class='transaction-row'>
                             <div style='flex: 1; text-align: left; font-weight: bold;'>{transaction_type}</div>
                             <div style='flex: 1; text-align: center;'>{formatted_date}</div>
-                            <div style='flex: 1; text-align: right;'>${format_number_with_dots(round(amount, 2))}</div>
+                            <div style='flex: 1; text-align: right; color: {amount_color};'>
+                                ${format_number_with_dots(round(amount, 2))}
+                            </div>
                         </div>
                         """
 
@@ -3843,7 +3854,7 @@ def buy_property(conn, user_id, property_id):
             VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
         """, (random.randint(100000000000, 999999999999), 
               user_id, 
-              f"Property Purchase: {region} {prop_type}", 
+              f"Property Purchase: {prop_type}", 
               price))
         
         conn.commit()
