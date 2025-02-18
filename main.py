@@ -27,10 +27,10 @@ ph = argon2.PasswordHasher(
 )    
 
 if "current_menu" not in st.session_state:
-    st.session_state.current_menu = "Dashboard"
+    st.session_state.current_menu = "Login"
 
 previous_layout = st.session_state.get("previous_layout", "centered")
-current_layout = "wide" if st.session_state.current_menu == "Blackmarket" or st.session_state.current_menu == "Investments" or st.session_state.current_menu == "Membership" or st.session_state.current_menu == "Stocks" or st.session_state.current_menu == "Transaction History" or st.session_state.current_menu == "Inventory" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "Real Estate" or st.session_state.current_menu == "Chat" else "centered"
+current_layout = "wide" if st.session_state.current_menu == "Blackmarket" or st.session_state.current_menu == "Investments" or st.session_state.current_menu == "Dashboard" or st.session_state.current_menu == "Membership" or st.session_state.current_menu == "Stocks" or st.session_state.current_menu == "Transaction History" or st.session_state.current_menu == "Inventory" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "Real Estate" or st.session_state.current_menu == "Chat" else "centered"
 
 if previous_layout != current_layout:
     st.session_state.previous_layout = current_layout
@@ -42,6 +42,9 @@ st.set_page_config(
     layout=current_layout,
     initial_sidebar_state="expanded"
 )
+
+def format_number_with_dots(number):
+    return f"{number:,}"
 
 def format_number(num, decimals=2):
     suffixes = [
@@ -1073,7 +1076,7 @@ def transfer_to_vault_dialog(conn, user_id):
             c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (net, user_id))
             c.execute("UPDATE savings SET balance = balance - ? WHERE user_id = ?", (amount, user_id))
 
-            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Withdraw from Savings to Vault", net))
+            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Transfer to Vault", net))
             c.execute("UPDATE users SET balance = balance + ? WHERE username = 'Government'", (tax,))
             conn.commit()
 
@@ -2167,6 +2170,13 @@ def dashboard(conn, user_id):
 
     total_worth = balance + savings + real_estates_worth + total_country_worth + total_stock_worth - loan
     
+    transactions = c.execute("""
+        SELECT timestamp, type, amount 
+        FROM transactions 
+        WHERE user_id = ? 
+        ORDER BY timestamp DESC 
+        LIMIT 5
+    """, (user_id,)).fetchall()
     now = datetime.datetime.now()
     days_ahead = (6 - now.weekday()) % 7
     if days_ahead == 0:
@@ -2203,69 +2213,95 @@ def dashboard(conn, user_id):
     st.text("")
     st.text("")
     st.text("")
+    
+    def create_padded_row(descriptor, value, color=None):
+        if color:
+            value = f"<span style='color: {color};'>{value}</span>"
+        return f"""
+        <div style='padding-bottom: 15px; display: flex; align-items: center; justify-content: space-between;'>
+            <div>{descriptor}</div>
+            <div style='text-align: right;'>{value}</div>
+        </div>
+        """
+    
+    def format_timestamp(timestamp):
+        try:
+            dt = datetime.datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
 
-    c1, c2, c3, c4, c5, c6 = st.columns(6)
-
+            today = datetime.datetime.today().date()
+            transaction_date = dt.date()
+            
+            if transaction_date == today:
+                return "Today"
+            elif transaction_date == today - datetime.timedelta(days=1):
+                return "Yesterday"
+            else:
+                return dt.strftime("%Y-%m-%d")  # Format as YYYY-MM-DD
+        except ValueError:
+            return "Invalid Date"  # Handle incorrect formats safely
+    
+    st.markdown("""
+    <style>
+    .transaction-row {
+        padding: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-radius: 8px;
+        transition: background-color 0.2s ease-in-out;
+    }
+    .transaction-row:hover {
+        background-color: rgb(25, 27, 32);
+    }
+    .transaction-container {
+        border-radius: 15px;
+        padding: 10px;
+    }
+    </style>
+                """, unsafe_allow_html=True)
+    
+    c1, c2 = st.columns(2)
     with c1:
-        st.write("Vault")
-        st.subheader(f":green[${format_number(balance, 2)}]")
+        with st.container(border=True):
+            st.caption(":gray[Total Worth]")
+            st.write(f"## <span style='font-family: Inter;'>${format_number_with_dots(round(total_worth, 2))}</span>", unsafe_allow_html=True)
+            st.divider()
+            st.write(create_padded_row("Available Balance", f"${format_number_with_dots(round(balance, 2))}"), unsafe_allow_html=True)
+            st.write(create_padded_row("Savings", f"${format_number_with_dots(round(savings, 2))}"), unsafe_allow_html=True)
+            st.write(create_padded_row("Active Loans", f"${format_number_with_dots(round(loan, 2))}", "red"), unsafe_allow_html=True)
+            st.write(create_padded_row("Credit Score", f"{credit_score}", ""), unsafe_allow_html=True)
+            st.write(create_padded_row("Login Streak", f"{streak}", ""), unsafe_allow_html=True)
 
     with c2:
-        st.write("Savings")
-        if has_savings:
-            st.subheader(f":green[${format_number(savings_balance, 2)}]")
-        else:
-            st.subheader(f":red[Not owned]")
+        with st.container(border=True, height=340):
+            st.caption(":gray[Recent Transactions]")
 
-    with c3:
-        st.write("Total Worth")
-        st.subheader(f":green[${format_number(total_worth)}]")
+            if transactions:
+                if transactions:
+                    def create_transaction_row(transaction_type, timestamp, amount):
+                        formatted_date = format_timestamp(timestamp)
+                        return f"""
+                        <div class='transaction-row'>
+                            <div style='flex: 1; text-align: left; font-weight: bold;'>{transaction_type}</div>
+                            <div style='flex: 1; text-align: center;'>{formatted_date}</div>
+                            <div style='flex: 1; text-align: right;'>${format_number_with_dots(round(amount, 2))}</div>
+                        </div>
+                        """
 
-    with c4:
-        st.write("Active Loans")
-        st.subheader(f":red[${format_number(loan)}]")
+                    header = """
+                    <div style='padding-bottom: 8px; display: flex; align-items: center; justify-content: space-between; font-weight: bold;'>
+                        <div style='flex: 1;'>Type</div>
+                        <div style='flex: 1; text-align: center;'>Date</div>
+                        <div style='flex: 1; text-align: right;'>Amount</div>
+                    </div>
+                    """
+                    st.write(header, unsafe_allow_html=True)
+                    st.divider()
 
-    with c5:
-        st.write("Credit Score")
-        if credit_score < 300:
-            st.subheader(f":red[{credit_score}]")
-        elif credit_score >= 300 and credit_score < 900:
-            st.subheader(f":orange[{credit_score}]")
-        else:
-            st.subheader(f":green[{credit_score}]")
-
-    with c6:
-        st.write("Login Streak")
-        st.subheader(f":blue[{streak}]")
-
-    st.text("")
-    st.text("")
-    st.text("")
-    st.text("")
-    
-    c11, c22 = st.columns(2)
-    with c11:
-        if vip_tier == "NONE":
-            st.write("**YOU DO NOT OWN A :orange[MEMBERSHIP CARD]**")
-
-    st.text("")
-    st.text("")
-    st.subheader("📜 Recent Transactions", divider="rainbow")
-
-    transactions = c.execute("""
-        SELECT timestamp, type, amount 
-        FROM transactions 
-        WHERE user_id = ? 
-        ORDER BY timestamp DESC 
-        LIMIT 5
-    """, (user_id,)).fetchall()
-
-    if transactions:
-        df = pd.DataFrame(transactions, columns=["Timestamp", "Type", "Amount"])
-        df["Timestamp"] = pd.to_datetime(df["Timestamp"])
-        st.dataframe(df.set_index("Timestamp"), use_container_width = True)
-    else:
-        st.info("No recent transactions.")
+                    for timestamp, transaction_type, amount in transactions:
+                        st.write(create_transaction_row(transaction_type, timestamp, amount), unsafe_allow_html=True)
+                else:
+                    st.info("No recent transactions.")
 
 def get_latest_message_time(conn):
     c = conn.cursor()
@@ -4642,7 +4678,6 @@ def main(conn):
         st.session_state.logged_in = False
         st.session_state.user_id = None
         st.session_state.username = None
-        st.session_state.current_menu = "Dashboard"
 
     if not st.session_state.logged_in:
         st.title("Bank :red[Genova] ™", anchor = False)
@@ -4667,9 +4702,9 @@ def main(conn):
                             st.session_state.logged_in = True
                             st.session_state.user_id = user[0]
                             st.session_state.username = username
-                            time.sleep(1)
+                            st.session_state.current_menu = "Dashboard"
+                            time.sleep(3)
                             
-                    time.sleep(2)
                     st.rerun()
                 else:
                     st.error("Invalid username or password")
@@ -4677,13 +4712,9 @@ def main(conn):
             st.text("")
             st.text("")
 
-            c1, c2, c3 = st.columns([1, 1, 1])
-            with c2:
-                c1, c2 = st.columns(2)
-                if c1.button("[ Privacy Policy", type = "tertiary"):
-                    privacy_policy_dialog()
+            if st.button("[Terms]", type = "tertiary", use_container_width=True):
+                privacy_policy_dialog()
 
-                c2.button("Terms of Use ]", type = "tertiary")
             
             st.write('<div style="position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); color: slategray; text-align: center;"><marquee>Simple and educational bank / finance simulator by Ege. Specifically built for IB Computer Science IA. All rights of this "game" is reserved.</marquee></div>', unsafe_allow_html=True)
 
@@ -4724,20 +4755,23 @@ def main(conn):
     elif st.session_state.logged_in:        
         with st.sidebar:
             balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (st.session_state.user_id,)).fetchone()[0]
-            st.sidebar.write(f"Balance   |   :green[${balance}]")
-
-        t1, t2 = st.sidebar.tabs(["🌐 Global", "💠 Personal"])
-        st.markdown('''
-                    <style>
-                button[data-baseweb="tab"] {
-                font-size: 24px;
-                margin: 0;
-                width: 100%;
-                }
-                </style>
-                ''', unsafe_allow_html=True)
+            st.sidebar.write(f"# <span style='font-family: Inter;'>${format_number_with_dots(round(balance, 2))}</span>", unsafe_allow_html=True)
+            st.caption("Balance")
+            st.text("")
+            st.text("")
+            t1, t2 = st.sidebar.tabs(["🌐 Global", "💠 Personal"])
+            st.markdown('''
+                        <style>
+                    button[data-baseweb="tab"] {
+                    font-size: 24px;
+                    margin: 0;
+                    width: 100%;
+                    }
+                    </style>
+                    ''', unsafe_allow_html=True)
         
         with t1:
+            st.text("")
             c1, c2 = st.columns(2)
             if c1.button("Dashboard", type="primary", use_container_width=True):
                 st.session_state.current_menu = "Dashboard"
@@ -4777,6 +4811,7 @@ def main(conn):
                 st.rerun()
 
         with t2:
+            st.text("")
             c1, c2 = st.columns(2)
             if c1.button("Vault", type="primary", use_container_width=True):
                 st.session_state.current_menu = "Main Account"
@@ -4880,7 +4915,7 @@ def main(conn):
             st.session_state.logged_in = False
             st.session_state.user_id = None
             st.session_state.username = None
-            st.session_state.current_menu = "Dashboard"
+            st.session_state.current_menu = "Login"
             st.rerun()
 
         elif st.session_state.current_menu == "Settings":
@@ -4915,8 +4950,18 @@ if __name__ == "__main__":
                 }
     
                 html, body, [class*="st-"] {
-            font-size: 13px !important;
-        }
+                    font-size: 13px !important;
+                }
                 </style""", unsafe_allow_html=True)
+    
+    st.markdown("""
+    <style>
+    .stButton>button:first-child {
+        padding: 10px 10px !important;
+        transition: all 0.1s ease-in-out;
+        border-radius: 10px
+        
+    </style>
+""", unsafe_allow_html=True)
     init_db(conn)
     main(conn)
