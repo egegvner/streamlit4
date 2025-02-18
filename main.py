@@ -2283,9 +2283,9 @@ def dashboard(conn, user_id):
                         
                         # Check for keywords in the transaction type
                         if any(keyword in transaction_type for keyword in ["Buy", "Upgrade", "Repay", "Transfer to", "Gift", "Declined", "Purchase"]):
-                            amount_color = "lime"
+                            amount_color = "red"
                         elif any(keyword in transaction_type for keyword in ["Sell", "Dividend", "Collect", "Accepted", "Borrow"]):
-                            amount_color = "green"
+                            amount_color = "lime"
                         else:
                             amount_color = "white"  # Default color if no keywords match
 
