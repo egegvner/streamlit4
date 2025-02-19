@@ -1133,7 +1133,7 @@ def transfer_to_vault_dialog(conn, user_id):
     st.write(f"Net Transfer -> :green[${format_number(net, 2)}] $|$ :red[${format_number(tax, 2)} Tax]")
     st.write(f"Remaining Savings -> :green[${format_number((current_savings - amount), 2)}]")
 
-    if st.button("Transfer to Vault", type = "primary", key = "758103k", use_container_width = True, disabled = True if amount <= 0.00 else False):
+    if st.button("Transfer to Vault", type = "primary", use_container_width = True, disabled = True if amount <= 0.00 else False):
         if check_cooldown(conn, user_id):
             c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (net, user_id))
             c.execute("UPDATE savings SET balance = balance - ? WHERE user_id = ?", (amount, user_id))
@@ -4903,24 +4903,28 @@ def main(conn):
         with t1:
             st.text("")
             c1, c2 = st.columns(2)
-            if c1.button("Dashboard", type="primary", use_container_width=True):
+            if c1.button("Dashboard", use_container_width=True):
                 st.session_state.current_menu = "Dashboard"
                 st.rerun()
             
-            if c2.button("Leaderboard", type="primary", use_container_width=True):
+            if c2.button("Leaderboard", use_container_width=True):
                 st.session_state.current_menu = "Leaderboard"
                 st.rerun()
 
-            if st.button("InvestSphere™", type="primary", use_container_width=True):
+            if st.button("InvestSphere™", icon=":material/finance_mode:", use_container_width=True):
                 st.session_state.current_menu = "Investments"
                 st.rerun()
 
-            if st.button("QubitTrades™", type="primary", use_container_width=True):
+            if st.button("QubitTrades™", icon=":material/finance:", use_container_width=True):
                 st.session_state.current_menu = "Stocks"
                 st.rerun()
 
-            if st.button("PrimeEstates™", type="primary", use_container_width=True):
+            if st.button("PrimeEstates™", icon=":material/home_pin:", use_container_width=True):
                 st.session_state.current_menu = "Real Estate"
+                st.rerun()
+
+            if st.button("ElevateJobs™", icon=":material/payments:", use_container_width=True):
+                st.session_state.current_menu = "Jobs"
                 st.rerun()
             
             if st.button("#Global Chat", type="secondary", use_container_width=True):
