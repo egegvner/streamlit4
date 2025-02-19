@@ -4174,9 +4174,9 @@ def admin_panel(conn):
 
     st.header("Manage News", divider = "rainbow")
     with st.spinner("Loading news..."):
-        quiz_data = c.execute("SELECT news_id, title, content, likes, dislikes, created, category FROM news").fetchall()
+        news_data = c.execute("SELECT news_id, title, content, likes, dislikes, created, category FROM news").fetchall()
    
-    df = pd.DataFrame(quiz_data, columns = ["ID", "Title", "Content", "Likes", "Dislikes", "Published", "Category"])
+    df = pd.DataFrame(news_data, columns = ["ID", "Title", "Content", "Likes", "Dislikes", "Published", "Category"])
     edited_df = st.data_editor(df, key = "news", num_rows = "fixed", use_container_width = True, hide_index = True)
     if st.button("Update News", use_container_width = True):
         for _, row in edited_df.iterrows():
