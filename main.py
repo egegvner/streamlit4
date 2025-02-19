@@ -18,6 +18,7 @@ import os
 import shutil
 import geopandas as gpd
 import numpy as np
+import streamlit_lightweight_charts
 from streamlit_lightweight_charts import renderLightweightCharts
 
 ph = argon2.PasswordHasher(
@@ -30,7 +31,7 @@ if "current_menu" not in st.session_state:
     st.session_state.current_menu = "Login"
 
 previous_layout = st.session_state.get("previous_layout", "centered")
-current_layout = "wide" if st.session_state.current_menu == "Blackmarket" or st.session_state.current_menu == "Investments" or st.session_state.current_menu == "Dashboard" or st.session_state.current_menu == "Membership" or st.session_state.current_menu == "Stocks" or st.session_state.current_menu == "Transaction History" or st.session_state.current_menu == "Inventory" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "Real Estate" or st.session_state.current_menu == "Chat" else "centered"
+current_layout = "wide" if st.session_state.current_menu == "Blackmarket" or st.session_state.current_menu == "Main Account" or st.session_state.current_menu == "Investments" or st.session_state.current_menu == "Dashboard" or st.session_state.current_menu == "Membership" or st.session_state.current_menu == "Stocks" or st.session_state.current_menu == "Transaction History" or st.session_state.current_menu == "Inventory" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "Real Estate" or st.session_state.current_menu == "Chat" or st.session_state.current_menu == "View Savings" else "centered"
 
 if previous_layout != current_layout:
     st.session_state.previous_layout = current_layout
@@ -112,7 +113,7 @@ def apply_interest_if_due(conn, user_id, check = True):
     c = conn.cursor()
     current_time = time.time()
     if check:
-        if current_time - st.session_state.last_refresh >= 5:
+        if current_time - st.session_state.last_refresh >= 30:
             st.session_state.last_refresh = current_time
 
             has_savings_account = c.execute("SELECT has_savings_account FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
@@ -123,9 +124,7 @@ def apply_interest_if_due(conn, user_id, check = True):
             balance, last_applied = savings_data if savings_data else (0, None)
 
             last_applied_time = datetime.datetime.strptime(last_applied, "%Y-%m-%d %H:%M:%S") if last_applied else now
-
             now = datetime.datetime.now()
-
             hours_passed = (now - last_applied_time).total_seconds() / 86400
 
             hourly_interest_rate = c.execute("SELECT interest_rate FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
@@ -147,7 +146,7 @@ def apply_interest_if_due(conn, user_id, check = True):
             conn.commit()
             st.rerun()
         else:
-            st.toast(f"Wait {int(5 - (current_time - st.session_state.last_refresh))} seconds before refreshing again.")
+            st.toast(f"Wait {int(30 - (current_time - st.session_state.last_refresh))} seconds before refreshing again.")
     
 def change_password(conn, username, current_password, new_password):
     c = conn.cursor()
@@ -620,6 +619,43 @@ def load_lands_from_json(conn, json_file):
             """, (land["name"], land["total_worth"], land["share_price"], land["image_url"], land["latitude"], land["longitude"], land["border_geometry"], land["country_id"]))
 
     conn.commit()
+
+def get_balance_trend(conn, user_id):
+    c = conn.cursor()
+    
+    transactions_query = """
+        SELECT timestamp, type, amount 
+        FROM transactions 
+        WHERE user_id = ? 
+        ORDER BY timestamp ASC
+    """
+    transactions = c.execute(transactions_query, (user_id,)).fetchall()
+
+    cumulative_balance = []
+    current_balance = 0
+
+    for transaction in transactions:
+        timestamp, transaction_type, amount = transaction
+        
+        if any(keyword in transaction_type for keyword in ["Buy", "Upgrade", "Repay", "Transfer to", "Gift", "Declined", "Purchase", "Fail"]):
+            current_balance += amount
+        elif any(keyword in transaction_type for keyword in ["Sell", "Dividend", "Collect", "Accepted", "Borrow", "Return"]):
+            current_balance -= amount
+        
+        cumulative_balance.append({
+            "time": timestamp.split(" ")[0],  # Extract only the date part
+            "value": round(current_balance, 2)
+        })
+
+    return cumulative_balance
+
+def prepare_chart_data(balance_trend):
+    seriesAreaChart = [{
+        "type": 'Area',
+        "data": balance_trend,
+        "options": {}
+    }]
+    return seriesAreaChart
 
 def register_user(conn, username, password):
     c = conn.cursor()
@@ -2050,53 +2086,71 @@ def main_account_view(conn, user_id):
 
     current_balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
-    st.header("Main Account (Vault)", divider = "rainbow")
-    st.subheader(f"Balance -> :green[${format_number(current_balance, 2)}]")
-    st.text("")
-    st.text("")
+    st.header("Main Account (Vault)", divider = "gray")
+    co1, co2 = st.columns(2)
+    with co1:
+        with st.container(border=True):
+            st.caption("Available Total Funds")
+            st.write(f"# <span style='font-family: Inter;'>${format_number_with_dots(round(current_balance, 2))}</span>", unsafe_allow_html=True)
+            st.text("")
+            st.text("")
+            st.text("")
+            col1, col2 = st.columns(2)
+            if col1.button("Transfer to Savings", type="primary", use_container_width = True):
+                transfer_to_savings_dialog(conn, user_id)
+            if col2.button("Transfer to People", use_container_width = True):
+                transfer_dialog(conn, user_id)
 
-    col1, col2 = st.columns(2)
-    if col1.button("**Transfer to Savings**", type="primary", use_container_width = True):
-        transfer_to_savings_dialog(conn, user_id)
-    if col2.button("**Transfer to People**", use_container_width = True):
-        transfer_dialog(conn, user_id)
+    with co2:
+        balance_trend = get_balance_trend(conn, user_id)
+        if balance_trend:
+            seriesAreaChart = prepare_chart_data(balance_trend)
 
-    st.divider()
-    
-    incoming, outgoing = (
-        c.execute("SELECT incoming_transfers, outgoing_transfers FROM users WHERE user_id = ?", (user_id,)).fetchone()
-    )
-    
-    total_transactions = incoming + outgoing
-    recent_metrics = recent_transactions_metrics(c, user_id)
-   
-    st.header("Last 24 Hours", divider = "rainbow")
-    
-    c1, c2 = st.columns(2)
-    c1.metric("Incoming Transfers (24h)", recent_metrics["Incoming Transfers"]["count"], f"${recent_metrics['Incoming Transfers']['total']:.2f}")
-    c2.metric("Outgoing Transfers (24h)", recent_metrics["Outgoing Transfers"]["count"], f"${recent_metrics['Outgoing Transfers']['total']:.2f}")
-    
-    st.text("")
-    st.text("")
-    st.header("Lifetime Metrics", divider = "rainbow")
+            chartOptions = {
+                "layout": {
+                    "textColor": 'rgba(180, 180, 180, 1)',
+                    "background": {
+                        "type": 'solid',
+                        "color": 'rgb(15, 17, 22)'
+                    }
+                },
+                "grid": {
+                    "vertLines": {"color": "rgba(30, 30, 30, 0.7)"},
+                    "horzLines": {"color": "rgba(30, 30, 30, 0.7)"}
+                },
+                "crosshair": {"mode": 0},
+                "watermark": {
+                    "visible": True,
+                    "fontSize": 70,
+                    "horzAlign": 'center',
+                    "vertAlign": 'center',
+                    "color": 'rgba(50, 50, 50, 0.2)',
+                    "text": 'Genova',
+                }
+            }
 
-    c1, c2 = st.columns(2)
-    c1.metric("Incoming Transfers", incoming)
-    c2.metric("Outgoing Transfers", outgoing)
-    st.write(f"Total Transactions   |   :green[{total_transactions}]")
+            st.subheader("Balance Trend Over Time")
+            renderLightweightCharts([
+                {
+                    "chart": chartOptions,
+                    "series": seriesAreaChart,
+                }
+            ], 'area')
+        else:
+            st.info("No transactions found to display balance trend.")
 
 def savings_view(conn, user_id):
     c = conn.cursor()
     if "last_refresh" not in st.session_state:
         st.session_state.last_refresh = 0
-    apply_interest_if_due(conn, user_id, check = False)
+    apply_interest_if_due(conn, user_id, check=False)
     
-    st.header("Savings Account", divider="rainbow")
+    st.header("Savings Account", divider="gray")
 
     has_savings_account = c.execute("SELECT has_savings_account FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
     if not has_savings_account:
-        if st.button("Set Up a Savings Account (%0.005 Interest Per Hour) - Boostable", type = "primary", use_container_width = True):
+        if st.button("Set Up a Savings Account (%0.005 Interest Per Hour) - Boostable", type="primary", use_container_width=True):
             with st.spinner("Setting up a savings account for you..."):
                 c.execute("UPDATE users SET has_savings_account = 1 WHERE user_id = ?", (user_id,))
                 c.execute("INSERT INTO savings (user_id, balance, interest_rate, last_interest_applied) VALUES (?, 0, 0.005, ?)", 
@@ -2106,45 +2160,97 @@ def savings_view(conn, user_id):
                 st.balloons()
             st.rerun()
     else:
-        savings_balance = c.execute("SELECT balance FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
-        st.subheader(f"Savings -> :green[${format_number(savings_balance, 2)}]")
-        st.text("")
-        st.text("")
+        col1, col2 = st.columns(2)
+        with col1:
+            savings_balance = c.execute("SELECT balance FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
+            with st.container(border=True):
+                st.caption("Total Savings")
+                st.write(f"# <span style='font-family: Inter;'>${format_number_with_dots(round(savings_balance, 2))}</span>", unsafe_allow_html=True)
+                st.text("")
+                st.text("")
 
-        c1, c2 = st.columns(2)
-        if c1.button("**Transfer to Vault**", type="primary", use_container_width=True):
-            transfer_to_vault_dialog(conn, st.session_state.user_id)
-        
-        if c2.button("Refresh Savings Balance", use_container_width=True):
-            apply_interest_if_due(conn, user_id)
+                c1, c2 = st.columns(2)
+                if c1.button("Transfer to Vault", type="primary", use_container_width=True):
+                    transfer_to_vault_dialog(conn, st.session_state.user_id)
+                
+                if c2.button("Refresh Savings Balance", use_container_width=True):
+                    apply_interest_if_due(conn, user_id)
 
-    st.text("")
-    if has_savings_account:
-        interest = c.execute("SELECT interest_rate from savings WHERE user_id = ?", (user_id,)).fetchone()[0]
-        with st.container(border=True):
-            
-            st.write(f":green[%{interest}] simple interest per **day.**")
-        st.caption(":gray[HINT: Some items can boost your interest rate!]")
-    st.text("")
+            if has_savings_account:
+                interest = c.execute("SELECT interest_rate from savings WHERE user_id = ?", (user_id,)).fetchone()[0]
+                with st.container(border=True):
+                    st.caption(":gray[Daily Simple Interest]")
+                    c1, c2, c3 = st.columns([2.5,1.7,2.5])
+                    c2.write(f"## <span style='font-family: Inter;'>%{format_number_with_dots(interest)}</span>", unsafe_allow_html=True)
+
+                st.caption(":gray[HINT: Some items can boost your interest rate!]")
+            st.text("")
     
-    st.header("📜 Interest History", divider="rainbow")
-    if has_savings_account:
-        interest_history = c.execute("""
-            SELECT timestamp, interest_amount, new_balance 
-            FROM interest_history 
-            WHERE user_id = ? 
-            ORDER BY timestamp DESC 
-            LIMIT 10
-        """, (user_id,)).fetchall()
+    st.markdown("""
+                <style>
+                .savings-row {
+                    padding: 10px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    border-radius: 8px;
+                    transition: background-color 0.2s ease-in-out;
+                }
+                .savings-row:hover {
+                    background-color: rgb(25, 27, 32);
+                }
+                .savings-container {
+                    border-radius: 105px;
+                    padding: 10px;
+                    height: 50px;
+                    overflow-y: auto;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+    with col2:
+        st.header("📜 Interest History")
+        if has_savings_account:
+            interest_history = c.execute("""
+                SELECT timestamp, interest_amount, new_balance 
+                FROM interest_history 
+                WHERE user_id = ? 
+                ORDER BY timestamp DESC 
+                LIMIT 10
+            """, (user_id,)).fetchall()
 
-        if interest_history:
-            df = pd.DataFrame(interest_history, columns=["Timestamp", "Interest Earned", "New Balance"])
-            df["Timestamp"] = pd.to_datetime(df["Timestamp"])
-            st.dataframe(df.set_index("Timestamp"), use_container_width = True)
+            if interest_history:
+                with st.container(border=True):
+                    st.markdown("""
+                    <div class='savings-container'>
+                        <div style='padding-bottom: 8px; display: flex; align-items: center; justify-content: space-between; font-weight: bold;'>
+                            <div style='flex: 1;'>Timestamp</div>
+                            <div style='flex: 1; text-align: center;'>Interest Amount</div>
+                            <div style='flex: 1; text-align: right;'>New Savings</div>
+                        </div>
+                        <div style='border-bottom: 1px solid #ccc; margin-bottom: 8px;'></div>
+                    """, unsafe_allow_html=True)
+
+                    for timestamp, interest_amount, new_balance in interest_history:
+                        formatted_date = datetime.datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S") + datetime.timedelta(hours=8)
+                        savings_row = f"""
+                        <div class='savings-row'>
+                            <div style='flex: 1; text-align: left; color: gray;'>{formatted_date}</div>
+                            <div style='flex: 1; text-align: center; color: lime;'>
+                                ${format_number_with_dots(round(interest_amount, 2))}
+                            </div>
+                            <div style='flex: 1; text-align: right; color: white;'>
+                                ${format_number_with_dots(round(new_balance, 2))}
+                            </div>
+                        </div>
+                        """
+                        st.markdown(savings_row, unsafe_allow_html=True)
+
+                    st.markdown("</div>", unsafe_allow_html=True)  # Close the savings-container
+            else:
+                st.info("No interest history available.")
         else:
-            st.info("No interest history available.")
-    else:
-        st.write("You do not own a savings account.")
+            st.write("You do not own a savings account.")
+    
 
 def dashboard(conn, user_id):
     c = conn.cursor()
@@ -2731,7 +2837,7 @@ def stocks_view(conn, user_id):
                         "textColor": 'rgba(180, 180, 180, 1)',
                         "background": {
                             "type": 'solid',
-                            "color": 'rgba(15, 17, 22, 1)'
+                            "color": 'rgb(15, 17, 22)'
                         }
                     },
                     "grid": {
