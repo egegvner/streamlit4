@@ -2180,7 +2180,7 @@ def savings_view(conn, user_id):
                 interest = c.execute("SELECT interest_rate from savings WHERE user_id = ?", (user_id,)).fetchone()[0]
                 with st.container(border=True):
                     st.caption(":gray[Daily Simple Interest]")
-                    c1, c2, c3 = st.columns([2.5,1.7,2.5])
+                    c1, c2, c3 = st.columns([2.5, 1.9, 2.5])
                     c2.write(f"## <span style='font-family: Inter;'>%{format_number_with_dots(interest)}</span>", unsafe_allow_html=True)
 
                 st.caption(":gray[HINT: Some items can boost your interest rate!]")
