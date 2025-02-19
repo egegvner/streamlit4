@@ -1133,7 +1133,7 @@ def transfer_to_vault_dialog(conn, user_id):
     st.write(f"Net Transfer -> :green[${format_number(net, 2)}] $|$ :red[${format_number(tax, 2)} Tax]")
     st.write(f"Remaining Savings -> :green[${format_number((current_savings - amount), 2)}]")
 
-    if st.button("Transfer to Vault", type = "primary", use_container_width = True, disabled = True if amount <= 0.00 else False):
+    if st.button("Transfer to Vault", type = "primary", key = "758103k", use_container_width = True, disabled = True if amount <= 0.00 else False):
         if check_cooldown(conn, user_id):
             c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (net, user_id))
             c.execute("UPDATE savings SET balance = balance - ? WHERE user_id = ?", (amount, user_id))
