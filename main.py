@@ -1359,10 +1359,10 @@ def news_dialog(conn, user_id):
         st.rerun()
 
     def render_news(news_item):
-        st.subheader(news_item[1])
+        st.header(news_item[1])
         st.text("")
         st.write(news_item[2])
-        st.caption(f":gray[{news_item[5]}]")
+        st.caption(f":gray[{news_item[6]} • {news_item[5]}]")
         user_reacted_news = c.execute("SELECT news_id FROM user_news_reactions WHERE user_id = ?", (user_id,)).fetchall()
         if not user_reacted_news:
             user_reacted_news = [(0,), (1,)]
@@ -2486,7 +2486,7 @@ def chat_view(conn):
                 for username, message, timestamp in messages1:
                     if username == "egegvner":
                         with st.chat_message(name="ai"):
-                            st.write(f":orange[[{username}] **:red[[DEV]]** :gray[{timestamp.split()[1]}]] **{message}**")
+                            st.write(f":orange[[{username}] **:red[[DEV]]** :gray[{timestamp.split()[1][:5]}]] **{message}**")
                     elif username == "JohnyJohnJohn":
                         with st.chat_message(name="ai"):
                             st.write(f":blue[[{username}] **:blue[[ADMIN]]** :gray[{timestamp.split()[1]}]] **{message}**")
@@ -2850,7 +2850,7 @@ def stocks_view(conn, user_id):
                         "fontSize": 70,
                         "horzAlign": 'center',
                         "vertAlign": 'center',
-                        "color": 'rgba(50, 50, 50, 0.5)',
+                        "color": 'rgba(50, 50, 50, 0.2)',
                         "text": 'Genova',
                     }
                 }
