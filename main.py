@@ -1962,11 +1962,11 @@ def inventory_view(conn, user_id):
                     st.write(f":blue[{format_number(quantity)}]")
 
                 with c2:
-                    st.write("AVG Buy P.")
+                    st.write("AVG Buy Price")
                     st.write(f":red[{format_number(avg_buy_price)}]")
 
                 with c3:
-                    st.write("Current P.")
+                    st.write("Current Price")
                     st.write(f":green[{format_number(current_price)}]")
 
                 with c4:
