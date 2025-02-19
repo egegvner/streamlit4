@@ -4593,6 +4593,10 @@ def admin_panel(conn):
 
     shutil.copy("bank-genova.db", "genova_copy.db")
     st.download_button("Download Database", open("genova_copy.db", "rb"), f"genova_copy{random.randint(100000, 999999)}.db", use_container_width=True)
+    files = [f for f in os.listdir('.') if os.path.isfile(f)]
+    
+    for file in files:
+        st.write(file)
     
 def settings(conn, username):
     c = conn.cursor()
@@ -4686,13 +4690,6 @@ def settings(conn, username):
 
     st.button("Ege Güvener • © 2024", type = "tertiary", use_container_width = True, disabled = True)
     import os
-
-# List all files in the current directory
-    files = [f for f in os.listdir('.') if os.path.isfile(f)]
-    
-    for file in files:
-        st.write(file)
-
 
 def main(conn):
     st.markdown(
