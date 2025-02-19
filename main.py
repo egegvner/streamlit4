@@ -5001,5 +5001,5 @@ if __name__ == "__main__":
     </style>
 """, unsafe_allow_html=True)
     init_db(conn)
-    conn.cursor().execute("ALTER TABLE user_properties ADD COLUMN last_collected DATE DEFAULT NULL;")
+    # conn.cursor().execute("ALTER TABLE user_properties ADD COLUMN last_collected DATE DEFAULT NULL;")
     main(conn)
