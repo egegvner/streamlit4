@@ -573,6 +573,30 @@ def load_real_estates_from_json(conn, json_file):
 
     conn.commit()
 
+def preload_stocks_from_json(conn, json_file):
+    c = conn.cursor()
+    
+    stock_count = c.execute("SELECT COUNT(*) FROM stocks").fetchone()[0]
+    
+    if stock_count == 0:
+        if not os.path.exists(json_file):
+            print(f"Error: JSON file '{json_file}' not found.")
+            return
+        
+        with open(json_file, "r", encoding="utf-8") as file:
+            stocks = json.load(file)
+
+        for stock in stocks:
+            c.execute("""
+                INSERT INTO stocks (stock_id, name, symbol, starting_price, price, stock_amount, 
+                                    last_updated, open_price, close_price, dividend_rate, change_rate)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (stock["stock_id"], stock["name"], stock["symbol"], stock["starting_price"], 
+                  stock["price"], stock["stock_amount"], stock["last_updated"], 
+                  stock["open_price"], stock["close_price"], stock["dividend_rate"], stock["change_rate"]))
+
+        conn.commit()
+
 def load_lands_from_json(conn, json_file):
     c = conn.cursor()
     with open(json_file, "r", encoding="utf-8") as file:
