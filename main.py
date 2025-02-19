@@ -2597,6 +2597,7 @@ def sell_stock(conn, user_id, stock_id, quantity):
 def stocks_view(conn, user_id):
     c = conn.cursor()
     
+    preload_stocks_from_json(conn, "./stocks.json")
     update_stock_prices(conn)
     st_autorefresh(interval=30000, key="stock_autorefresh")
 
