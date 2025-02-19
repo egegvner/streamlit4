@@ -627,9 +627,11 @@ def register_user(conn, username, password):
                     ))
             conn.commit()
 
-        st.session_state.logged_in = True
-        st.session_state.user_id = user_id_to_be_registered
-        st.session_state.username = username
+        with st.spinner("Getting ready..."):
+            st.session_state.logged_in = True
+            st.session_state.user_id = user_id_to_be_registered
+            st.session_state.username = username
+            time.sleep(4)
         st.balloons()
         time.sleep(2)
         st.session_state.current_menu = "Dashboard"
