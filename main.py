@@ -505,8 +505,7 @@ def check_and_update_investments(conn, user_id):
                 profit = -amount
                 outcome = "loss"
 
-            new_balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0] + profit
-            c.execute("UPDATE users SET balance = ? WHERE user_id = ?", (new_balance, user_id))
+            c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (profit, user_id))
 
             c.execute("""
                 UPDATE investments 
@@ -517,8 +516,10 @@ def check_and_update_investments(conn, user_id):
             conn.commit()
 
             if success:
+                c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, "Investment Return", profit))
                 st.toast(f"✅ Your investment in {company_name} has completed successfully! You earned :green[${format_number(profit)}].")
             else:
+                c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, "Investment Fail", profit))
                 st.toast(f"❌ Your investment in {company_name} failed. You lost :red[${format_number(amount)}].")
 
     conn.commit()
@@ -1799,16 +1800,22 @@ def marketplace_view(conn, user_id):
 def inventory_view(conn, user_id):
     c = conn.cursor()
 
+    user_stocks = c.execute("""
+            SELECT us.stock_id, s.name, s.symbol, us.quantity, us.avg_buy_price, s.price 
+            FROM user_stocks us
+            JOIN stocks s ON us.stock_id = s.stock_id
+            WHERE us.user_id = ? AND us.quantity > 0
+        """, (user_id,)).fetchall()
+
+    owned_properties = c.execute("""
+            SELECT up.property_id, re.region, re.type, re.image_url, up.rent_income, up.last_collected, up.purchase_date, up.level
+            FROM user_properties up
+            JOIN real_estate re ON up.property_id = re.property_id
+            WHERE up.user_id = ?
+        """, (user_id,)).fetchall()
+
     t1, t2, t3 = st.tabs(["💠 GNFTs", "🏠 Properties", "📈 Stocks"])
-    st.markdown('''<style>
-                        button[data-baseweb="tab"] {
-                        font-size: 24px;
-                        margin: 0;
-                        width: 100%;
-                        }
-                        </style>
-                ''', unsafe_allow_html=True)
-    
+
     with t1:
         owned_item_ids = [owned_item[0] for owned_item in c.execute("SELECT item_id FROM user_inventory WHERE user_id = ?", (user_id,)).fetchall()]
         if not owned_item_ids:
@@ -1853,16 +1860,8 @@ def inventory_view(conn, user_id):
         st.text("")
         st.header("🏡 My Properties", divider="rainbow")
 
-        owned_properties = c.execute("""
-            SELECT up.property_id, re.region, re.type, re.image_url, up.rent_income, up.last_collected, up.purchase_date, up.level
-            FROM user_properties up
-            JOIN real_estate re ON up.property_id = re.property_id
-            WHERE up.user_id = ?
-        """, (user_id,)).fetchall()
-
         if not owned_properties:
             st.info("You don't own any properties yet.")
-            return
 
         for property in owned_properties:
             prop_id, region, prop_type, image_url, rent_income, last_collected, purchase_date, level = property
@@ -1941,16 +1940,8 @@ def inventory_view(conn, user_id):
 
         st.header("📊 My Portfolio", divider="rainbow")
 
-        user_stocks = c.execute("""
-            SELECT us.stock_id, s.name, s.symbol, us.quantity, us.avg_buy_price, s.price 
-            FROM user_stocks us
-            JOIN stocks s ON us.stock_id = s.stock_id
-            WHERE us.user_id = ? AND us.quantity > 0
-        """, (user_id,)).fetchall()
-
         if not user_stocks:
-            st.info("You don't own any stocks yet. Start investing now! 🚀")
-            return
+            st.info("You do not hold any stocks. Start trading now!")
         
         st.text("")
         st.text("")
@@ -2306,13 +2297,12 @@ def dashboard(conn, user_id):
                     def create_transaction_row(transaction_type, timestamp, amount):
                         formatted_date = format_timestamp(timestamp)
                         
-                        # Check for keywords in the transaction type
-                        if any(keyword in transaction_type for keyword in ["Buy", "Upgrade", "Repay", "Transfer to", "Gift", "Declined", "Purchase"]):
+                        if any(keyword in transaction_type for keyword in ["Buy", "Upgrade", "Repay", "Transfer to", "Gift", "Declined", "Purchase", "Fail"]):
                             amount_color = "red"
-                        elif any(keyword in transaction_type for keyword in ["Sell", "Dividend", "Collect", "Accepted", "Borrow"]):
+                        elif any(keyword in transaction_type for keyword in ["Sell", "Dividend", "Collect", "Accepted", "Borrow", "Return"]):
                             amount_color = "lime"
                         else:
-                            amount_color = "white"  # Default color if no keywords match
+                            amount_color = "white"
 
                         return f"""
                         <div class='transaction-row'>
@@ -2401,7 +2391,7 @@ def chat_view(conn):
         new_message = st.chat_input(placeholder="Message @English", key="chat_input")
 
         if new_message:
-            send_disabled = (datetime.datetime.now() - st.session_state.cd).total_seconds() < 2  # Cooldown check
+            send_disabled = (datetime.datetime.now() - st.session_state.cd).total_seconds() < 2
             if not send_disabled:
                 if new_message.strip():
                     c.execute(
@@ -2437,7 +2427,7 @@ def chat_view(conn):
         new_message = st.chat_input(placeholder="Message @English", key="chat2_input")
 
         if new_message:
-            send_disabled = (datetime.datetime.now() - st.session_state.cd).total_seconds() < 2  # Cooldown check
+            send_disabled = (datetime.datetime.now() - st.session_state.cd).total_seconds() < 2
             if not send_disabled:
                 if new_message.strip():
                     c.execute(
@@ -2658,7 +2648,7 @@ def stocks_view(conn, user_id):
         stock_id, name, symbol, price, stock_amount, dividend = selected_stock
 
         now = datetime.datetime.now()
-        start_time = now - datetime.timedelta(hours=st.session_state.hours)  # Change time period as needed
+        start_time = now - datetime.timedelta(hours=st.session_state.hours)
         start_time_str = start_time.strftime("%Y-%m-%d %H:%M:%S")
 
         history = c.execute("""
@@ -2821,8 +2811,8 @@ def stocks_view(conn, user_id):
                 st.rerun()
             
             now = datetime.datetime.now()
-            days_ahead = (6 - now.weekday()) % 7  # Days until next Sunday (0 = Monday, 6 = Sunday)
-            if days_ahead == 0:  # If today is Sunday, return time left until next Sunday
+            days_ahead = (6 - now.weekday()) % 7
+            if days_ahead == 0:
                 days_ahead = 7
             
             next_sunday = now + datetime.timedelta(days=days_ahead)
@@ -2938,7 +2928,7 @@ def stocks_view(conn, user_id):
         st.text("")
 
         leaderboard_data = []
-        selected_stock_id = st.session_state.selected_game_stock  # Get the currently selected stock's ID
+        selected_stock_id = st.session_state.selected_game_stock
         
         stockholders = c.execute("""
             SELECT u.username, SUM(us.quantity) AS total_quantity
@@ -3324,7 +3314,7 @@ def investments_view(conn, user_id):
         st.info("Click on a company to view investment options.")
         return
 
-    selected_company = st.session_state.s_c  # Safely use the selected company
+    selected_company = st.session_state.s_c
 
     st.divider()
     st.subheader(f"💼 {selected_company['name']}", divider="rainbow")
@@ -3345,7 +3335,7 @@ def investments_view(conn, user_id):
         min_value=0.0,
         max_value=st.session_state.balance,
         step=1.0,
-        value=float(st.session_state.invest_value),  # Set default value to the smaller of balance or 1.0
+        value=float(st.session_state.invest_value),
         key=f"investment_{selected_company['id']}",
     )
 
@@ -3362,7 +3352,7 @@ def investments_view(conn, user_id):
             with st.spinner("Processing Investment"):
                 return_rate = calculate_investment_return(st.session_state.s_c['risk_level'], investment_amount)
             
-                duration_hours = random.randint(1, 24)  # Convert 7 days to hours
+                duration_hours = random.randint(1, 24)
                 start_date = datetime.datetime.now()
                 end_date = start_date + datetime.timedelta(hours=duration_hours)
 
