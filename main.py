@@ -2933,7 +2933,7 @@ def stocks_view(conn, user_id):
 
         with c2:
             st.subheader(f"{name} ({symbol})")
-            st.header(f":green[${format_number(price)}] \n {change_color}]")
+            st.header(f":green[${format_number_with_dots(price)}] \n {change_color}]")
             user_stock = c.execute("SELECT quantity, avg_buy_price FROM user_stocks WHERE user_id = ? AND stock_id = ?", 
                                     (user_id, stock_id)).fetchall()
 
