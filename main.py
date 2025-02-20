@@ -31,7 +31,7 @@ if "current_menu" not in st.session_state:
     st.session_state.current_menu = "Login"
 
 previous_layout = st.session_state.get("previous_layout", "centered")
-current_layout = "wide" if st.session_state.current_menu == "Blackmarket" or st.session_state.current_menu == "Main Account" or st.session_state.current_menu == "Investments" or st.session_state.current_menu == "Dashboard" or st.session_state.current_menu == "Membership" or st.session_state.current_menu == "Stocks" or st.session_state.current_menu == "Transaction History" or st.session_state.current_menu == "Inventory" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "Real Estate" or st.session_state.current_menu == "Chat" or st.session_state.current_menu == "View Savings" else "centered"
+current_layout = "wide" if st.session_state.current_menu == "Blackmarket" or st.session_state.current_menu == "Main Account" or st.session_state.current_menu == "Jobs Marketplace" or st.session_state.current_menu == "Jobs" or st.session_state.current_menu == "Investments" or st.session_state.current_menu == "Dashboard" or st.session_state.current_menu == "Membership" or st.session_state.current_menu == "Stocks" or st.session_state.current_menu == "Transaction History" or st.session_state.current_menu == "Inventory" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "Real Estate" or st.session_state.current_menu == "Chat" or st.session_state.current_menu == "View Savings" else "centered"
 
 if previous_layout != current_layout:
     st.session_state.previous_layout = current_layout
@@ -974,7 +974,31 @@ def init_db(conn):
             type INTEGER,
             include_username TEXT
             );''')
+    
+    c.execute('''CREATE TABLE IF NOT EXISTS companies (
+            company_id INTEGER,
+            owner_id INTEGER,
+            name TEXT,
+            description TEXT,
+            founded TEXT
+            );''')
+    
+    c.execute('''CREATE TABLE IF NOT EXISTS job_posters (
+            job_poster_id INTEGER,
+            job_title TEXT,
+            company_id INTEGER,
+            starting_wage REAL,
+            description TEXT
+            );''')
 
+    c.execute('''CREATE TABLE IF NOT EXISTS employees (
+            employee_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            company_id INTEGER,
+            FOREIGN KEY (company_id) REFERENCES companies(company_id),
+            FOREIGN KEY (user_id) REFERENCES users(user_id)
+            );''')
+    
     conn.commit()
     return conn, c
 
@@ -4145,6 +4169,181 @@ def buy_membership_dialog(conn, user_id, type, base_price):
     if st.button("Confirm Request (Coming soon)", type="primary", use_container_width=True):
         pass
 
+@st.dialog("Apply to Job")
+def apply_to_job_dialog(conn, user_id, job_poster_id, comp_id):
+    c = conn.cursor()
+    comp_name = c.execute("SELECT name FROM companies WHERE company_id = ?", (comp_id,)).fetchone()[0]
+    job_title = c.execute("SELECT job_title FROM job_posters WHERE job_poster_id = ?", (job_poster_id,)).fetchone()[0]
+    st.write(f"{job_title} at {comp_name}")
+    if st.button("Apply For This Job", use_container_width=True):
+        with st.spinner("Sending job request..."):
+            c.execute("INSERT INTO employees (employee_id, user_id, company_id) VALUES (?, ?, ?)", (random.randint(100000, 999999), user_id, comp_id))
+            conn.commit()
+            time.sleep(3)
+        st.success("You finally have a job now!")
+        time.sleep(3)
+        st.rerun()
+
+@st.dialog("New Business")
+def new_business_dialog(conn, user_id):
+    c = conn.cursor()
+    name = st.text_input("", label_visibility="collapsed", placeholder="Company name")
+    description = st.text_area("", label_visibility="collapsed", placeholder="Tell us about your company. What will you do, and how will you do?")
+    if st.button("Create"):
+        with st.spinner("Setting up your company"):
+            comp_id  = random.randint(100000, 999999)
+            c.execute("INSERT INTO companies (company_id, owner_id, name, description, founded) VALUES (?, ?, ?, ?, ?)", (comp_id, user_id, name, description, datetime.datetime.date(datetime.datetime.now())))
+            c.execute("INSERT INTO employees (employee_id, user_id, company_id) VALUES (?, ?, ?)", (random.randint(100000, 999999), user_id, comp_id))
+            conn.commit()
+            time.sleep(6)
+        st.success("Success!")
+        time.sleep(3)
+
+        st.session_state.current_menu = "Jobs"
+        st.rerun()
+
+@st.dialog("New Job Offer")
+def new_job_offer_dialog(conn, user_id, comp_id):
+    c = conn.cursor()
+    job_title = st.text_input("", label_visibility="collapsed", placeholder="Job title")
+    description = st.text_input("", label_visibility="collapsed", placeholder="Job description")
+    starting_wage = st.number_input("", label_visibility="collapsed", placeholder="Starting wage")
+    if st.button("Post Ad"):
+        with st.spinner("Posting your job offer"):
+            c.execute("INSERT INTO job_posters (job_poster_id, job_title, company_id, starting_wage, description) VALUES (?, ?, ?, ?, ?)", (random.randint(1000000000, 9999999999), job_title, comp_id, starting_wage, description))
+            conn.commit()
+            time.sleep(3)
+        st.success("Success!")
+        time.sleep(3)
+        st.rerun()
+
+def available_jobs_view(conn, user_id):
+    c = conn.cursor()
+    
+    c1, c2 = st.columns([3, 1])
+    c1.header("Jobs Marketplace", divider="gray")
+    if c2.button("Set Up Your Business", use_container_width=True):
+        new_business_dialog(conn, user_id)
+
+    st.text("")
+    st.text("")
+    st.text("")
+    st.caption(":gray[Here are some job opportunities you may like:]")
+
+    st.markdown("""
+    <style>
+        .left {
+            display: inline-block;
+            width: 50%;
+            text-align: left;
+        }
+        .right1 {
+            display: inline-block;
+            width: 50%;
+            text-align: right;
+            color: gold;
+        }
+        .right2 {
+            display: inline-block;
+            width: 50%;
+            text-align: right;
+            color: silver;
+        }
+        .right3 {
+            display: inline-block;
+            width: 50%;
+            text-align: right;
+            color: lime;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    job_posts = c.execute("""
+        SELECT job_poster_id, job_title, company_id, starting_wage, description 
+        FROM job_posters
+    """).fetchall()
+
+    num_jobs = len(job_posts)
+    num_rows = (num_jobs + 2) // 3
+
+    job_index = 0
+    for _ in range(num_rows):
+        cols = st.columns(3)
+        for col in range(3):
+            if job_index >= num_jobs:
+                break
+
+            job_poster_id, job_title, company_id, starting_wage, description = job_posts[job_index]
+
+            company_name, owner_id = c.execute("SELECT name, owner_id FROM companies WHERE company_id = ?", (company_id,)).fetchone()
+            owner_username = c.execute("SELECT username FROM users WHERE user_id = ?", (owner_id,)).fetchone()[0]
+
+            with cols[col]:
+                with st.container(border=True):
+                    st.subheader(job_title)
+                    st.divider()
+
+                    st.markdown(f'<div class="left">Company:</div><div class="right1">{company_name}</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="left">Owner:</div><div class="right2">{owner_username}</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="left">Starting Wage:</div><div class="right3">${starting_wage} / day</div>', unsafe_allow_html=True)
+                    
+                    st.text("")
+                    st.write(description)
+                    st.text("")
+
+                    if st.button("Details", key=f"job_{job_poster_id}", use_container_width=True):
+                        apply_to_job_dialog(conn, user_id, job_poster_id, company_id)
+
+            job_index += 1
+
+
+def jobs_view(conn, user_id):
+    c = conn.cursor()
+    has_job = c.execute("SELECT employee_id FROM employees WHERE user_id = ?", (user_id,)).fetchone()
+    if not has_job:
+        st.header("My Job", divider="gray")
+        c1, c2, c3 = st.columns([2.4, 2, 1])
+        c2.text("")
+        c2.text("")
+        c2.text("")
+        c2.text("")
+        c2.caption("You're unemployed")
+        c2.text("")
+        c2.text("")
+        c2.text("")
+        c2.text("")
+        if st.button("Go Find Some Jobs", use_container_width=True):
+            st.session_state.current_menu = "Jobs Marketplace"
+            st.rerun()
+
+    else:
+        col1, col2, col3 = st.columns(3)
+        employee_id, company_id = c.execute("SELECT employee_id, company_id FROM employees WHERE user_id = ?", (user_id,)).fetchone()
+        owner_id, name, description, founded = c.execute("SELECT owner_id, name, description, founded FROM companies WHERE company_id = ?", (company_id,)).fetchone()
+        employees = c.execute("SELECT user_id FROM employees WHERE company_id = ?", (company_id,)).fetchall()
+        employee_usernames = [c.execute("SELECT username FROM users WHERE user_id = ?", (emp[0],)).fetchone()[0] for emp in employees]
+        col1, col2, col3 = st.columns([3,1,1])
+        col1.header(name, divider="gray")
+        if col2.button("Post Job Offer", use_container_width=True):
+            new_job_offer_dialog(conn, user_id, company_id)
+        if col3.button("Job Marketplace", use_container_width=True):
+            st.session_state.current_menu = "Jobs Marketplace"
+            st.rerun()
+
+        st.caption(f":gray[Founded {founded}]")
+        st.write(f"Owner: :orange[{c.execute("SELECT username FROM users WHERE user_id = ?", (owner_id,)).fetchone()[0]}]")
+        st.write(description)
+        st.text("")
+        st.text("")
+        st.text("")
+        st.subheader("Labour", divider="gray")
+        if employee_usernames:
+            for username in employee_usernames:
+                st.write(username)
+
+        else:
+            st.info("No any employees at the moment.")
+        
 def admin_panel(conn):
     c = conn.cursor()
 
@@ -4799,6 +4998,46 @@ def main(conn):
     """, 
     unsafe_allow_html=True
 )
+    
+    st.markdown(
+    """
+    <style>
+    /* Target buttons inside the sidebar only */
+    [aria-label="Sidebar"] div.stButton > button {
+        border: none; /* Remove border */
+        font-size: 14px !important; /* Reduce font size */
+        padding: 8px 15px !important; /* Adjust padding */
+        margin: 3px 0 !important; /* Reduce spacing */
+        width: 100%; /* Full width for alignment */
+        border-radius: 8px; /* Optional: Rounded corners */
+        background-color: #222; /* Dark button background */
+        color: white; /* White text */
+        transition: background-color 0.3s ease-in-out;
+    }
+
+    /* Hover Effect */
+    [aria-label="Sidebar"] div.stButton > button:hover {
+        background-color: #444 !important; /* Lighter gray on hover */
+        color: white !important;
+    }
+
+    /* Fix Sidebar Button Alignment */
+    [aria-label="Sidebar"] div[data-testid="column"] {
+        padding: 0px !important;
+    }
+
+    /* Adjust Sidebar Tabs */
+    [aria-label="Sidebar"] button[data-baseweb="tab"] {
+        font-size: 16px !important; /* Reduce tab text size */
+        margin: 0 !important;
+        padding: 5px !important;
+        width: 100% !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
     if 'current_menu' not in st.session_state:
         st.session_state.current_menu = "Deposit"
 
@@ -4926,13 +5165,15 @@ def main(conn):
             if st.button("ElevateJobs™", icon=":material/payments:", use_container_width=True):
                 st.session_state.current_menu = "Jobs"
                 st.rerun()
+
+            st.divider()
             
-            if st.button("#Global Chat", type="secondary", use_container_width=True):
+            if st.button("Global Chat", icon=":material/forum:", type="secondary", use_container_width=True):
                 st.session_state.current_menu = "Chat"
                 st.rerun()
             
             c1, c2 = st.columns(2)
-            if c1.button("Shop", type="secondary", use_container_width=True):
+            if c1.button("Store", type="secondary", use_container_width=True):
                 st.session_state.current_menu = "Marketplace"
                 st.rerun()
 
@@ -5022,6 +5263,12 @@ def main(conn):
         elif st.session_state.current_menu == "View Savings":
             savings_view(conn, st.session_state.user_id)
 
+        elif st.session_state.current_menu == "Jobs":
+            jobs_view(conn, st.session_state.user_id)
+
+        elif st.session_state.current_menu == "Jobs Marketplace":
+            available_jobs_view(conn, st.session_state.user_id)
+
         elif st.session_state.current_menu == "Chat":
             chat_view(conn)
         
@@ -5097,6 +5344,7 @@ if __name__ == "__main__":
         
     </style>
 """, unsafe_allow_html=True)
+    
     init_db(conn)
-    # conn.cursor().execute("ALTER TABLE user_properties ADD COLUMN last_collected DATE DEFAULT NULL;")
+    # conn.cursor().execute("ALTER TABLE job_posters ADD COLUMN job_title TEXT;")
     main(conn)
