@@ -2205,7 +2205,7 @@ def savings_view(conn, user_id):
                 with st.container(border=True):
                     st.caption(":gray[Daily Simple Interest]")
                     c1, c2, c3 = st.columns([2.5, 2.5, 2.5])
-                    c2.write(f"## <span style='font-family: Inter;'>%{format_number_with_dots(interest)}</span>", unsafe_allow_html=True)
+                    c2.write(f"## <span style='font-family: Inter;'>%{format_number_with_dots(round(interest, 5))}</span>", unsafe_allow_html=True)
 
                 st.caption(":gray[HINT: Some items can boost your interest rate!]")
             st.text("")
