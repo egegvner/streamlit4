@@ -4357,8 +4357,8 @@ def jobs_view(conn, user_id):
             if owner_id == st.session_state.user_id:
                 if st.button("Post New Job Offer", use_container_width=True):
                     new_job_offer_dialog(conn, user_id, company_id)
-            if st.button("Job Requests", use_container_width=True):
-                job_requests_dialog(conn, company_id)
+                if st.button("Job Requests", use_container_width=True):
+                    job_requests_dialog(conn, company_id)
             if st.button("Resign", use_container_width=True):
                 pass
             if st.button("Jobs Marketplace", use_container_width=True):
