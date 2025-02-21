@@ -3636,143 +3636,141 @@ def real_estate_marketplace_view(conn, user_id):
     t1, t2 = st.tabs(["🏠 PROPERTIES 🏠", "🚩 LANDS 🚩"])
     
     with t1:
-        co1, co2 = st.columns(2)
-        with co1:
-            if "selected_property" not in st.session_state:
-                st.session_state.selected_property = None
+        if "selected_property" not in st.session_state:
+            st.session_state.selected_property = None
 
-            df = pd.DataFrame(properties, columns=[
-                "Property ID", "Region", "Type", "Price", "Rent Income", "Demand Factor", "LAT", "LON", "Image URL", "Sold", "Username"
-            ])
+        df = pd.DataFrame(properties, columns=[
+            "Property ID", "Region", "Type", "Price", "Rent Income", "Demand Factor", "LAT", "LON", "Image URL", "Sold", "Username"
+        ])
 
-            df["LAT"] = pd.to_numeric(df["LAT"], errors="coerce")
-            df["LON"] = pd.to_numeric(df["LON"], errors="coerce")
+        df["LAT"] = pd.to_numeric(df["LAT"], errors="coerce")
+        df["LON"] = pd.to_numeric(df["LON"], errors="coerce")
 
-            df["Formatted Price"] = df["Price"].apply(lambda x: format_number(x))
-            df["Formatted Rent"] = df["Rent Income"].apply(lambda x: format_number(x))
+        df["Formatted Price"] = df["Price"].apply(lambda x: format_number(x))
+        df["Formatted Rent"] = df["Rent Income"].apply(lambda x: format_number(x))
 
-            df["Color"] = df.apply(lambda row: 
-                [0, 255, 0] if row["Username"] == username else 
-                ([255, 0, 0] if row["Sold"] else [255, 255, 255]), axis=1
-            )
+        df["Color"] = df.apply(lambda row: 
+            [0, 255, 0] if row["Username"] == username else 
+            ([255, 0, 0] if row["Sold"] else [255, 255, 255]), axis=1
+        )
 
-            df["Color"] = df["Color"].astype(object)
+        df["Color"] = df["Color"].astype(object)
 
-            st.pydeck_chart(pdk.Deck(
-                height=600,
-                layers=[
-                    pdk.Layer(
-                        "PointCloudLayer",
-                        data=df,
-                        get_position=["LON", "LAT"],  
-                        get_color="Color",
-                        pickable=True,
-                        pointSize=4,
-                    ),
-                ],
-                initial_view_state=pdk.ViewState(
-                    latitude=float(df["LAT"].mean()),  
-                    longitude=float(df["LON"].mean()),
-                    zoom=2,
-                    pitch=50,
+        st.pydeck_chart(pdk.Deck(
+            height=400,
+            layers=[
+                pdk.Layer(
+                    "PointCloudLayer",
+                    data=df,
+                    get_position=["LON", "LAT"],  
+                    get_color="Color",
+                    pickable=True,
+                    pointSize=4,
                 ),
-                tooltip={
-                    "html": """
-                        <span style="color: white;"><b>{Type}</b></span><br/><hr>
-                        <span style="color: white;">Region</span> <span style="color: gold;">{Region}</span><br/>
-                        <span style="color: white;">Price</span> <span style="color: red;">${Formatted Price}</span><br/>
-                        <span style="color: white;">Rent</span> <span style="color: lime;">${Formatted Rent} / day</span><br/>
-                        <span style="color: white;">Owner</span> <span style="color: gold;">{Username}</span>
-                    """,
-                    "style": {
-                        "backgroundColor": "black",
-                        "color": "gray"
-                    }
+            ],
+            initial_view_state=pdk.ViewState(
+                latitude=float(df["LAT"].mean()),  
+                longitude=float(df["LON"].mean()),
+                zoom=2,
+                pitch=50,
+            ),
+            tooltip={
+                "html": """
+                    <span style="color: white;"><b>{Type}</b></span><br/><hr>
+                    <span style="color: white;">Region</span> <span style="color: gold;">{Region}</span><br/>
+                    <span style="color: white;">Price</span> <span style="color: red;">${Formatted Price}</span><br/>
+                    <span style="color: white;">Rent</span> <span style="color: lime;">${Formatted Rent} / day</span><br/>
+                    <span style="color: white;">Owner</span> <span style="color: gold;">{Username}</span>
+                """,
+                "style": {
+                    "backgroundColor": "black",
+                    "color": "gray"
                 }
-            ))
-        
-        with co2:
-            property_categories = {
-                "AIRPORTS": [],
-                "PORTS": [],
-                "LANDMARKS": [],
-                "BSB": [],
             }
-            for _, row in df.iterrows():
-                title = row["Type"].lower()
-                if "airport" in title:
-                    property_categories["AIRPORTS"].append(row)
-                elif "port" in title:
-                    property_categories["PORTS"].append(row)
-                elif any(x in title for x in ["ms.", "mr.", "mrs."]):
-                    property_categories["BSB"].append(row)
-                else:
-                    property_categories["LANDMARKS"].append(row)
+        ))
 
-            tabs = st.tabs(["✈️ AIRPORTS ✈️", "⚓️ PORTS ⚓️", "🪅 LANDMARKS 🪅", "📚 BSB 📚"])
-            tab_names = ["AIRPORTS", "PORTS", "LANDMARKS", "BSB"]
-            
-            property_categories = {category: [] for category in tab_names}
-            
-            for _, row in df.iterrows():
-                title = row["Type"].lower()
-                if "airport" in title:
-                    property_categories["AIRPORTS"].append(row)
-                elif "port" in title:
-                    property_categories["PORTS"].append(row)
-                elif any(x in title for x in ["ms.", "mr.", "mrs."]):
-                    property_categories["BSB"].append(row)
-                else:
-                    property_categories["LANDMARKS"].append(row)
-            
-            for tab, category in zip(tabs, tab_names):
-                with tab:
-                    cw1, cw2 = st.columns([10, 1])
-                    search_query = cw1.text_input(f"", label_visibility="collapsed", key=f"search_{category}", placeholder=f"Search {category.lower()}")
-            
-                    search_button = cw2.button("", icon = ":material/search:", key=f"search_btn_{category}", use_container_width=True, type="primary")
-            
-                    properties_in_category = property_categories[category]
-                    if search_button and search_query.strip():
-                        properties_in_category = [
-                            row for row in properties_in_category if search_query.lower() in row["Type"].lower()
-                        ]
-            
-                    if not properties_in_category:
-                        st.info(f"No matching {category.lower()} found.")
-                    else:
-                        for row in properties_in_category:
-                            image_col, details_col = st.columns([1, 3])
-                            with image_col:
-                                if row["Image URL"]:
-                                    st.image(row["Image URL"], use_container_width=True)
-            
-                            with details_col:
-                                if row["Username"] == username:
-                                    st.subheader(f"{row['Type']} :green[ - Owned]", divider="rainbow")
-                                elif row["Sold"]:
-                                    st.subheader(f"{row['Type']} :red[ - Sold]", divider="rainbow")
-                                else:
-                                    st.subheader(f"{row['Type']}", divider="rainbow")
-            
-                                st.text("")
-                                c1, c2 = st.columns(2)
-                                c1.write(f":blue[COST] :red[${format_number(row['Price'])}]")
-                                c2.write(f":blue[RENT] :green[${format_number(row['Rent Income'])} / day]")
-                                c1.write(f":blue[Region] :grey[{row['Region']}]")
-                                c2.write(f":blue[Demand Factor] :green[{format_number(row['Demand Factor'])}]")
-            
-                                st.text("")
-                                if row["Username"] == username:
-                                    st.success("You own this property.")
-                                elif row["Sold"] == 0:
-                                    if st.button(f"Property Options", key=f"buy_{row['Property ID']}", use_container_width=True):
-                                        prop_details_dialog(conn, user_id, row["Property ID"])
-                                else:
-                                    st.warning("This property has already been sold.")
+        property_categories = {
+            "AIRPORTS": [],
+            "PORTS": [],
+            "LANDMARKS": [],
+            "BSB": [],
+        }
 
-                                st.caption(":gray[UPGRADABLE]")
-                            st.divider()
+        for _, row in df.iterrows():
+            title = row["Type"].lower()
+            if "airport" in title:
+                property_categories["AIRPORTS"].append(row)
+            elif "port" in title:
+                property_categories["PORTS"].append(row)
+            elif any(x in title for x in ["ms.", "mr.", "mrs."]):
+                property_categories["BSB"].append(row)
+            else:
+                property_categories["LANDMARKS"].append(row)
+
+        tabs = st.tabs(["✈️ AIRPORTS ✈️", "⚓️ PORTS ⚓️", "🪅 LANDMARKS 🪅", "📚 BSB 📚"])
+        tab_names = ["AIRPORTS", "PORTS", "LANDMARKS", "BSB"]
+        
+        property_categories = {category: [] for category in tab_names}
+        
+        for _, row in df.iterrows():
+            title = row["Type"].lower()
+            if "airport" in title:
+                property_categories["AIRPORTS"].append(row)
+            elif "port" in title:
+                property_categories["PORTS"].append(row)
+            elif any(x in title for x in ["ms.", "mr.", "mrs."]):
+                property_categories["BSB"].append(row)
+            else:
+                property_categories["LANDMARKS"].append(row)
+        
+        for tab, category in zip(tabs, tab_names):
+            with tab:
+                cw1, cw2 = st.columns([10, 1])
+                search_query = cw1.text_input(f"", label_visibility="collapsed", key=f"search_{category}", placeholder=f"Search {category.lower()}")
+        
+                search_button = cw2.button("", icon = ":material/search:", key=f"search_btn_{category}", use_container_width=True, type="primary")
+        
+                properties_in_category = property_categories[category]
+                if search_button and search_query.strip():
+                    properties_in_category = [
+                        row for row in properties_in_category if search_query.lower() in row["Type"].lower()
+                    ]
+        
+                if not properties_in_category:
+                    st.info(f"No matching {category.lower()} found.")
+                else:
+                    for row in properties_in_category:
+                        image_col, details_col = st.columns([1, 3])
+                        with image_col:
+                            if row["Image URL"]:
+                                st.image(row["Image URL"], use_container_width=True)
+        
+                        with details_col:
+                            if row["Username"] == username:
+                                st.subheader(f"{row['Type']} :green[ - Owned]", divider="rainbow")
+                            elif row["Sold"]:
+                                st.subheader(f"{row['Type']} :red[ - Sold]", divider="rainbow")
+                            else:
+                                st.subheader(f"{row['Type']}", divider="rainbow")
+        
+                            st.text("")
+                            c1, c2 = st.columns(2)
+                            c1.write(f":blue[COST] :red[${format_number(row['Price'])}]")
+                            c2.write(f":blue[RENT] :green[${format_number(row['Rent Income'])} / day]")
+                            c1.write(f":blue[Region] :grey[{row['Region']}]")
+                            c2.write(f":blue[Demand Factor] :green[{format_number(row['Demand Factor'])}]")
+        
+                            st.text("")
+                            if row["Username"] == username:
+                                st.success("You own this property.")
+                            elif row["Sold"] == 0:
+                                if st.button(f"Property Options", key=f"buy_{row['Property ID']}", use_container_width=True):
+                                    prop_details_dialog(conn, user_id, row["Property ID"])
+                            else:
+                                st.warning("This property has already been sold.")
+
+                            st.caption(":gray[UPGRADABLE]")
+                        st.divider()
 
     with t2:
         def get_color_from_shares(share_percentage):
