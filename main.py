@@ -3628,7 +3628,6 @@ def real_estate_marketplace_view(conn, user_id):
         """).fetchall()
     
     username = c.execute("SELECT username FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
-    
     user_shares = c.execute("""
             SELECT country_id, shares_owned FROM user_country_shares WHERE user_id = ?
         """, (user_id,)).fetchall()
