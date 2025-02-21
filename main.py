@@ -3448,7 +3448,7 @@ def bank_view(conn, user_id):
         with co2:
             st.session_state.amt = max_borrow
             st.divider()
-            st.info(f"[Max Borrow] :green[${format_number_with_dots(st.session_state.amt)}]")
+            st.info(f"[Max Borrow] :green[${format_number_with_dots(round(st.session_state.amt, 2))}]")
             st.subheader("Borrow Loan")
             borrow_amount = st.number_input("A", label_visibility="collapsed", min_value=0.0, max_value=float(st.session_state.amt), step=100.0)
             duration = st.slider("Duration (Days)", min_value=7, max_value=60)
