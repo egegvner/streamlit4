@@ -999,6 +999,12 @@ def init_db(conn):
             FOREIGN KEY (user_id) REFERENCES users(user_id)
             );''')
     
+    c.execute('''CREATE TABLE IF NOT EXISTS job_requests (
+            request_id INTEGER,
+            user_id INTEGER,
+            company_id INTEGER
+            );''')
+    
     conn.commit()
     return conn, c
 
@@ -2205,7 +2211,7 @@ def savings_view(conn, user_id):
                 with st.container(border=True):
                     st.caption(":gray[Daily Simple Interest]")
                     c1, c2, c3 = st.columns([2.5, 2.5, 2.5])
-                    c2.write(f"## <span style='font-family: Inter;'>%{format_number_with_dots(round(interest, 5))}</span>", unsafe_allow_html=True)
+                    c2.write(f"## <span style='font-family: Inter;'>%{format_number_with_dots(interest)}</span>", unsafe_allow_html=True)
 
                 st.caption(":gray[HINT: Some items can boost your interest rate!]")
             st.text("")
@@ -2957,7 +2963,7 @@ def stocks_view(conn, user_id):
 
         with c2:
             st.subheader(f"{name} ({symbol})")
-            st.header(f":green[${format_number_with_dots(price)}] \n {change_color}]")
+            st.header(f":green[${format_number_with_dots(round(price, 2))}] \n {change_color}]")
             user_stock = c.execute("SELECT quantity, avg_buy_price FROM user_stocks WHERE user_id = ? AND stock_id = ?", 
                                     (user_id, stock_id)).fetchall()
 
@@ -2969,11 +2975,11 @@ def stocks_view(conn, user_id):
                 avg_price = 0
 
             with st.container(border=True):
-                st.write(f"**[HOLDING]** :blue[{format_number(user_quantity, 2)} {symbol}] ~ :green[${format_number(user_quantity * price, 2)}]")
-                st.write(f"[AVG. Bought At] :green[${format_number(avg_price, 2)}]")
+                st.write(f"**Holding** :blue[{format_number(user_quantity, 2)} {symbol}] ~ :green[${format_number(user_quantity * price, 2)}]")
+                st.write(f"**AVG. Bought At** :green[${format_number(avg_price, 2)}]")
                 ca1, ca2 = st.columns(2)
-                ca1.write(f"[Available] :orange[{format_number(stock_amount, 2)} {symbol}]")                                
-                ca2.write(f"[Dividend Rate] :orange[{dividend * 100}%]")                                
+                ca1.write(f"**Available** :orange[{format_number(stock_amount, 2)} {symbol}]")                                
+                ca2.write(f"**Dividend Ratio** :orange[{dividend * 100}%]")                                
 
             col1, col2 = st.columns(2)
             
@@ -4169,18 +4175,42 @@ def buy_membership_dialog(conn, user_id, type, base_price):
     if st.button("Confirm Request (Coming soon)", type="primary", use_container_width=True):
         pass
 
+@st.dialog(" ", width="large")
+def job_requests_dialog(conn, company_id):
+    c = conn.cursor()
+    requests = c.execute("SELECT user_id FROM job_requests WHERE company_id = ?", (company_id,)).fetchall()
+    if requests:
+        usernames = [c.execute("SELECT username FROM users WHERE user_id = ?", (emp[0],)).fetchone()[0] for emp in requests]
+    st.write('<b><span style="font-size: 20px;">Job Requests to Your Company</span></b>', unsafe_allow_html=True)
+    st.divider()
+    if not requests:
+        st.info("No one has applied to your company for work.")
+    else:
+        for name in usernames:
+            c1, c2, c3 = st.columns(3)
+            c1.subheader(name)
+            if c2.button("Accept", key=name, icon=":material/check_circle:", use_container_width=True, type="primary"):
+                c.execute("INSERT INTO employees (employee_id, user_id, company_id) VALUES (?, ?, ?)", (random.randint(100000, 999999), c.execute("SELECT user_id FROM users WHERE username = ?", (name,)).fetchone()[0], company_id))
+                conn.commit()
+                st.rerun()
+            if c3.button("Reject", key=name + "a", icon=":material/cancel:", use_container_width=True):
+                c.execute("DELETE FROM job_requests WHERE user_id = ?", (c.execute("SELECT user_id FROM users WHERE username = ?", (name,)).fetchone()[0],))
+                conn.commit()
+                st.rerun()
+
 @st.dialog("Apply to Job")
 def apply_to_job_dialog(conn, user_id, job_poster_id, comp_id):
     c = conn.cursor()
     comp_name = c.execute("SELECT name FROM companies WHERE company_id = ?", (comp_id,)).fetchone()[0]
     job_title = c.execute("SELECT job_title FROM job_posters WHERE job_poster_id = ?", (job_poster_id,)).fetchone()[0]
+    has_job_already = c.execute("SELECT company_id FROM employees WHERE user_id = ?", (user_id,)).fetchone()
     st.write(f"{job_title} at {comp_name}")
-    if st.button("Apply For This Job", use_container_width=True):
+    if st.button("Apply For This Job", use_container_width=True, disabled=True if has_job_already else False, help="You already have a job." if has_job_already else None):
         with st.spinner("Sending job request..."):
-            c.execute("INSERT INTO employees (employee_id, user_id, company_id) VALUES (?, ?, ?)", (random.randint(100000, 999999), user_id, comp_id))
+            c.execute("INSERT INTO job_requests (request_id, user_id, company_id) VALUES (?, ?, ?)", (random.randint(100000000, 999999999), user_id, comp_id))
             conn.commit()
             time.sleep(3)
-        st.success("You finally have a job now!")
+        st.success("Application has sent successfully! Waiting for review.")
         time.sleep(3)
         st.rerun()
 
@@ -4207,7 +4237,7 @@ def new_job_offer_dialog(conn, user_id, comp_id):
     c = conn.cursor()
     job_title = st.text_input("", label_visibility="collapsed", placeholder="Job title")
     description = st.text_input("", label_visibility="collapsed", placeholder="Job description")
-    starting_wage = st.number_input("", label_visibility="collapsed", placeholder="Starting wage")
+    starting_wage = st.number_input("", label_visibility="collapsed", placeholder="Starting wage", value=None)
     if st.button("Post Ad"):
         with st.spinner("Posting your job offer"):
             c.execute("INSERT INTO job_posters (job_poster_id, job_title, company_id, starting_wage, description) VALUES (?, ?, ?, ?, ?)", (random.randint(1000000000, 9999999999), job_title, comp_id, starting_wage, description))
@@ -4219,10 +4249,10 @@ def new_job_offer_dialog(conn, user_id, comp_id):
 
 def available_jobs_view(conn, user_id):
     c = conn.cursor()
-    
+    has_job = c.execute("SELECT employee_id FROM employees WHERE user_id = ?", (user_id,)).fetchone()
     c1, c2 = st.columns([3, 1])
     c1.header("Jobs Marketplace", divider="gray")
-    if c2.button("Set Up Your Business", use_container_width=True):
+    if c2.button("Set Up Your Business", use_container_width=True, disabled=True if has_job else False, help="You already have a job." if has_job else None):
         new_business_dialog(conn, user_id)
 
     st.text("")
@@ -4296,7 +4326,6 @@ def available_jobs_view(conn, user_id):
 
             job_index += 1
 
-
 def jobs_view(conn, user_id):
     c = conn.cursor()
     has_job = c.execute("SELECT employee_id FROM employees WHERE user_id = ?", (user_id,)).fetchone()
@@ -4322,13 +4351,19 @@ def jobs_view(conn, user_id):
         owner_id, name, description, founded = c.execute("SELECT owner_id, name, description, founded FROM companies WHERE company_id = ?", (company_id,)).fetchone()
         employees = c.execute("SELECT user_id FROM employees WHERE company_id = ?", (company_id,)).fetchall()
         employee_usernames = [c.execute("SELECT username FROM users WHERE user_id = ?", (emp[0],)).fetchone()[0] for emp in employees]
-        col1, col2, col3 = st.columns([3,1,1])
+        col1, col2 = st.columns([3,1])
         col1.header(name, divider="gray")
-        if col2.button("Post Job Offer", use_container_width=True):
-            new_job_offer_dialog(conn, user_id, company_id)
-        if col3.button("Job Marketplace", use_container_width=True):
-            st.session_state.current_menu = "Jobs Marketplace"
-            st.rerun()
+        with col2.popover("Options", icon=":material/settings:", use_container_width=True):
+            if owner_id == st.session_state.user_id:
+                if st.button("Post New Job Offer", use_container_width=True):
+                    new_job_offer_dialog(conn, user_id, company_id)
+            if st.button("Job Requests", use_container_width=True):
+                job_requests_dialog(conn, company_id)
+            if st.button("Resign", use_container_width=True):
+                pass
+            if st.button("Jobs Marketplace", use_container_width=True):
+                st.session_state.current_menu = "Jobs Marketplace"
+                st.rerun()
 
         st.caption(f":gray[Founded {founded}]")
         st.write(f"Owner: :orange[{c.execute("SELECT username FROM users WHERE user_id = ?", (owner_id,)).fetchone()[0]}]")
@@ -4336,13 +4371,19 @@ def jobs_view(conn, user_id):
         st.text("")
         st.text("")
         st.text("")
-        st.subheader("Labour", divider="gray")
-        if employee_usernames:
-            for username in employee_usernames:
-                st.write(username)
-
-        else:
-            st.info("No any employees at the moment.")
+        co1, co2 = st.columns(2)
+        with co1:
+            st.subheader("Labour", divider="gray")
+            if employee_usernames:
+                for username in employee_usernames:
+                   with st.popover(username, icon=":material/account_circle:", use_container_width=True):
+                        st.write("Useless data goes here.")
+            else:
+                st.info("No any employees at the moment.")
+        
+        with co2:
+            with st.container(border=True):
+                st.write("NUB")
         
 def admin_panel(conn):
     c = conn.cursor()
@@ -4546,7 +4587,88 @@ def admin_panel(conn):
             c.execute("DELETE FROM stocks WHERE stock_id = ?", (stock_id_to_delete,))
         conn.commit()
         st.rerun()
-        
+
+    st.header("Manage Community Companies", divider = "rainbow")
+    with st.spinner("Loading companies..."):
+        user_companies = c.execute("SELECT company_id, owner_id, name, description, founded FROM companies").fetchall()
+    df = pd.DataFrame(user_companies, columns = ["Company ID", "Owner ID", "Name", "Description", "Founded"])
+    edited_df = st.data_editor(df, key = "user_company_table", num_rows = "fixed", use_container_width = True, hide_index = True)
+    if st.button("Update Community Companies", use_container_width = True):
+        for _, row in edited_df.iterrows():
+            c.execute("UPDATE OR IGNORE companies SET owner_id = ?, name = ?, description = ?, founded = ? WHERE company_id = ?", (row["Owner ID"], row["Name"], row["Description"], row["Founded"]))
+        conn.commit()
+        st.rerun()
+
+    user_company_id_to_delete = st.number_input("Enter Community Company ID to Delete", min_value = 0, step = 1)
+    if st.button("Delete Community Company", use_container_width = True):
+        with st.spinner("Processing..."):
+            c.execute("DELETE FROM companies WHERE company_id = ?", (user_company_id_to_delete,))
+        conn.commit()
+        st.rerun()
+
+    st.header("Manage Job Postings", divider="rainbow")
+    with st.spinner("Loading job postings..."):
+        job_postings = c.execute("SELECT job_poster_id, job_title, company_id, starting_wage, description FROM job_posters").fetchall()
+
+    df_jobs = pd.DataFrame(job_postings, columns=["Job ID", "Job Title", "Company ID", "Starting Wage", "Description"])
+    edited_jobs_df = st.data_editor(df_jobs, key="job_postings_table", num_rows="fixed", use_container_width=True, hide_index=True)
+
+    if st.button("Update Job Postings", use_container_width=True):
+        for _, row in edited_jobs_df.iterrows():
+            c.execute("UPDATE OR IGNORE job_posters SET job_title = ?, company_id = ?, starting_wage = ?, description = ? WHERE job_poster_id = ?", 
+                    (row["Job Title"], row["Company ID"], row["Starting Wage"], row["Description"], row["Job ID"]))
+        conn.commit()
+        st.rerun()
+
+    job_id_to_delete = st.number_input("Enter Job Posting ID to Delete", min_value=0, step=1)
+    if st.button("Delete Job Posting", use_container_width=True):
+        with st.spinner("Processing..."):
+            c.execute("DELETE FROM job_posters WHERE job_poster_id = ?", (job_id_to_delete,))
+        conn.commit()
+        st.rerun()
+    
+    st.header("Manage Employees", divider="rainbow")
+    with st.spinner("Loading employees..."):
+        employees = c.execute("SELECT employee_id, user_id, company_id FROM employees").fetchall()
+
+    df_employees = pd.DataFrame(employees, columns=["Employee ID", "User ID", "Company ID"])
+    edited_employees_df = st.data_editor(df_employees, key="employees_table", num_rows="fixed", use_container_width=True, hide_index=True)
+
+    if st.button("Update Employees", use_container_width=True):
+        for _, row in edited_employees_df.iterrows():
+            c.execute("UPDATE OR IGNORE employees SET user_id = ?, company_id = ? WHERE employee_id = ?", 
+                    (row["User ID"], row["Company ID"], row["Employee ID"]))
+        conn.commit()
+        st.rerun()
+
+    employee_id_to_delete = st.number_input("Enter Employee ID to Remove", min_value=0, step=1)
+    if st.button("Remove Employee", use_container_width=True):
+        with st.spinner("Processing..."):
+            c.execute("DELETE FROM employees WHERE employee_id = ?", (employee_id_to_delete,))
+        conn.commit()
+        st.rerun()
+
+    st.header("Manage Job Requests", divider="rainbow")
+    with st.spinner("Loading job requests..."):
+        job_requests = c.execute("SELECT request_id, user_id, company_id FROM job_requests").fetchall()
+
+    df_requests = pd.DataFrame(job_requests, columns=["Request ID", "User ID", "Company ID"])
+    edited_requests_df = st.data_editor(df_requests, key="job_requests_table", num_rows="fixed", use_container_width=True, hide_index=True)
+
+    if st.button("Update Job Requests", use_container_width=True):
+        for _, row in edited_requests_df.iterrows():
+            c.execute("UPDATE OR IGNORE job_requests SET user_id = ?, company_id = ? WHERE request_id = ?", 
+                    (row["User ID"], row["Company ID"], row["Request ID"]))
+        conn.commit()
+        st.rerun()
+
+    request_id_to_delete = st.number_input("Enter Job Request ID to Delete", min_value=0, step=1)
+    if st.button("Delete Job Request", use_container_width=True):
+        with st.spinner("Processing..."):
+            c.execute("DELETE FROM job_requests WHERE request_id = ?", (request_id_to_delete,))
+        conn.commit()
+        st.rerun()
+
     st.header("Investment Companies", divider = "rainbow")
 
     with st.expander("New Company Creation"):
