@@ -31,7 +31,7 @@ if "current_menu" not in st.session_state:
     st.session_state.current_menu = "Login"
 
 previous_layout = st.session_state.get("previous_layout", "centered")
-current_layout = "wide" if st.session_state.current_menu == "Blackmarket" or st.session_state.current_menu == "Main Account" or st.session_state.current_menu == "Jobs Marketplace" or st.session_state.current_menu == "Jobs" or st.session_state.current_menu == "Investments" or st.session_state.current_menu == "Dashboard" or st.session_state.current_menu == "Membership" or st.session_state.current_menu == "Stocks" or st.session_state.current_menu == "Transaction History" or st.session_state.current_menu == "Inventory" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "Real Estate" or st.session_state.current_menu == "Chat" or st.session_state.current_menu == "View Savings" else "centered"
+current_layout = "wide" if st.session_state.current_menu == "Blackmarket" or st.session_state.current_menu == "Main Account" or st.session_state.current_menu == "Bank" or st.session_state.current_menu == "Jobs Marketplace" or st.session_state.current_menu == "Jobs" or st.session_state.current_menu == "Investments" or st.session_state.current_menu == "Dashboard" or st.session_state.current_menu == "Membership" or st.session_state.current_menu == "Stocks" or st.session_state.current_menu == "Transaction History" or st.session_state.current_menu == "Inventory" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "Real Estate" or st.session_state.current_menu == "Chat" or st.session_state.current_menu == "View Savings" else "centered"
 
 if previous_layout != current_layout:
     st.session_state.previous_layout = current_layout
@@ -2211,7 +2211,7 @@ def savings_view(conn, user_id):
                 with st.container(border=True):
                     st.caption(":gray[Daily Simple Interest]")
                     c1, c2, c3 = st.columns([2.5, 2.5, 2.5])
-                    c2.write(f"## <span style='font-family: Inter;'>%{format_number_with_dots(interest)}</span>", unsafe_allow_html=True)
+                    c2.write(f"## <span style='font-family: Inter;'>%{format_number_with_dots(round(interest, 5))}</span>", unsafe_allow_html=True)
 
                 st.caption(":gray[HINT: Some items can boost your interest rate!]")
             st.text("")
@@ -3210,8 +3210,9 @@ def calculate_total_worth(c, user_id):
     
     total_stock_worth = sum(quantity * price for quantity, price in user_stocks)
     loan = c.execute("SELECT loan FROM users WHERE user_id = ?", (user_id,)).fetchone()[0] or 0.0
+    worth = balance + savings + real_estates_worth + total_country_worth + total_stock_worth - loan
     
-    return balance + savings + real_estates_worth + total_country_worth + total_stock_worth - loan
+    return worth if worth > 0 else 0
 
 def get_adjusted_interest_rate(credit_score, base_interest_rate):
     if credit_score > 1000:
@@ -3239,12 +3240,18 @@ def get_max_borrow(credit_score, total_worth):
     else:
         return total_worth * 0.2
 
-def borrow_money(conn, user_id, amount, base_interest_rate):
+def borrow_money(conn, user_id, amount, base_interest_rate, duration):
     c = conn.cursor()
+
+    if duration < 7 or duration > 30:
+        st.error("Loan duration must be between 7 and 30 days.")
+        return
+
     credit_score = c.execute("SELECT credit_score FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
-    interest_rate = get_adjusted_interest_rate(credit_score, base_interest_rate)[0]
-    
+
+    interest_rate = base_interest_rate + ((duration - 7) * 0.002)
     rejection_chance = max(0, (400 - credit_score) / 400)
+
     if random.random() < rejection_chance:
         st.toast("❌ Loan application denied due to low credit score!")
         time.sleep(2.5)
@@ -3255,29 +3262,36 @@ def borrow_money(conn, user_id, amount, base_interest_rate):
         st.toast("❌ You must repay your existing loan first!")
         time.sleep(2.5)
         return
-    
-    due_date = (datetime.date.today() + datetime.timedelta(days=7)).strftime("%Y-%m-%d")
-    c.execute("UPDATE users SET loan_start_date = ? WHERE user_id = ?", (datetime.date.today().strftime("%Y-%m-%d"), user_id))
+
+    today = datetime.date.today()
+    due_date = (today + datetime.timedelta(days=duration)).strftime("%Y-%m-%d")
+
     new_loan = round(amount * (1 + interest_rate), 2)
-    
+
     c.execute("UPDATE users SET balance = balance - ? WHERE username = 'Government'", (amount,))
-    c.execute("UPDATE users SET loan = ?, loan_due_date = ?, balance = balance + ? WHERE user_id = ?", 
-              (new_loan, due_date, amount, user_id))
+    c.execute("UPDATE users SET loan = ?, loan_due_date = ?, loan_start_date = ?, loan_duration = ? WHERE user_id = ?", 
+              (new_loan, due_date, today.strftime("%Y-%m-%d"), duration, user_id))
+
     c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", 
               (random.randint(100000000, 999999999), user_id, "Borrow Loan", amount))
-    
+
     c.execute("UPDATE users SET credit_score = credit_score - 10 WHERE user_id = ?", (user_id,))
-    
+
     conn.commit()
-    st.toast(f"✅ Borrowed ${format_number(amount)}. Due Date: {due_date}.")
+    st.toast(f"✅ Borrowed ${amount}. Due Date: {due_date}.")
     time.sleep(2.5)
     st.rerun()
 
 def repay_loan(conn, user_id, amount):
     c = conn.cursor()
     user_data = c.execute("SELECT loan, balance, loan_due_date, loan_start_date FROM users WHERE user_id = ?", (user_id,)).fetchone()
-    loan, balance, loan_due_date, loan_start_date = user_data if user_data else (0, 0, None, None)
     
+    if not user_data:
+        st.toast("❌ No loan information found!")
+        return
+
+    loan, balance, loan_due_date, loan_start_date = user_data
+
     if loan <= 0:
         st.toast("✅ You have no outstanding loans!")
         time.sleep(2.5)
@@ -3287,33 +3301,56 @@ def repay_loan(conn, user_id, amount):
         time.sleep(2.5)
         return
     
-    if (datetime.datetime.today().date() - datetime.datetime.strptime(loan_start_date, "%Y-%m-%d").date()).days < 2:
-        st.toast("❌ You must wait at least 2 days before repaying the loan!")
-        time.sleep(2.5)
-        return
-    
-    loan_start_date_obj = datetime.datetime.strptime(loan_start_date, "%Y-%m-%d")
-    if (datetime.datetime.today() - loan_start_date_obj).days < 7:
-        fee = amount * 0.05
+    loan_start_date_obj = datetime.datetime.strptime(loan_start_date, "%Y-%m-%d").date()
+    days_since_borrowed = (datetime.date.today() - loan_start_date_obj).days
+
+    if days_since_borrowed < 7:
+        fee = round(amount * 0.05, 2)
         amount += fee
         st.toast(f"⚠ Early repayment fee of ${fee:.2f} applied!")
         time.sleep(2)
-    
+
     new_loan = max(0, loan - amount)
     new_balance = balance - amount
-    
+
     c.execute("UPDATE users SET balance = balance + ? WHERE username = 'Government'", (amount,))
     c.execute("UPDATE users SET loan = ?, balance = ? WHERE user_id = ?", (new_loan, new_balance, user_id))
     c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", 
               (random.randint(100000000, 999999999), user_id, "Repay Loan", amount))
-    
-    c.execute("UPDATE users SET credit_score = credit_score + 20 WHERE user_id = ?", (user_id,))
-    
+
+    if new_loan == 0:
+        c.execute("UPDATE users SET credit_score = credit_score + 50 WHERE user_id = ?", (user_id,))
+        st.toast(f"✅ Loan fully repaid! Credit score improved.")
+
     conn.commit()
-    st.toast(f"✅ Loan repaid. Remaining debt: :red[${format_number(new_loan)}].")
+    st.toast(f"✅ Loan repaid. Remaining debt: :red[${new_loan}].")
     time.sleep(2.5)
-    st.session_state.repay = 0.0
     st.rerun()
+
+def apply_loan_penalty(conn):
+    c = conn.cursor()
+    today = datetime.date.today()
+
+    users_with_loans = c.execute("SELECT user_id, loan, loan_due_date, credit_score FROM users WHERE loan > 0").fetchall()
+
+    for user_id, loan, due_date, credit_score in users_with_loans:
+        if not due_date:
+            continue
+
+        due_date_obj = datetime.datetime.strptime(due_date, "%Y-%m-%d").date()
+        days_late = (today - due_date_obj).days
+
+        if days_late > 0:
+            penalty_interest = round(loan * 0.01 * days_late, 2)  # 1% per overdue day
+            new_loan = loan + penalty_interest
+            new_credit_score = max(0, credit_score - (50 * days_late))  # -50 per day late
+
+            c.execute("UPDATE users SET loan = ?, credit_score = ? WHERE user_id = ?", (new_loan, new_credit_score, user_id))
+
+            st.warning(f"⚠ User {user_id} is {days_late} days late on loan. Penalty interest: ${penalty_interest}, New Credit Score: {new_credit_score}")
+
+    conn.commit()
+
 
 def bank_view(conn, user_id):
     update_inflation(conn)
@@ -3362,59 +3399,78 @@ def bank_view(conn, user_id):
             st.info("No inflation data available yet.")
 
     with t2:
-        with st.container(border=True):
-            user_data = c.execute("SELECT balance, loan, loan_due_date, loan_penalty, credit_score FROM users WHERE user_id = ?", (user_id,)).fetchone()
-            total_worth = calculate_total_worth(c, user_id)
-            max_borrow = get_max_borrow(user_data[4], total_worth)
-            balance, loan, due_date, penalty, credit_score = user_data if user_data else (0, None, None, 0)
-
-            interest_rate = max(0.001, inflation_rate + 0.01)
-            
+        co1, co2 = st.columns(2)
+        with co1:
+            st.text("")
+            st.text("")
             with st.container(border=True):
-                st.write(f"📊 **[Inflation]** :red[{format_number(inflation_rate * 100)}%]")
-            if credit_score > 1000:
-                st.write(f"🪙 **[Credit Score]** :green[{credit_score}]")
-            elif credit_score < 1000 and credit_score > 400:
-                st.write(f"🪙 **[Credit Score]** :orange[{credit_score}]")
-            else:
-                st.write(f"🪙 **[Credit Score]** :red[{credit_score}]")
+                user_data = c.execute("SELECT balance, loan, loan_due_date, loan_penalty, credit_score FROM users WHERE user_id = ?", (user_id,)).fetchone()
+                total_worth = calculate_total_worth(c, user_id)
+                max_borrow = get_max_borrow(user_data[4], total_worth)
+                balance, loan, due_date, penalty, credit_score = user_data if user_data else (0, None, None, 0)
 
-            st.write(f"📈 **[Default Interest]** :red[{format_number(interest_rate * 100)}% / day]")
-            st.write(f"📉 **[CreditScore - Based Interest]** :red[{format_number(get_adjusted_interest_rate(credit_score, interest_rate)[0] * 100)}% / day] | :blue[{get_adjusted_interest_rate(credit_score, interest_rate)[1]}] of default")
-            st.write(f"💳 **[Loan Debt]** :red[${format_number(loan)}]")
-
-            if loan > 0 and due_date:
-                due_date_obj = datetime.datetime.strptime(due_date, "%Y-%m-%d").date()
-                today = datetime.date.today()
+                interest_rate = max(0.001, inflation_rate + 0.01)
                 
-                if today > due_date_obj:
-                    st.error(f"⚠ **Your loan is overdue!** You now owe **${format_number(loan)}** with a total penalty of **${format_number(penalty)}**.")
+                with st.container(border=True):
+                    st.write(f"📊 **[Inflation]** :red[{format_number(inflation_rate * 100)}%]")
+                st.text("")
+                if credit_score > 1000:
+                    st.write(f"🪙 **[Credit Score]** :green[{credit_score}]")
+                elif credit_score < 1000 and credit_score > 400:
+                    st.write(f"🪙 **[Credit Score]** :orange[{credit_score}]")
                 else:
-                    st.info(f"📅 [You Have an Active Loan!] **Due:** {due_date}")
-        
-        st.session_state.amt = max_borrow
-        st.divider()
-        st.warning(f"[Max Borrow] :green[${format_number(st.session_state.amt)}]")
-        st.subheader("Borrow Loan")
-        borrow_amount = st.number_input("A", label_visibility="collapsed", min_value=0.0, max_value=float(st.session_state.amt), step=100.0)
-        if st.button(f"Borrow :red[${format_number(borrow_amount)}]", use_container_width=True):
-            with st.spinner("Processing borrow"):
-                time.sleep(3)
-                borrow_money(conn, user_id, borrow_amount, interest_rate)
-                st.session_state.amt = 0.0
+                    st.write(f"🪙 **[Credit Score]** :red[{credit_score}]")
 
-        st.subheader("Repay Loan")
-        c1, c2 = st.columns(2)
-        
-        st.session_state.repay = c1.number_input("d", label_visibility="collapsed", min_value=0.0, value=float(st.session_state.repay), step=100.0)
-        if c2.button("Max", use_container_width=True):
-            st.session_state.repay = loan
-            st.rerun()
+                st.text("")
+                st.write(f"📈 **[Default Interest]** :red[{format_number(round(interest_rate * 100, 2))}% / day]")
+                st.text("")
+                st.write(f"📉 **[CreditScore - Based Interest]** :red[{format_number(get_adjusted_interest_rate(credit_score, interest_rate)[0] * 100)}% / day] | :blue[{get_adjusted_interest_rate(credit_score, interest_rate)[1]}] of default")
+                st.text("")
+                st.write(f"💳 **[Loan Debt]** :red[${format_number(loan)}]")
 
-        if st.button(f"Repay :green[${format_number(st.session_state.repay)}]", use_container_width=True, disabled=True if st.session_state.repay == 0 else False):
-            with st.spinner("Processing loan..."):
-                time.sleep(3)
-                repay_loan(conn, user_id, st.session_state.repay)
+                if loan > 0 and due_date:
+                    due_date_obj = datetime.datetime.strptime(due_date, "%Y-%m-%d").date()
+                    today = datetime.date.today()
+                    
+                    if today > due_date_obj:
+                        st.error(f"⚠ **Your loan is overdue!** You now owe **${format_number(loan)}** with a total penalty of **${format_number(penalty)}**.")
+                    else:
+                        st.info(f"📅 [You Have an Active Loan!] **Due:** {due_date}")
+        
+            with st.container(border=True):
+                st.caption(":gray[Interest]")
+                col1, col2, col3 = st.columns([1.5, 1, 1])
+                col1.write(f"# <span style='font-family: Inter; color: rgb(234, 89, 82);'><s>%{format_number(round(interest_rate * 100, 2))}</s></span>", unsafe_allow_html=True)
+                col2.write("# ->")
+                col3.write(f"# <span style='font-family: Inter; color: lime;'>%{format_number(get_adjusted_interest_rate(credit_score, interest_rate)[0] * 100)}</span>", unsafe_allow_html=True)
+                col3.caption(":gray[/ day]")
+
+        with co2:
+            st.session_state.amt = max_borrow
+            st.divider()
+            st.info(f"[Max Borrow] :green[${format_number_with_dots(st.session_state.amt)}]")
+            st.subheader("Borrow Loan")
+            borrow_amount = st.number_input("A", label_visibility="collapsed", min_value=0.0, max_value=float(st.session_state.amt), step=100.0)
+            duration = st.slider("Duration (Days)", min_value=7, max_value=60)
+            if st.button(f"Borrow :red[${format_number(borrow_amount)}]", use_container_width=True):
+                with st.spinner("Processing borrow"):
+                    time.sleep(3)
+                    st.session_state.amt = 0.0
+                    borrow_money(conn, user_id, borrow_amount, interest_rate, duration)
+
+            st.divider()
+            st.subheader("Repay Loan")
+            c1, c2 = st.columns(2)
+            
+            st.session_state.repay = c1.number_input("d", label_visibility="collapsed", min_value=0.0, value=float(st.session_state.repay), step=100.0)
+            if c2.button("Max", use_container_width=True):
+                st.session_state.repay = loan
+                st.rerun()
+
+            if st.button(f"Repay :green[${format_number(st.session_state.repay)}]", use_container_width=True, disabled=True if st.session_state.repay == 0 else False):
+                with st.spinner("Processing loan..."):
+                    time.sleep(3)
+                    repay_loan(conn, user_id, st.session_state.repay)
                 
 def investments_view(conn, user_id):
     st.header("📈 Investments", divider="rainbow")
@@ -5468,5 +5524,5 @@ if __name__ == "__main__":
 """, unsafe_allow_html=True)
     
     init_db(conn)
-    # conn.cursor().execute("ALTER TABLE job_posters ADD COLUMN job_title TEXT;")
+    conn.cursor().execute("ALTER TABLE users ADD COLUMN loan_duration INTEGER DEFAULT 7;")
     main(conn)
