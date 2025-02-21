@@ -5524,5 +5524,5 @@ if __name__ == "__main__":
 """, unsafe_allow_html=True)
     
     init_db(conn)
-    conn.cursor().execute("ALTER TABLE users ADD COLUMN loan_duration INTEGER DEFAULT 7;")
+    # conn.cursor().execute("ALTER TABLE users ADD COLUMN loan_duration INTEGER DEFAULT 7;")
     main(conn)
