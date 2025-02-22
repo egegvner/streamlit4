@@ -3269,8 +3269,8 @@ def borrow_money(conn, user_id, amount, base_interest_rate, duration):
     new_loan = round(amount * (1 + interest_rate), 2)
 
     c.execute("UPDATE users SET balance = balance - ? WHERE username = 'Government'", (amount,))
-    c.execute("UPDATE users SET loan = ?, loan_due_date = ?, loan_start_date = ?, loan_duration = ? WHERE user_id = ?", 
-              (new_loan, due_date, today.strftime("%Y-%m-%d"), duration, user_id))
+    c.execute("UPDATE users SET balance = balance + ?, loan = ?, loan_due_date = ?, loan_start_date = ?, loan_duration = ? WHERE user_id = ?", 
+              (amount, new_loan, due_date, today.strftime("%Y-%m-%d"), duration, user_id))
 
     c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", 
               (random.randint(100000000, 999999999), user_id, "Borrow Loan", amount))
@@ -3311,10 +3311,9 @@ def repay_loan(conn, user_id, amount):
         time.sleep(2)
 
     new_loan = max(0, loan - amount)
-    new_balance = balance - amount
 
     c.execute("UPDATE users SET balance = balance + ? WHERE username = 'Government'", (amount,))
-    c.execute("UPDATE users SET loan = ?, balance = ? WHERE user_id = ?", (new_loan, new_balance, user_id))
+    c.execute("UPDATE users SET balance = balance - ?, loan = ?, WHERE user_id = ?", (amount, new_loan, user_id))
     c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", 
               (random.randint(100000000, 999999999), user_id, "Repay Loan", amount))
 
