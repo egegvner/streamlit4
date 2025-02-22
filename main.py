@@ -3234,11 +3234,11 @@ def get_max_borrow(credit_score, total_worth):
     elif credit_score > 750:
         return total_worth * 2.0
     elif credit_score > 500:
-        return total_worth * 1.0
+        return total_worth * 1.5
     elif credit_score > 250:
-        return total_worth * 0.5
+        return total_worth * 1
     else:
-        return total_worth * 0.2
+        return total_worth * 0.5
 
 def borrow_money(conn, user_id, amount, base_interest_rate, duration):
     c = conn.cursor()
@@ -3278,7 +3278,7 @@ def borrow_money(conn, user_id, amount, base_interest_rate, duration):
     c.execute("UPDATE users SET credit_score = credit_score - 10 WHERE user_id = ?", (user_id,))
 
     conn.commit()
-    st.toast(f"✅ Borrowed ${amount}. Due Date: {due_date}.")
+    st.toast(f"✅ Borrowed :green[${format_number_with_dots(amount)}]. Due Date: {due_date}.")
     time.sleep(2.5)
     st.rerun()
 
@@ -3305,10 +3305,13 @@ def repay_loan(conn, user_id, amount):
     days_since_borrowed = (datetime.date.today() - loan_start_date_obj).days
 
     if days_since_borrowed < 7:
-        fee = round(amount * 0.05, 2)
+        fee = round(amount * 0.5, 2)
         amount += fee
-        st.toast(f"⚠ Early repayment fee of ${fee:.2f} applied!")
+        score = -1
+        st.toast(f"⚠ Early repayment fee of :red[${format_number_with_dots(fee)}] applied!")
         time.sleep(2)
+    else:
+        score = 50
 
     new_loan = max(0, loan - amount)
 
@@ -3318,7 +3321,7 @@ def repay_loan(conn, user_id, amount):
               (random.randint(100000000, 999999999), user_id, "Repay Loan", amount))
 
     if new_loan == 0:
-        c.execute("UPDATE users SET credit_score = credit_score + 50 WHERE user_id = ?", (user_id,))
+        c.execute("UPDATE users SET credit_score = credit_score + ? WHERE user_id = ?", (user_id, score))
         st.toast(f"✅ Loan fully repaid! Credit score improved.")
 
     conn.commit()
@@ -3345,11 +3348,7 @@ def apply_loan_penalty(conn):
             new_credit_score = max(0, credit_score - (50 * days_late))  # -50 per day late
 
             c.execute("UPDATE users SET loan = ?, credit_score = ? WHERE user_id = ?", (new_loan, new_credit_score, user_id))
-
-            st.warning(f"⚠ User {user_id} is {days_late} days late on loan. Penalty interest: ${penalty_interest}, New Credit Score: {new_credit_score}")
-
     conn.commit()
-
 
 def bank_view(conn, user_id):
     update_inflation(conn)
