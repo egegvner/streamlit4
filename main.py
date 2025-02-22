@@ -5298,8 +5298,6 @@ def main(conn):
         with st.sidebar:
             balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (st.session_state.user_id,)).fetchone()[0]
             st.sidebar.write(f"# <span style='font-family: Inter;'>${format_number_with_dots(round(balance, 2))}</span>", unsafe_allow_html=True)
-            st.caption("Balance")
-            st.text("")
             st.text("")
             t1, t2 = st.sidebar.tabs(["🌐 Global", "💠 Personal"])
             st.markdown('''
