@@ -4910,9 +4910,6 @@ def admin_panel(conn):
             c.execute("DELETE FROM user_inventory WHERE user_id = ?", (temp_user_id[0],))
             c.execute("DELETE FROM savings WHERE user_id = ?", (temp_user_id[0],))
             conn.commit()
-            
-            st.success(f"User {temp_user.capitalize()} and their associated data have been deleted.")
-            time.sleep(2)
             st.rerun()
         else:
             st.error(f"User {temp_user.capitalize()} not found in the database!")
