@@ -2520,7 +2520,7 @@ def chat_view(conn):
                             st.write(f":orange[[{username}] **:red[[DEV]]** :gray[{timestamp.split()[1][:5]}]] **{message}**")
                     elif username == "JohnyJohnyJohn":
                         with st.chat_message(name="ai"):
-                            st.write(f":blue[[{username}] **:blue[[ADMIN]]** :gray[{timestamp.split()[1]}]] **{message}**")
+                            st.write(f":green[[{username}] **:green[[ADMIN]]** :gray[{timestamp.split()[1]}]] **{message}**")
                     else:
                         with st.chat_message(name="user"):
                             st.write(f":gray[[{username}] :gray[[{timestamp.split()[1]}]]] {message}")
@@ -2556,7 +2556,7 @@ def chat_view(conn):
                             st.write(f":orange[[{username}] **:red[[DEV]]** :gray[{timestamp.split()[1]}]] **{message}**")
                     elif username == "JohnyJohnyJohn":
                         with st.chat_message(name="ai"):
-                            st.write(f":blue[[{username}] **:blue[[ADMIN]]** :gray[{timestamp.split()[1]}]] **{message}**")
+                            st.write(f":green[[{username}] **:green[[MOD]]** :gray[{timestamp.split()[1]}]] **{message}**")
                     else:
                         with st.chat_message(name="user"):
                             st.write(f":gray[[{username}] :gray[[{timestamp.split()[1]}]]] {message}")
