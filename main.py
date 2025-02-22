@@ -3189,7 +3189,7 @@ def blackmarket_view(conn, user_id):
 
 def calculate_total_worth(c, user_id):
     balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
-    has_savings = c.execute("SELECT has_savings_account FROM users WHERE user_id = ?", (user_id,)).fetchone()
+    has_savings = c.execute("SELECT has_savings_account FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     savings = c.execute("SELECT balance FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0] if has_savings else 0
     real_estates_worth = c.execute("SELECT SUM(price) FROM real_estate WHERE user_id = ?", (user_id,)).fetchone()[0] or 0
     
