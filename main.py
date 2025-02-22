@@ -107,6 +107,7 @@ def verifyPass(hashed_password, entered_password):
 
 admins = [
     "egegvner",
+    "JohnyJohnyJohn",
 ]
 
 def apply_interest_if_due(conn, user_id, check = True):
@@ -2517,7 +2518,7 @@ def chat_view(conn):
                     if username == "egegvner":
                         with st.chat_message(name="ai"):
                             st.write(f":orange[[{username}] **:red[[DEV]]** :gray[{timestamp.split()[1][:5]}]] **{message}**")
-                    elif username == "JohnyJohnJohn":
+                    elif username == "JohnyJohnyJohn":
                         with st.chat_message(name="ai"):
                             st.write(f":blue[[{username}] **:blue[[ADMIN]]** :gray[{timestamp.split()[1]}]] **{message}**")
                     else:
@@ -2553,7 +2554,7 @@ def chat_view(conn):
                     if username == "egegvner":
                         with st.chat_message(name="ai"):
                             st.write(f":orange[[{username}] **:red[[DEV]]** :gray[{timestamp.split()[1]}]] **{message}**")
-                    elif username == "JohnyJohnJohn":
+                    elif username == "JohnyJohnyJohn":
                         with st.chat_message(name="ai"):
                             st.write(f":blue[[{username}] **:blue[[ADMIN]]** :gray[{timestamp.split()[1]}]] **{message}**")
                     else:
@@ -3188,7 +3189,7 @@ def blackmarket_view(conn, user_id):
 
 def calculate_total_worth(c, user_id):
     balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
-    has_savings = c.execute("SELECT has_savings_account FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+    has_savings = c.execute("SELECT has_savings_account FROM users WHERE user_id = ?", (user_id,)).fetchone()
     savings = c.execute("SELECT balance FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0] if has_savings else 0
     real_estates_worth = c.execute("SELECT SUM(price) FROM real_estate WHERE user_id = ?", (user_id,)).fetchone()[0] or 0
     
