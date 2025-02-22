@@ -3243,7 +3243,7 @@ def get_max_borrow(credit_score, total_worth):
 def borrow_money(conn, user_id, amount, base_interest_rate, duration):
     c = conn.cursor()
 
-    if duration < 7 or duration > 30:
+    if duration < 7 or duration > 60:
         st.error("Loan duration must be between 7 and 30 days.")
         return
 
