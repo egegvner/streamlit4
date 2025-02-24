@@ -1232,7 +1232,7 @@ def gift_prop_dialog(conn, user_id, prop_id):
             c.execute("DELETE FROM user_properties WHERE property_id = ? AND user_id = ?", (prop_id, user_id))
             c.execute("INSERT INTO user_properties (user_id, property_id, purchase_date, rent_income, level) VALUES (?, ?, ?, ?, ?)", (chosen_id, prop_id, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), rent_i, prop_level))
             c.execute("UPDATE real_estate SET username = ? WHERE property_id = ?", (chosen, prop_id))
-            c.execute("INSET INTO transactions (transaction_id, user_id, type, amount, receiver_username) VALUES (?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Gift Property ID {prop_id}", 0.00, chosen))
+            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, receiver_username) VALUES (?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Gift Property ID {prop_id}", 0.00, chosen))
         st.success("Gift was sent successfully!")
         time.sleep(2)
         st.rerun()
@@ -3588,6 +3588,7 @@ def investments_view(conn, user_id):
                     start_date.strftime("%Y-%m-%d %H:%M:%S"),
                     end_date.strftime("%Y-%m-%d %H:%M:%S"),
                 ))
+                c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Investment Initiated to  {company_name}", investment_amount))
                 conn.commit()
                 time.sleep(4)
             st.toast(f"Investment of :green[${format_number(investment_amount)}] in {selected_company['name']} has initiated! Ends on {end_date}.")
