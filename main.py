@@ -2477,7 +2477,7 @@ def dashboard(conn, user_id):
     st.text("")
     st.text("")
     vip_tier = c.execute("SELECT vip_tier FROM users WHERE user_id = ?", (user_id,)).fetchone()
-    if vip_tier and not vip_tier == "NONE":
+    if vip_tier:
         vip_tier = vip_tier[0]
         card_url = c.execute("SELECT card_url FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
         with st.container(border=True):
@@ -2490,8 +2490,8 @@ def dashboard(conn, user_id):
                 st.write("still...")
                 st.write("infinite data paradox...")
         
-        with co2:
-            st.image(card_url)
+            with co2:
+                st.image(card_url)
     else:
         st.info("You do not own a Genova Card")
 
