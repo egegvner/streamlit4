@@ -733,7 +733,8 @@ def init_db(conn):
                   loan_penalty REAL DEFAULT 0,
                   loan_start_date,
                   credit_score INTEGER DEFAULT 600,
-                  vip_tier TEXT DEFAULT 'NONE'
+                  vip_tier TEXT DEFAULT NULL,
+                  card_url TEXT DEFAULT NULL
                   );''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS transactions (
@@ -1004,6 +1005,13 @@ def init_db(conn):
             request_id INTEGER,
             user_id INTEGER,
             company_id INTEGER
+            );''')
+    
+    c.execute('''CREATE TABLE IF NOT EXISTS card_requests (
+            request_id INTEGER,
+            user_id INTEGER,
+            membership TEXT,
+            include_username INTEGER DEFAULT 0
             );''')
     
     conn.commit()
@@ -2465,6 +2473,27 @@ def dashboard(conn, user_id):
                         st.write(create_transaction_row(transaction_type, timestamp, amount), unsafe_allow_html=True)
                 else:
                     st.info("No recent transactions.")
+
+    st.text("")
+    st.text("")
+    vip_tier = c.execute("SELECT vip_tier FROM users WHERE user_id = ?", (user_id,)).fetchone()
+    if vip_tier:
+        vip_tier = vip_tier[0]
+        card_url = c.execute("SELECT card_url FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+        with st.container(border=True):
+            co1, co2 = st.columns(2)
+            with co1:
+                st.caption(":gray[Membership Status]")
+                st.write(f"# <span style='font-family: Inter;'>{vip_tier}</span>", unsafe_allow_html=True)
+                st.write("some useless data..")
+                st.write("some useless data again..")
+                st.write("still...")
+                st.write("infinite data paradox...")
+        
+        with co2:
+            st.image(card_url)
+    else:
+        st.info("You do not own a Genova Card")
 
 def get_latest_message_time(conn):
     c = conn.cursor()
@@ -4094,9 +4123,9 @@ def membership_view(conn, user_id):
                     st.write("Tax Discount | :red[-5%]")
                     st.write("Property Income | :green[+5%]")
                     st.write("Property Income | :green[+1%]")
-                st.write("#### **Membership Cost** :red[$38,000] + :orange[650 Credits]")
-                if st.button("Request Card", use_container_width=True, disabled=True if balance < 38000 or credit < 650 else False, help="Not enough balance or credit scores." if balance < 38000 or credit < 650 else None, key="guest"):
-                    buy_membership_dialog(conn, user_id, "Guest", 38000)
+                st.write("#### **Membership Cost** :red[$199,000] + :orange[590 Credits]")
+                if st.button("Request Card", use_container_width=True, disabled=True if balance < 199000 or credit < 590 else False, help="Not enough balance or credit scores." if balance < 199000 or credit < 590 else None, key="guest"):
+                    buy_membership_dialog(conn, user_id, "Guest", 199000)
                 st.caption(":gray[USERNAME ON CARD AVAILABLE]")
 
     with t2:
@@ -4118,9 +4147,9 @@ def membership_view(conn, user_id):
                     st.write("Tax Discount | :red[-10%]")
                     st.write("Property Income | :green[+10%]")
                     st.write("Property Income | :green[+2%]")
-                st.write("#### **Membership Cost** :red[$99,000] + :orange[690 Credits]")
-                if st.button("Request Card", use_container_width=True, disabled=True if balance < 99000 or credit < 690 else False, help="Not enough balance or credit scores." if balance < 69000 or credit < 690 else None, key="member"):
-                    buy_membership_dialog(conn, user_id, "Member", 99000)
+                st.write("#### **Membership Cost** :red[$629,000] + :orange[610 Credits]")
+                if st.button("Request Card", use_container_width=True, disabled=True if balance < 629000 or credit < 620 else False, help="Not enough balance or credit scores." if balance < 629000 or credit < 620 else None, key="member"):
+                    buy_membership_dialog(conn, user_id, "Member", 629000)
                 st.caption(":gray[USERNAME ON CARD AVAILABLE]")
 
     with t3:
@@ -4142,9 +4171,9 @@ def membership_view(conn, user_id):
                     st.write("Tax Discount | :red[-20%]")
                     st.write("Property Income | :green[+20%]")
                     st.write("Property Income | :green[+4%]")
-                st.write("#### **Membership Cost** :red[$189,500] + :orange[710 Credits]")
-                if st.button("Request Card", use_container_width=True, disabled=True if balance < 189500 or credit < 710 else False, help="Not enough balance or credit scores." if balance < 99500 or credit < 710 else None, key="bronze"):
-                    buy_membership_dialog(conn, user_id, "Bronze", 189500)
+                st.write("#### **Membership Cost** :red[$1.500,000] + :orange[640 Credits]")
+                if st.button("Request Card", use_container_width=True, disabled=True if balance < 1500000 or credit < 640 else False, help="Not enough balance or credit scores." if balance < 1500000 or credit < 640 else None, key="bronze"):
+                    buy_membership_dialog(conn, user_id, "Bronze", 1500000)
                 st.caption(":gray[USERNAME ON CARD AVAILABLE]")
 
     with t4:
@@ -4166,9 +4195,9 @@ def membership_view(conn, user_id):
                     st.write("Tax Discount | :red[-30%]")
                     st.write("Property Income | :green[+30%]")
                     st.write("Property Income | :green[+6%]")
-                st.write("#### **Membership Cost** :red[$250,000] + :orange[730 Credits]")
-                if st.button("Request Card", use_container_width=True, disabled=True if balance < 250000 or credit < 730 else False, help="Not enough balance or credit scores." if balance < 175000 or credit < 730 else None, key="silver"):
-                    buy_membership_dialog(conn, user_id, "Silver", 250000)
+                st.write("#### **Membership Cost** :red[$8,950,000] + :orange[660 Credits]")
+                if st.button("Request Card", use_container_width=True, disabled=True if balance < 8950000 or credit < 660 else False, help="Not enough balance or credit scores." if balance < 8950000 or credit < 660 else None, key="silver"):
+                    buy_membership_dialog(conn, user_id, "Silver", 8950000)
                 st.caption(":gray[USERNAME ON CARD AVAILABLE]")
 
     with t5:
@@ -4190,9 +4219,9 @@ def membership_view(conn, user_id):
                     st.write("Tax Discount | :red[-40%]")
                     st.write("Property Income | :green[+40%]")
                     st.write("Property Income | :green[+8%]")
-                st.write("#### **Membership Cost** :red[$475,500] + :orange[760 Credits]")
-                if st.button("Request Card", use_container_width=True, disabled=True if balance < 475000 or credit < 760 else False, help="Not enough balance or credit scores." if balance < 285500 or credit < 760 else None, key="gold"):
-                    buy_membership_dialog(conn, user_id, "Gold", 475500)
+                st.write("#### **Membership Cost** :red[$17.400,000] + :orange[680 Credits]")
+                if st.button("Request Card", use_container_width=True, disabled=True if balance < 17400000 or credit < 680 else False, help="Not enough balance or credit scores." if balance < 17400000 or credit < 680 else None, key="gold"):
+                    buy_membership_dialog(conn, user_id, "Gold", 17400000)
                 st.caption(":gray[USERNAME ON CARD AVAILABLE]")
 
     with t6:
@@ -4214,20 +4243,42 @@ def membership_view(conn, user_id):
                     st.write("Tax Discount | :red[-50%]")
                     st.write("Property Income | :green[+50%]")
                     st.write("Property Income | :green[+10%]")
-                st.write("#### **Membership Cost** :red[$899,000] + :orange[800 Credits]")
-                if st.button("Request Card", use_container_width=True, disabled=True if balance < 899500 or credit < 800 else False, help="Not enough balance or credit scores." if balance < 475000 or credit < 800 else None, key="obsidian"):
-                    buy_membership_dialog(conn, user_id, "Obsidian", 899000)
+                st.write("#### **Membership Cost** :red[$42,500,000] + :orange[700 Credits]")
+                if st.button("Request Card", use_container_width=True, disabled=True if balance < 42500000 or credit < 700 else False, help="Not enough balance or credit scores." if balance < 42500000 or credit < 700 else None, key="obsidian"):
+                    buy_membership_dialog(conn, user_id, "Obsidian", 42500000)
                 st.caption(":gray[USERNAME ON CARD AVAILABLE]")
     
 @st.dialog("Buy Membership")
 def buy_membership_dialog(conn, user_id, type, base_price):
-    st.subheader(f"Membership Type -> :orange[{type}]")
-    include_name = st.checkbox("Include my username on top left :red[(+$500)]")
-    st.divider()
-    st.caption(f":gray[Estimated Receive Date: {datetime.datetime.date(datetime.datetime.now()) + datetime.timedelta(days=2)}]")
-    st.header(f"Total Cost :red[${base_price}]" if not include_name else f"Total Cost :red[${base_price + 500}]")
-    if st.button("Confirm Request (Coming soon)", type="primary", use_container_width=True):
-        pass
+    c = conn.cursor()
+    already_has_request = c.execute("SELECT request_id FROM card_requests WHERE user_id = ?", (user_id,)).fetchone()
+    if not already_has_request:
+        st.subheader(f"Membership Type -> :orange[{type}]")
+        include_name = st.checkbox("Include my username on top left :red[(+$500,000)]")
+        total_cost = base_price if not include_name else base_price + 500000
+        st.divider()
+        st.caption(f":gray[Estimated Receive Date: {datetime.datetime.date(datetime.datetime.now()) + datetime.timedelta(days=2)}]")
+        st.header(f"Total Cost :red[${total_cost}]")
+        if st.button("Confirm Request", type="primary", use_container_width=True):
+            with st.spinner("Processing purchase..."):
+                c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (total_cost, user_id))
+                c.execute("INSERT INTO card_requests (request_id, user_id, membership, include_username) VALUES (?, ?, ?, ?)", (random.randint(100000, 999999), user_id, type, 1 if include_name else 0))
+                c.execute("""
+                            INSERT INTO transactions 
+                            (transaction_id, user_id, type, amount, timestamp) 
+                            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                        """, (random.randint(100000000000, 999999999999), 
+                            user_id, 
+                            f"Membership Card Purchase: {type} + Username" if include_name else f"Membership Card Purchase: {type}", 
+                            total_cost))
+                c.execute("UPDATE users SET balance = balance + ? WHERE username = 'egegvner'", (total_cost,))
+                conn.commit()
+                time.sleep(6)
+            st.success("Thanks for your purchase! We've received your order.")
+            time.sleep(4)
+            st.rerun()
+    else:
+        st.info("You already have a pending card request.")
 
 @st.dialog(" ", width="large")
 def job_requests_dialog(conn, company_id):
@@ -4527,6 +4578,25 @@ def admin_panel(conn):
     if st.button("Delete Quiz", use_container_width = True):
         with st.spinner("Processing..."):
             c.execute("DELETE FROM quizzes WHERE quiz_id = ?", (quiz_id_to_delete,))
+        conn.commit()
+        st.rerun()
+
+    st.header("Card Requests", divider = "rainbow")
+    with st.spinner("Loading requests..."):
+        card_data = c.execute("SELECT request_id, user_id, membership, include_username FROM card_requests").fetchall()
+   
+    df = pd.DataFrame(card_data, columns = ["Request ID", "User ID",  "Membership", "Include Username"])
+    edited_df = st.data_editor(df, key = "card_table", num_rows = "fixed", use_container_width = True, hide_index = True)
+    if st.button("Update Card Requests", use_container_width = True):
+        for _, row in edited_df.iterrows():
+            c.execute("UPDATE OR IGNORE card_requests SET user_id = ?, type = ?, include_username = ? WHERE request_id = ?", (row["User ID"], row["Type"], row["Include Username"], row["Request ID"]))
+        conn.commit()
+        st.rerun()
+
+    card_id_to_delete = st.number_input("Enter Request ID to Delete", min_value = 0, step = 1)
+    if st.button("Delete Request", use_container_width = True):
+        with st.spinner("Processing..."):
+            c.execute("DELETE FROM card_requests WHERE request_id = ?", (card_id_to_delete,))
         conn.commit()
         st.rerun()
 
@@ -4954,8 +5024,8 @@ def admin_panel(conn):
     st.text("")
     st.write(":red[Editing data from the dataframes below without proper permission will trigger a legal punishment by law.]")
     with st.spinner("Loading User Data"):
-        userData = c.execute("SELECT user_id, username, level, visible_name, password, balance, has_savings_account, suspension, incoming_transfers, outgoing_transfers, last_transaction_time, email, last_daily_reward_claimed, login_streak, last_username_change, loan, loan_due_date, loan_penalty, loan_start_date, credit_score FROM users").fetchall()
-    df = pd.DataFrame(userData, columns = ["User ID", "Username", "Level", "Visible Name", "Pass", "Balance", "Has Savings Account", "Suspension", "Transfers Received", "Transfers Sent", "Last Transaction Time", "Email", "Last Daily Reward Claimed", "Login Streak", "Last Username Change", "Loan", "Loan Due Date", "Loan Penalty", "Loan Start Date", "Credit Score"])
+        userData = c.execute("SELECT user_id, username, level, visible_name, password, balance, has_savings_account, suspension, incoming_transfers, outgoing_transfers, last_transaction_time, email, last_daily_reward_claimed, login_streak, last_username_change, loan, loan_due_date, loan_penalty, loan_start_date, credit_score, vip_tier, card_url FROM users").fetchall()
+    df = pd.DataFrame(userData, columns = ["User ID", "Username", "Level", "Visible Name", "Pass", "Balance", "Has Savings Account", "Suspension", "Transfers Received", "Transfers Sent", "Last Transaction Time", "Email", "Last Daily Reward Claimed", "Login Streak", "Last Username Change", "Loan", "Loan Due Date", "Loan Penalty", "Loan Start Date", "Credit Score", "Vip Tier", "Card URL"])
     edited_df = st.data_editor(df, key = "users_table", num_rows = "fixed", use_container_width = True, hide_index = False)
 
     for _ in range(4):
@@ -4963,7 +5033,7 @@ def admin_panel(conn):
 
     if st.button("Update Data", use_container_width = True, type = "secondary"):
         for _, row in edited_df.iterrows():
-            c.execute("UPDATE OR IGNORE users SET username = ?, level = ?, visible_name = ?, password = ?, balance = ?, has_savings_account = ?, suspension = ?, incoming_transfers = ?, outgoing_transfers = ?, last_transaction_time = ?, email = ?, last_daily_reward_claimed = ?, login_streak = ?, last_username_change = ?, loan = ?, loan_due_date = ?, loan_penalty = ?, loan_start_date = ?, credit_score = ? WHERE user_id = ?", (row["Username"], row["Level"], row["Visible Name"], row["Pass"], row["Balance"], row["Has Savings Account"], row["Suspension"], row["Transfers Received"], row["Transfers Sent"], row["Last Transaction Time"], row["Email"], row["Last Daily Reward Claimed"], row["Login Streak"], row["Last Username Change"], row["Loan"], row["Loan Due Date"], row["Loan Penalty"], row["Loan Start Date"], row["Credit Score"],  row["User ID"]))
+            c.execute("UPDATE OR IGNORE users SET username = ?, level = ?, visible_name = ?, password = ?, balance = ?, has_savings_account = ?, suspension = ?, incoming_transfers = ?, outgoing_transfers = ?, last_transaction_time = ?, email = ?, last_daily_reward_claimed = ?, login_streak = ?, last_username_change = ?, loan = ?, loan_due_date = ?, loan_penalty = ?, loan_start_date = ?, credit_score = ?, vip_tier = ?, card_url = ? WHERE user_id = ?", (row["Username"], row["Level"], row["Visible Name"], row["Pass"], row["Balance"], row["Has Savings Account"], row["Suspension"], row["Transfers Received"], row["Transfers Sent"], row["Last Transaction Time"], row["Email"], row["Last Daily Reward Claimed"], row["Login Streak"], row["Last Username Change"], row["Loan"], row["Loan Due Date"], row["Loan Penalty"], row["Loan Start Date"], row["Credit Score"], row["Vip Tier"], row["Card URL"], row["User ID"]))
         conn.commit()
         st.rerun()
 
@@ -5517,5 +5587,5 @@ if __name__ == "__main__":
 """, unsafe_allow_html=True)
     
     init_db(conn)
-    # conn.cursor().execute("ALTER TABLE users ADD COLUMN loan_duration INTEGER DEFAULT 7;")
+    conn.cursor().execute("ALTER TABLE users ADD COLUMN card_url TEXT DEFAULT NULL;")
     main(conn)
