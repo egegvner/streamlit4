@@ -268,7 +268,7 @@ def claim_daily_reward(conn, user_id):
         else:
             streak = c.execute("SELECT login_streak FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
             new_streak = streak + 1 if last_claimed else 1
-            reward = 1000 + (new_streak * 2)
+            reward = 5000 + (new_streak * 5)
 
             c.execute("UPDATE users SET balance = balance + ?, last_daily_reward_claimed = ?, login_streak = ? WHERE user_id = ?", 
                     (reward, datetime.datetime.today().strftime("%Y-%m-%d"), new_streak, user_id))
