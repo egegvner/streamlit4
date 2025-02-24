@@ -734,7 +734,7 @@ def init_db(conn):
                   loan_start_date,
                   credit_score INTEGER DEFAULT 600,
                   vip_tier TEXT DEFAULT NULL,
-                  card_url TEXT DEFAULT NULL
+                  card_url TEXT DEFAULT 'https://res.cloudinary.com/triplet/image/upload/v1739785192/Bank_Genova_Inc_f4oofr.png'
                   );''')
 
     c.execute('''CREATE TABLE IF NOT EXISTS transactions (
