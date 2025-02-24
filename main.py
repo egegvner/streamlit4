@@ -2476,7 +2476,7 @@ def dashboard(conn, user_id):
 
     st.text("")
     st.text("")
-    vip_tier = c.execute("SELECT vip_tier FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+    vip_tier = c.execute("SELECT vip_tier FROM users WHERE user_id = ?", (user_id,)).fetchone()
     if vip_tier:
         vip_tier = vip_tier[0]
         card_url = c.execute("SELECT card_url FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
