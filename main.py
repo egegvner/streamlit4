@@ -2290,7 +2290,6 @@ def savings_view(conn, user_id):
         else:
             st.write("You do not own a savings account.")
     
-
 def dashboard(conn, user_id):
     c = conn.cursor()
     check_and_update_investments(conn, user_id)
@@ -2477,7 +2476,7 @@ def dashboard(conn, user_id):
     st.text("")
     st.text("")
     vip_tier = c.execute("SELECT vip_tier FROM users WHERE user_id = ?", (user_id,)).fetchone()
-    if vip_tier:
+    if vip_tier is not None or vip_tier != "" or vip_tier != "None" or vip_tier != "NULL:
         vip_tier = vip_tier[0]
         card_url = c.execute("SELECT card_url FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
         with st.container(border=True):
