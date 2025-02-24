@@ -5587,5 +5587,5 @@ if __name__ == "__main__":
 """, unsafe_allow_html=True)
     
     init_db(conn)
-    conn.cursor().execute("ALTER TABLE users ADD COLUMN card_url TEXT DEFAULT NULL;")
+    # conn.cursor().execute("ALTER TABLE users ADD COLUMN card_url TEXT DEFAULT NULL;")
     main(conn)
