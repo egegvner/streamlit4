@@ -4132,7 +4132,7 @@ def membership_view(conn, user_id):
                 with c12:
                     st.write("Tax Discount | :red[-5%]")
                     st.write("Property Income | :green[+5%]")
-                    st.write("Property Income | :green[+1%]")
+                    st.write("Land Income | :green[+1%]")
                 st.write("#### **Membership Cost** :red[$199,000] + :orange[590 Credits]")
                 if st.button("Request Card", use_container_width=True, disabled=True if balance < 199000 or credit < 590 else False, help="Not enough balance or credit scores." if balance < 199000 or credit < 590 else None, key="guest"):
                     buy_membership_dialog(conn, user_id, "Guest", 199000)
@@ -4156,7 +4156,7 @@ def membership_view(conn, user_id):
                 with c12:
                     st.write("Tax Discount | :red[-10%]")
                     st.write("Property Income | :green[+10%]")
-                    st.write("Property Income | :green[+2%]")
+                    st.write("Land Income | :green[+2%]")
                 st.write("#### **Membership Cost** :red[$629,000] + :orange[610 Credits]")
                 if st.button("Request Card", use_container_width=True, disabled=True if balance < 629000 or credit < 620 else False, help="Not enough balance or credit scores." if balance < 629000 or credit < 620 else None, key="member"):
                     buy_membership_dialog(conn, user_id, "Member", 629000)
@@ -4180,7 +4180,7 @@ def membership_view(conn, user_id):
                 with c12:
                     st.write("Tax Discount | :red[-20%]")
                     st.write("Property Income | :green[+20%]")
-                    st.write("Property Income | :green[+4%]")
+                    st.write("Land Income | :green[+4%]")
                 st.write("#### **Membership Cost** :red[$1.500,000] + :orange[640 Credits]")
                 if st.button("Request Card", use_container_width=True, disabled=True if balance < 1500000 or credit < 640 else False, help="Not enough balance or credit scores." if balance < 1500000 or credit < 640 else None, key="bronze"):
                     buy_membership_dialog(conn, user_id, "Bronze", 1500000)
@@ -4204,7 +4204,7 @@ def membership_view(conn, user_id):
                 with c12:
                     st.write("Tax Discount | :red[-30%]")
                     st.write("Property Income | :green[+30%]")
-                    st.write("Property Income | :green[+6%]")
+                    st.write("Land Income | :green[+6%]")
                 st.write("#### **Membership Cost** :red[$8,950,000] + :orange[660 Credits]")
                 if st.button("Request Card", use_container_width=True, disabled=True if balance < 8950000 or credit < 660 else False, help="Not enough balance or credit scores." if balance < 8950000 or credit < 660 else None, key="silver"):
                     buy_membership_dialog(conn, user_id, "Silver", 8950000)
@@ -4228,7 +4228,7 @@ def membership_view(conn, user_id):
                 with c12:
                     st.write("Tax Discount | :red[-40%]")
                     st.write("Property Income | :green[+40%]")
-                    st.write("Property Income | :green[+8%]")
+                    st.write("Land Income | :green[+8%]")
                 st.write("#### **Membership Cost** :red[$17.400,000] + :orange[680 Credits]")
                 if st.button("Request Card", use_container_width=True, disabled=True if balance < 17400000 or credit < 680 else False, help="Not enough balance or credit scores." if balance < 17400000 or credit < 680 else None, key="gold"):
                     buy_membership_dialog(conn, user_id, "Gold", 17400000)
@@ -4252,7 +4252,7 @@ def membership_view(conn, user_id):
                 with c12:
                     st.write("Tax Discount | :red[-50%]")
                     st.write("Property Income | :green[+50%]")
-                    st.write("Property Income | :green[+10%]")
+                    st.write("Land Income | :green[+10%]")
                 st.write("#### **Membership Cost** :red[$42,500,000] + :orange[700 Credits]")
                 if st.button("Request Card", use_container_width=True, disabled=True if balance < 42500000 or credit < 700 else False, help="Not enough balance or credit scores." if balance < 42500000 or credit < 700 else None, key="obsidian"):
                     buy_membership_dialog(conn, user_id, "Obsidian", 42500000)
