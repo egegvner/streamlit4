@@ -1802,14 +1802,14 @@ def upgrade_prop_dialog(conn, user_id, prop_id):
             with st.container(border=True, ):
                 st.caption(":orange[NEXT]")
                 st.title(f"**Level** :blue[{user_prop[0] + 1}]")
-                st.subheader(f"RENT -> **:green[${format_number(user_prop[1] * 1.5)}]** / day")
+                st.subheader(f"RENT -> **:green[${format_number(user_prop[1] * 2.5)}]** / day")
     
-    st.title(f"**COST**  :red[${format_number(user_prop[0] * user_prop[1] * 10)}]" if user_prop[0] != 10 else ":red[$∞]")
-    if st.button("**Confirm Upgrade**", type="primary", use_container_width=True, disabled=True if balance < (user_prop[0] * user_prop[1] * 10) or user_prop[0] == 10 else False):
+    st.title(f"**COST**  :red[${format_number(user_prop[0] * user_prop[1] * 5)}]" if user_prop[0] != 10 else ":red[$∞]")
+    if st.button("**Confirm Upgrade**", type="primary", use_container_width=True, disabled=True if balance < (user_prop[0] * user_prop[1] * 5) or user_prop[0] == 10 else False):
         with st.spinner("🔨 Processing upgrade..."):
-            c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (user_prop[0] * user_prop[1] * 10, user_id))
-            c.execute("UPDATE user_properties SET rent_income = ?, level = level + 1 WHERE property_id = ?", (user_prop[1] * 1.5, prop_id))
-            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Upgrade Property {prop} (ID {prop_id}) to Level {user_prop[0] + 1}", user_prop[0] * user_prop[1] * 10))
+            c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (user_prop[0] * user_prop[1] * 5, user_id))
+            c.execute("UPDATE user_properties SET rent_income = ?, level = level + 1 WHERE property_id = ?", (user_prop[1] * 2.5, prop_id))
+            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Upgrade Property {prop} (ID {prop_id}) to Level {user_prop[0] + 1}", user_prop[0] * user_prop[1] * 5))
             conn.commit()
             time.sleep(3)
         st.success(f"Upgraded {prop} to level :orange[{user_prop[0] + 1}]!")
@@ -2054,10 +2054,10 @@ def inventory_view(conn, user_id):
                 with c5:
                     st.write("Gain / Loss")
                     if profit_loss < 0:
-                        st.subheader(f":red[{format_number(profit_loss)}]")
+                        st.subheader(f":red[{format_number_with_dots(profit_loss)}]")
                         st.caption(f":red[{format_number(profit_loss_percent)}%]")
                     else:
-                        st.subheader(f":green[{format_number(profit_loss)}]")
+                        st.subheader(f":green[{format_number_with_dots(profit_loss)}]")
                         st.caption(f":green[+{format_number(profit_loss_percent)}%]")
                 
             if st.button("Quick Sell (ALL)", use_container_width = True, key = stock_id):
