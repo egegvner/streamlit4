@@ -19,10 +19,7 @@ import shutil
 import geopandas as gpd
 import numpy as np
 import streamlit_lightweight_charts
-from streamlit_cookies_controller import CookieController
 from streamlit_lightweight_charts import renderLightweightCharts
-
-cookieManager = CookieController()
 
 ph = argon2.PasswordHasher(
     memory_cost=65536,  # 64MB RAM usage (default: 10240)
@@ -271,7 +268,7 @@ def claim_daily_reward(conn, user_id):
         else:
             streak = c.execute("SELECT login_streak FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
             new_streak = streak + 1 if last_claimed else 1
-            reward = 5000 + (new_streak * 100)
+            reward = 5000 + (new_streak * 5)
 
             c.execute("UPDATE users SET balance = balance + ?, last_daily_reward_claimed = ?, login_streak = ? WHERE user_id = ?", 
                     (reward, datetime.datetime.today().strftime("%Y-%m-%d"), new_streak, user_id))
@@ -297,15 +294,15 @@ def update_stock_prices(conn):
             if last_updated:
                 last_updated = datetime.datetime.strptime(last_updated, "%Y-%m-%d %H:%M:%S")
             else:
-                last_updated = now - datetime.timedelta(seconds=10)
+                last_updated = now - datetime.timedelta(seconds=30)
 
             if open_price is None:
                 open_price = current_price
 
             elapsed_time = (now - last_updated).total_seconds()
-            num_updates = int(elapsed_time // 10)
+            num_updates = int(elapsed_time // 30)
 
-            one_month_ago = now - datetime.timedelta(days=60)
+            one_month_ago = now - datetime.timedelta(days=30)
             c.execute(
                 "DELETE FROM stock_history WHERE stock_id = ? AND timestamp < ?",
                 (stock_id, one_month_ago.strftime("%Y-%m-%d %H:%M:%S"))
@@ -316,7 +313,7 @@ def update_stock_prices(conn):
                     change_percent = round(random.uniform(-change_rate, change_rate), 2)
                     new_price = max(1, round(current_price * (1 + change_percent / 100), 2))
 
-                    missed_update_time = last_updated + datetime.timedelta(seconds=(i + 1) * 10)
+                    missed_update_time = last_updated + datetime.timedelta(seconds=(i + 1) * 30)
                     if missed_update_time <= now:
                         c.execute(
                             "INSERT INTO stock_history (stock_id, price, timestamp) VALUES (?, ?, ?)",
@@ -356,7 +353,7 @@ def get_stock_metrics(conn, stock_id):
     
     result = c.fetchone()
     all_time_low, all_time_high = result if result else (None, None)
-    
+
     c.execute("""
         SELECT price 
         FROM stock_history 
@@ -5237,13 +5234,9 @@ def settings(conn, username):
         st.text("")
 
     st.button("Ege Güvener • © 2024", type = "tertiary", use_container_width = True, disabled = True)
+    import os
 
 def main(conn):
-    if cookieManager.get("user_id"):
-        st.session_state.logged_in = True
-        st.session_state.user_id = cookieManager.get("user_id")
-        st.session_state.username = cookieManager.get("username")
-
     st.markdown(
     """
     <style>
@@ -5295,6 +5288,9 @@ def main(conn):
     unsafe_allow_html=True
 )
 
+    if 'current_menu' not in st.session_state:
+        st.session_state.current_menu = "Deposit"
+
     conn, c = init_db(conn)
     
     if 'logged_in' not in st.session_state:
@@ -5326,8 +5322,6 @@ def main(conn):
                             st.session_state.user_id = user[0]
                             st.session_state.username = username
                             st.session_state.current_menu = "Dashboard"
-                            cookieManager.set("user_id", user[0])
-                            cookieManager.set("username", username)
                             time.sleep(3)
                             
                     st.rerun()
@@ -5360,8 +5354,6 @@ def main(conn):
                             if len(new_password) >= 8:
                                 if new_password == confirm_password:
                                     if new_username not in existing_users and new_username != "egegvner" and new_username != "Egegvner" and new_username != "Genova":
-                                        cookieManager.set("user_id", user[0])
-                                        cookieManager.set("username", username)
                                         register_user(conn, new_username, new_password)
                                     else:
                                         st.error("Username already taken.")
@@ -5485,7 +5477,12 @@ def main(conn):
                     st.session_state.current_menu = "Admin Panel"
                     st.rerun()
 
-            if st.button("Settings", type="secondary", use_container_width=True):
+            c1, c2 = st.columns(2)
+            if c1.button("Log Out", type="secondary", use_container_width=True):
+                st.session_state.current_menu = "Logout"
+                st.rerun()
+
+            if c2.button("Settings", type="secondary", use_container_width=True):
                 st.session_state.current_menu = "Settings"
                 st.rerun()
 
@@ -5544,6 +5541,15 @@ def main(conn):
 
         elif st.session_state.current_menu == "Real Estate":
             real_estate_marketplace_view(conn, st.session_state.user_id)
+
+        elif st.session_state.current_menu == "Logout":
+            st.sidebar.info("Logging you out...")
+            time.sleep(2.5)
+            st.session_state.logged_in = False
+            st.session_state.user_id = None
+            st.session_state.username = None
+            st.session_state.current_menu = "Login"
+            st.rerun()
 
         elif st.session_state.current_menu == "Settings":
             settings(conn, st.session_state.username)
