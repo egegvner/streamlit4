@@ -1802,14 +1802,14 @@ def upgrade_prop_dialog(conn, user_id, prop_id):
             with st.container(border=True, ):
                 st.caption(":orange[NEXT]")
                 st.title(f"**Level** :blue[{user_prop[0] + 1}]")
-                st.subheader(f"RENT -> **:green[${format_number(user_prop[1] * 2.5)}]** / day")
+                st.subheader(f"RENT -> **:green[${format_number(user_prop[1] * 1.5)}]** / day")
     
-    st.title(f"**COST**  :red[${format_number(user_prop[0] * user_prop[1] * 5)}]" if user_prop[0] != 10 else ":red[$∞]")
-    if st.button("**Confirm Upgrade**", type="primary", use_container_width=True, disabled=True if balance < (user_prop[0] * user_prop[1] * 5) or user_prop[0] == 10 else False):
+    st.title(f"**COST**  :red[${format_number(user_prop[0] * user_prop[1] * 10)}]" if user_prop[0] != 10 else ":red[$∞]")
+    if st.button("**Confirm Upgrade**", type="primary", use_container_width=True, disabled=True if balance < (user_prop[0] * user_prop[1] * 10) or user_prop[0] == 10 else False):
         with st.spinner("🔨 Processing upgrade..."):
-            c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (user_prop[0] * user_prop[1] * 5, user_id))
-            c.execute("UPDATE user_properties SET rent_income = ?, level = level + 1 WHERE property_id = ?", (user_prop[1] * 2.5, prop_id))
-            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Upgrade Property {prop} (ID {prop_id}) to Level {user_prop[0] + 1}", user_prop[0] * user_prop[1] * 5))
+            c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (user_prop[0] * user_prop[1] * 10, user_id))
+            c.execute("UPDATE user_properties SET rent_income = ?, level = level + 1 WHERE property_id = ?", (user_prop[1] * 1.5, prop_id))
+            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Upgrade Property {prop} (ID {prop_id}) to Level {user_prop[0] + 1}", user_prop[0] * user_prop[1] * 10))
             conn.commit()
             time.sleep(3)
         st.success(f"Upgraded {prop} to level :orange[{user_prop[0] + 1}]!")
@@ -2054,10 +2054,10 @@ def inventory_view(conn, user_id):
                 with c5:
                     st.write("Gain / Loss")
                     if profit_loss < 0:
-                        st.subheader(f":red[{format_number_with_dots(round(profit_loss, 2))}]")
+                        st.subheader(f":red[{format_number(profit_loss)}]")
                         st.caption(f":red[{format_number(profit_loss_percent)}%]")
                     else:
-                        st.subheader(f":green[{format_number_with_dots(round(profit_loss, 2))}]")
+                        st.subheader(f":green[{format_number(profit_loss)}]")
                         st.caption(f":green[+{format_number(profit_loss_percent)}%]")
                 
             if st.button("Quick Sell (ALL)", use_container_width = True, key = stock_id):
@@ -2672,7 +2672,7 @@ def adjust_stock_prices(conn, stock_id, quantity, action):
     
     price, stock_amount = c.execute("SELECT price, stock_amount FROM stocks WHERE stock_id = ?", (stock_id,)).fetchone()
     
-    elasticity_factor = 0.1
+    elasticity_factor = 0.01
     
     if action == "buy":
         price_change = (quantity / stock_amount) * elasticity_factor * price
@@ -4132,7 +4132,7 @@ def membership_view(conn, user_id):
                 with c12:
                     st.write("Tax Discount | :red[-5%]")
                     st.write("Property Income | :green[+5%]")
-                    st.write("Land Income | :green[+1%]")
+                    st.write("Property Income | :green[+1%]")
                 st.write("#### **Membership Cost** :red[$199,000] + :orange[590 Credits]")
                 if st.button("Request Card", use_container_width=True, disabled=True if balance < 199000 or credit < 590 else False, help="Not enough balance or credit scores." if balance < 199000 or credit < 590 else None, key="guest"):
                     buy_membership_dialog(conn, user_id, "Guest", 199000)
@@ -4156,7 +4156,7 @@ def membership_view(conn, user_id):
                 with c12:
                     st.write("Tax Discount | :red[-10%]")
                     st.write("Property Income | :green[+10%]")
-                    st.write("Land Income | :green[+2%]")
+                    st.write("Property Income | :green[+2%]")
                 st.write("#### **Membership Cost** :red[$629,000] + :orange[610 Credits]")
                 if st.button("Request Card", use_container_width=True, disabled=True if balance < 629000 or credit < 620 else False, help="Not enough balance or credit scores." if balance < 629000 or credit < 620 else None, key="member"):
                     buy_membership_dialog(conn, user_id, "Member", 629000)
@@ -4180,7 +4180,7 @@ def membership_view(conn, user_id):
                 with c12:
                     st.write("Tax Discount | :red[-20%]")
                     st.write("Property Income | :green[+20%]")
-                    st.write("Land Income | :green[+4%]")
+                    st.write("Property Income | :green[+4%]")
                 st.write("#### **Membership Cost** :red[$1.500,000] + :orange[640 Credits]")
                 if st.button("Request Card", use_container_width=True, disabled=True if balance < 1500000 or credit < 640 else False, help="Not enough balance or credit scores." if balance < 1500000 or credit < 640 else None, key="bronze"):
                     buy_membership_dialog(conn, user_id, "Bronze", 1500000)
@@ -4204,7 +4204,7 @@ def membership_view(conn, user_id):
                 with c12:
                     st.write("Tax Discount | :red[-30%]")
                     st.write("Property Income | :green[+30%]")
-                    st.write("Land Income | :green[+6%]")
+                    st.write("Property Income | :green[+6%]")
                 st.write("#### **Membership Cost** :red[$8,950,000] + :orange[660 Credits]")
                 if st.button("Request Card", use_container_width=True, disabled=True if balance < 8950000 or credit < 660 else False, help="Not enough balance or credit scores." if balance < 8950000 or credit < 660 else None, key="silver"):
                     buy_membership_dialog(conn, user_id, "Silver", 8950000)
@@ -4228,7 +4228,7 @@ def membership_view(conn, user_id):
                 with c12:
                     st.write("Tax Discount | :red[-40%]")
                     st.write("Property Income | :green[+40%]")
-                    st.write("Land Income | :green[+8%]")
+                    st.write("Property Income | :green[+8%]")
                 st.write("#### **Membership Cost** :red[$17.400,000] + :orange[680 Credits]")
                 if st.button("Request Card", use_container_width=True, disabled=True if balance < 17400000 or credit < 680 else False, help="Not enough balance or credit scores." if balance < 17400000 or credit < 680 else None, key="gold"):
                     buy_membership_dialog(conn, user_id, "Gold", 17400000)
@@ -4252,7 +4252,7 @@ def membership_view(conn, user_id):
                 with c12:
                     st.write("Tax Discount | :red[-50%]")
                     st.write("Property Income | :green[+50%]")
-                    st.write("Land Income | :green[+10%]")
+                    st.write("Property Income | :green[+10%]")
                 st.write("#### **Membership Cost** :red[$42,500,000] + :orange[700 Credits]")
                 if st.button("Request Card", use_container_width=True, disabled=True if balance < 42500000 or credit < 700 else False, help="Not enough balance or credit scores." if balance < 42500000 or credit < 700 else None, key="obsidian"):
                     buy_membership_dialog(conn, user_id, "Obsidian", 42500000)
