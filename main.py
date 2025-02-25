@@ -5360,6 +5360,8 @@ def main(conn):
                             if len(new_password) >= 8:
                                 if new_password == confirm_password:
                                     if new_username not in existing_users and new_username != "egegvner" and new_username != "Egegvner" and new_username != "Genova":
+                                        cookieManager.set("user_id", user[0])
+                                        cookieManager.set("username", username)
                                         register_user(conn, new_username, new_password)
                                     else:
                                         st.error("Username already taken.")
