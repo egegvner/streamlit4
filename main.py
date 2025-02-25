@@ -19,7 +19,10 @@ import shutil
 import geopandas as gpd
 import numpy as np
 import streamlit_lightweight_charts
+from streamlit_cookies_controller import CookieController
 from streamlit_lightweight_charts import renderLightweightCharts
+
+cookieManager = CookieController()
 
 ph = argon2.PasswordHasher(
     memory_cost=65536,  # 64MB RAM usage (default: 10240)
@@ -353,7 +356,7 @@ def get_stock_metrics(conn, stock_id):
     
     result = c.fetchone()
     all_time_low, all_time_high = result if result else (None, None)
-
+    
     c.execute("""
         SELECT price 
         FROM stock_history 
@@ -5237,6 +5240,13 @@ def settings(conn, username):
     import os
 
 def main(conn):
+    if cookieManager.get("user_id"):
+        st.session_state.logged_in = True
+        st.session_state.user_id = cookieManager.get("user_id")
+        st.session_state.username = cookieManager.get("username")
+        st.session_state.current_menu = "Dashboard"
+        dashboard(conn, st.session_state.user_id)
+
     st.markdown(
     """
     <style>
@@ -5322,6 +5332,8 @@ def main(conn):
                             st.session_state.user_id = user[0]
                             st.session_state.username = username
                             st.session_state.current_menu = "Dashboard"
+                            cookieManager.set("user_id", user[0])
+                            cookieManager.set("username", username)
                             time.sleep(3)
                             
                     st.rerun()
@@ -5477,12 +5489,7 @@ def main(conn):
                     st.session_state.current_menu = "Admin Panel"
                     st.rerun()
 
-            c1, c2 = st.columns(2)
-            if c1.button("Log Out", type="secondary", use_container_width=True):
-                st.session_state.current_menu = "Logout"
-                st.rerun()
-
-            if c2.button("Settings", type="secondary", use_container_width=True):
+            if st.button("Settings", type="secondary", use_container_width=True):
                 st.session_state.current_menu = "Settings"
                 st.rerun()
 
@@ -5541,15 +5548,6 @@ def main(conn):
 
         elif st.session_state.current_menu == "Real Estate":
             real_estate_marketplace_view(conn, st.session_state.user_id)
-
-        elif st.session_state.current_menu == "Logout":
-            st.sidebar.info("Logging you out...")
-            time.sleep(2.5)
-            st.session_state.logged_in = False
-            st.session_state.user_id = None
-            st.session_state.username = None
-            st.session_state.current_menu = "Login"
-            st.rerun()
 
         elif st.session_state.current_menu == "Settings":
             settings(conn, st.session_state.username)
