@@ -5339,13 +5339,17 @@ def main(conn):
             st.text("")
             st.text("")
 
+            existing_users = c.execute("SELECT username FROM users").fetchall()
             if st.button("Register", use_container_width = True, type = "primary"):
                 if new_username != "":
                     if len(new_username) >= 5:
                         if new_password != "":
                             if len(new_password) >= 8:
                                 if new_password == confirm_password:
-                                    register_user(conn, new_username, new_password)
+                                    if new_username not in existing_users:
+                                        register_user(conn, new_username, new_password)
+                                    else:
+                                        st.error("Username already taken.")
                                 else:
                                     st.error("Passwords do not match.")
                             else:
