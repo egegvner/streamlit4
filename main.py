@@ -5237,9 +5237,6 @@ def settings(conn, username):
         st.text("")
 
     st.button("Ege Güvener • © 2024", type = "tertiary", use_container_width = True, disabled = True)
-    import os
-
-st.write("Click on a sidebar option to get started")
 
 def main(conn):
     if cookieManager.get("user_id"):
