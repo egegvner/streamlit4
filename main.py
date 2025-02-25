@@ -271,7 +271,7 @@ def claim_daily_reward(conn, user_id):
         else:
             streak = c.execute("SELECT login_streak FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
             new_streak = streak + 1 if last_claimed else 1
-            reward = 5000 + (new_streak * 5)
+            reward = 5000 + (new_streak * 100)
 
             c.execute("UPDATE users SET balance = balance + ?, last_daily_reward_claimed = ?, login_streak = ? WHERE user_id = ?", 
                     (reward, datetime.datetime.today().strftime("%Y-%m-%d"), new_streak, user_id))
@@ -297,15 +297,15 @@ def update_stock_prices(conn):
             if last_updated:
                 last_updated = datetime.datetime.strptime(last_updated, "%Y-%m-%d %H:%M:%S")
             else:
-                last_updated = now - datetime.timedelta(seconds=30)
+                last_updated = now - datetime.timedelta(seconds=10)
 
             if open_price is None:
                 open_price = current_price
 
             elapsed_time = (now - last_updated).total_seconds()
-            num_updates = int(elapsed_time // 30)
+            num_updates = int(elapsed_time // 10)
 
-            one_month_ago = now - datetime.timedelta(days=30)
+            one_month_ago = now - datetime.timedelta(days=60)
             c.execute(
                 "DELETE FROM stock_history WHERE stock_id = ? AND timestamp < ?",
                 (stock_id, one_month_ago.strftime("%Y-%m-%d %H:%M:%S"))
@@ -316,7 +316,7 @@ def update_stock_prices(conn):
                     change_percent = round(random.uniform(-change_rate, change_rate), 2)
                     new_price = max(1, round(current_price * (1 + change_percent / 100), 2))
 
-                    missed_update_time = last_updated + datetime.timedelta(seconds=(i + 1) * 30)
+                    missed_update_time = last_updated + datetime.timedelta(seconds=(i + 1) * 10)
                     if missed_update_time <= now:
                         c.execute(
                             "INSERT INTO stock_history (stock_id, price, timestamp) VALUES (?, ?, ?)",
