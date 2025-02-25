@@ -2672,7 +2672,7 @@ def adjust_stock_prices(conn, stock_id, quantity, action):
     
     price, stock_amount = c.execute("SELECT price, stock_amount FROM stocks WHERE stock_id = ?", (stock_id,)).fetchone()
     
-    elasticity_factor = 0.01
+    elasticity_factor = 0.1
     
     if action == "buy":
         price_change = (quantity / stock_amount) * elasticity_factor * price
