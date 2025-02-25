@@ -3269,18 +3269,26 @@ def get_max_borrow(credit_score, total_worth):
     else:
         return total_worth * 0.5
 
+def get_duration_adjusted_interest(base_interest_rate, duration, min_days=7, max_days=60):
+    scaling_factor = 2.5  # Controls how much shorter loans increase daily interest
+    loan_duration_factor = 1 + ((max_days - duration) / (max_days - min_days)) * scaling_factor
+    
+    daily_interest_rate = base_interest_rate / loan_duration_factor
+    total_interest = daily_interest_rate * duration  # Ensures total interest matches the default rate
+    
+    return daily_interest_rate, total_interest
+
 def borrow_money(conn, user_id, amount, base_interest_rate, duration):
     c = conn.cursor()
 
     if duration < 7 or duration > 60:
-        st.error("Loan duration must be between 7 and 30 days.")
+        st.error("Loan duration must be between 7 and 60 days.")
         return
 
     credit_score = c.execute("SELECT credit_score FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+    daily_interest_rate, total_interest = get_duration_adjusted_interest(base_interest_rate, duration)
 
-    interest_rate = base_interest_rate + ((duration - 7) * 0.002)
     rejection_chance = max(0, (400 - credit_score) / 400)
-
     if random.random() < rejection_chance:
         st.toast("❌ Loan application denied due to low credit score!")
         time.sleep(2.5)
@@ -3294,8 +3302,7 @@ def borrow_money(conn, user_id, amount, base_interest_rate, duration):
 
     today = datetime.date.today()
     due_date = (today + datetime.timedelta(days=duration)).strftime("%Y-%m-%d")
-
-    new_loan = round(amount * (1 + interest_rate), 2)
+    new_loan = round(amount * (1 + total_interest), 2)
 
     c.execute("UPDATE users SET balance = balance - ? WHERE username = 'Government'", (amount,))
     c.execute("UPDATE users SET balance = balance + ?, loan = ?, loan_due_date = ?, loan_start_date = ?, loan_duration = ? WHERE user_id = ?", 
@@ -3304,10 +3311,10 @@ def borrow_money(conn, user_id, amount, base_interest_rate, duration):
     c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", 
               (random.randint(100000000, 999999999), user_id, "Borrow Loan", amount))
 
-    c.execute("UPDATE users SET credit_score = credit_score - 10 WHERE user_id = ?", (user_id,))
+    c.execute("UPDATE users SET credit_score = credit_score - 15 WHERE user_id = ?", (user_id,))
 
     conn.commit()
-    st.toast(f"✅ Borrowed :green[${format_number_with_dots(amount)}]. Due Date: {due_date}.")
+    st.toast(f"✅ Borrowed :green[${format_number_with_dots(amount)}] with daily interest of :red[{round(daily_interest_rate * 100, 2)}%]. Due Date: {due_date}.")
     time.sleep(2.5)
     st.rerun()
 
@@ -3333,14 +3340,14 @@ def repay_loan(conn, user_id, amount):
     loan_start_date_obj = datetime.datetime.strptime(loan_start_date, "%Y-%m-%d").date()
     days_since_borrowed = (datetime.date.today() - loan_start_date_obj).days
 
-    if days_since_borrowed < 7:
+    if days_since_borrowed < 2:
         fee = round(amount * 0.5, 2)
         amount += fee
         score = -1
         st.toast(f"⚠ Early repayment fee of :red[${format_number_with_dots(fee)}] applied!")
         time.sleep(2)
     else:
-        score = 50
+        score = 20
 
     new_loan = max(0, loan - amount)
 
