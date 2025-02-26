@@ -5163,8 +5163,8 @@ def admin_panel(conn):
         else:
             st.write(f"No property found for {user}.")
 
-    shutil.copy("bank-genova.db", "genova_copy.db")
-    st.download_button("Download Database", open("genova_copy.db", "rb"), f"genova_copy{random.randint(100000, 999999)}.db", use_container_width=True)
+    shutil.copy("./genova_copy442501.db", "genova_db.db")
+    st.download_button("Download Database", open("./genova_copy442501.db", "rb"), f"genova_db.db", use_container_width=True)
     files = [f for f in os.listdir('.') if os.path.isfile(f)]
     
     for file in files:
