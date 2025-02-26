@@ -5488,8 +5488,13 @@ def main(conn):
                     st.session_state.current_menu = "Admin Panel"
                     st.rerun()
 
-            if st.button("Settings", type="secondary", use_container_width=True):
+            co1, co2 = st.columns(2)
+            if co1.button("Settings", type="secondary", use_container_width=True):
                 st.session_state.current_menu = "Settings"
+                st.rerun()
+
+            if co2.button("Logout", type="secondary", use_container_width=True):
+                st.session_state.current_menu = "Logout"
                 st.rerun()
 
             
@@ -5552,7 +5557,15 @@ def main(conn):
             settings(conn, st.session_state.username)
 
         elif st.session_state.current_menu == "Admin Panel":
-                admin_panel(conn)
+            admin_panel(conn)
+
+        elif st.session_state.current_menu == "Logout":
+            st.session_state.logged_in = False
+            st.session_state.user_id = ""
+            st.session_state.username = ""
+            cookieManager.remove("user_id")
+            cookieManager.remove("username")
+            main(conn)
             
 def column_exists(conn, table_name, column_name):
     c = conn.cursor()
