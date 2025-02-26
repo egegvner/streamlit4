@@ -293,7 +293,6 @@ def claim_daily_reward(conn, user_id):
         conn.commit()
         time.sleep(3)
 
-@st.fragment()
 def update_stock_prices(conn):
     c = conn.cursor()
     now = datetime.datetime.now()
@@ -305,13 +304,13 @@ def update_stock_prices(conn):
             if last_updated:
                 last_updated = datetime.datetime.strptime(last_updated, "%Y-%m-%d %H:%M:%S")
             else:
-                last_updated = now - datetime.timedelta(seconds=10)
+                last_updated = now - datetime.timedelta(seconds=15)
 
             if open_price is None:
                 open_price = current_price
 
             elapsed_time = (now - last_updated).total_seconds()
-            num_updates = int(elapsed_time // 10)
+            num_updates = int(elapsed_time // 15)
 
             one_month_ago = now - datetime.timedelta(days=60)
             c.execute(
@@ -324,7 +323,7 @@ def update_stock_prices(conn):
                     change_percent = round(random.uniform(-change_rate, change_rate), 2)
                     new_price = max(1, round(current_price * (1 + change_percent / 100), 2))
 
-                    missed_update_time = last_updated + datetime.timedelta(seconds=(i + 1) * 10)
+                    missed_update_time = last_updated + datetime.timedelta(seconds=(i + 1) * 15)
                     if missed_update_time <= now:
                         c.execute(
                             "INSERT INTO stock_history (stock_id, price, timestamp) VALUES (?, ?, ?)",
@@ -2022,8 +2021,8 @@ def inventory_view(conn, user_id):
                         st.rerun()
 
     with t3:
-        st_autorefresh(interval=30000, key="ss")
-
+        st_autorefresh(interval=15000, key="ss")
+        update_stock_prices(conn)
         st.header("📊 My Portfolio", divider="rainbow")
 
         if not user_stocks:
