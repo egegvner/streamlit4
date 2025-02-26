@@ -5247,11 +5247,6 @@ def settings(conn, username):
     st.button("Ege Güvener • © 2024", type = "tertiary", use_container_width = True, disabled = True)
 
 def main(conn):
-    if cookieManager.get("user_id"):
-        st.session_state.logged_in = True
-        st.session_state.user_id = cookieManager.get("user_id")
-        st.session_state.username = cookieManager.get("username")
-
     st.markdown(
     """
     <style>
