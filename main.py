@@ -3062,7 +3062,7 @@ def stocks_view(conn, user_id):
                     time.sleep(2)
                     st.rerun()
 
-                if st.button(f"Sell MAX: :orange[{user_quantity}] ~ :green[${format_number(user_quantity * price)}]", key=f"sell_max_btn_{stock_id}", use_container_width=True, disabled=True if not user_quantity else False):
+                if st.button(f"Sell MAX: :orange[{format_number(user_quantity)}] ~ :green[${format_number(user_quantity * price)}]", key=f"sell_max_btn_{stock_id}", use_container_width=True, disabled=True if not user_quantity else False):
                     with st.spinner("Selling..."):
                         time.sleep(2.5)
                         sell_stock(conn, user_id, stock_id, user_quantity)
