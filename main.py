@@ -2062,10 +2062,10 @@ def inventory_view(conn, user_id):
                 with c5:
                     st.write("Gain / Loss")
                     if profit_loss < 0:
-                        st.subheader(f":red[{format_number_with_dots(round(profit_loss, 2))}]")
+                        st.subheader(f":red[{format_number(profit_loss)}]")
                         st.caption(f":red[{format_number(profit_loss_percent)}%]")
                     else:
-                        st.subheader(f":green[{format_number_with_dots(round(profit_loss, 2))}]")
+                        st.subheader(f":green[{format_number(profit_loss)}]")
                         st.caption(f":green[+{format_number(profit_loss_percent)}%]")
                 
             if st.button("Quick Sell (ALL)", use_container_width = True, key = stock_id):
