@@ -86,9 +86,17 @@ def write_stream(s, delay = 0, random_delay = False):
             yield i
             time.sleep(delay)
 
+DB_PATH = "./genova_copy442501.db"
+WRITABLE_PATH = "/tmp/genova_copy442501.db"
+
+if not os.path.exists(WRITABLE_PATH):
+    shutil.copy(DB_PATH, WRITABLE_PATH)
+
 @st.cache_resource
 def get_db_connection():
-    return sqlite3.connect("./genova_copy442501.db", uri=True, check_same_thread=False)
+    return sqlite3.connect(WRITABLE_PATH, check_same_thread=False, uri=True)
+
+conn = get_db_connection()
 
 item_colors = {
         "Common":":gray",
