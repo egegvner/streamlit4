@@ -2690,6 +2690,7 @@ def adjust_stock_prices(conn, stock_id, quantity, action):
     c.execute("UPDATE stocks SET price = ? WHERE stock_id = ?", (new_price, stock_id))
     
     conn.commit()
+    st.rerun()
 
 def buy_stock(conn, user_id, stock_id, quantity):
     c = conn.cursor()
@@ -2762,7 +2763,7 @@ def sell_stock(conn, user_id, stock_id, quantity):
 def stocks_view(conn, user_id):
     c = conn.cursor()
     
-    preload_stocks_from_json(conn, "./stocks.json")
+    # preload_stocks_from_json(conn, "./stocks.json")
     update_stock_prices(conn)
     st_autorefresh(interval=15000, key="stock_autorefresh")
 
@@ -2951,7 +2952,7 @@ def stocks_view(conn, user_id):
                 st.rerun()
             
             if q2.button("30m", type="tertiary", use_container_width=True):
-                st.session_state.resample = "0.01"
+                st.session_state.resample = "0.05"
                 st.session_state.hours = 0.5
                 st.rerun()
             
@@ -2961,32 +2962,32 @@ def stocks_view(conn, user_id):
                 st.rerun()
             
             if q4.button("5h", type="tertiary", use_container_width=True):
-                st.session_state.resample = "0.01"
+                st.session_state.resample = "0.05"
                 st.session_state.hours = 1440
                 st.rerun()
             
             if q5.button("1d", type="tertiary", use_container_width=True):
-                st.session_state.resample = "0.01"
+                st.session_state.resample = "0.1"
                 st.session_state.hours = 1440
                 st.rerun()
             
             if q6.button("7d", type="tertiary", use_container_width=True):
-                st.session_state.resample = "0.01"
+                st.session_state.resample = "0.5"
                 st.session_state.hours = 1440
                 st.rerun()
             
             if q7.button("15d", type="tertiary", use_container_width=True):
-                st.session_state.resample = "0.01"
+                st.session_state.resample = "1"
                 st.session_state.hours = 1440
                 st.rerun()
             
             if q8.button("1mo", type="tertiary", use_container_width=True):
-                st.session_state.resample = "0.01"
+                st.session_state.resample = "5"
                 st.session_state.hours = 1440
                 st.rerun()
             
             if q9.button("MAX", type="tertiary", use_container_width=True):
-                st.session_state.resample = "0.01"
+                st.session_state.resample = "10"
                 st.session_state.hours = 1440
                 st.rerun()
                         
