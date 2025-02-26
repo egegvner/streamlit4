@@ -3751,7 +3751,7 @@ def real_estate_marketplace_view(conn, user_id):
                 property_categories["PORTS"].append(row)
             elif "island" in title:
                 property_categories["ISLANDS"].append(row)
-            elif "mount" or "mt" in title:
+            elif "mount" in title:
                 property_categories["MOUNTAINS"].append(row)
             elif any(x in title for x in ["ms.", "mr.", "mrs."]):
                 property_categories["BSB"].append(row)
