@@ -2944,51 +2944,49 @@ def stocks_view(conn, user_id):
                 st.info("Stock history will be available after 60 seconds of stock creation.")
 
             q1, q2, q3, q4, q5, q6, q7, q8, q9 = st.columns(9)
-            if st.button("erwre"):
-                st.session_state.resample = "1"
-                st.session_state.hours = 1
+
             if q1.button("1m", type="tertiary", use_container_width=True):
                 st.session_state.resample = "0.01"
                 st.session_state.hours = 0.1
                 st.rerun()
             
             if q2.button("30m", type="tertiary", use_container_width=True):
-                st.session_state.resample = "0.1"
+                st.session_state.resample = "0.01"
                 st.session_state.hours = 0.5
                 st.rerun()
             
             if q3.button("1h", type="tertiary", use_container_width=True):
-                st.session_state.resample = "1.5"
+                st.session_state.resample = "0.01"
                 st.session_state.hours = 1
                 st.rerun()
             
             if q4.button("5h", type="tertiary", use_container_width=True):
-                st.session_state.resample = "5"
+                st.session_state.resample = "0.01"
                 st.session_state.hours = 1440
                 st.rerun()
             
             if q5.button("1d", type="tertiary", use_container_width=True):
-                st.session_state.resample = "20"
+                st.session_state.resample = "0.01"
                 st.session_state.hours = 1440
                 st.rerun()
             
             if q6.button("7d", type="tertiary", use_container_width=True):
-                st.session_state.resample = "1"
+                st.session_state.resample = "0.01"
                 st.session_state.hours = 1440
                 st.rerun()
             
             if q7.button("15d", type="tertiary", use_container_width=True):
-                st.session_state.resample = "2"
+                st.session_state.resample = "0.01"
                 st.session_state.hours = 1440
                 st.rerun()
             
             if q8.button("1mo", type="tertiary", use_container_width=True):
-                st.session_state.resample = "5"
+                st.session_state.resample = "0.01"
                 st.session_state.hours = 1440
                 st.rerun()
             
             if q9.button("MAX", type="tertiary", use_container_width=True):
-                st.session_state.resample = "1"
+                st.session_state.resample = "0.01"
                 st.session_state.hours = 1440
                 st.rerun()
                         
@@ -3037,16 +3035,16 @@ def stocks_view(conn, user_id):
                 if st.button(f"Buy {symbol}", key=f"buy_btn_{stock_id}", type="primary", use_container_width=True, 
                             disabled=True if buy_quantity == 0 or stock_amount < buy_quantity else False, help="Not enough stock available in the market" if stock_amount < buy_quantity else None):
                     with st.spinner("Purchasing..."):
-                        time.sleep(3)
+                        time.sleep(2.5)
                         buy_stock(conn, user_id, stock_id, buy_quantity)
-                    time.sleep(2.5)
+                    time.sleep(2)
                     st.rerun()
                 
                 if st.button(f"Buy MAX: :orange[{format_number(buy_max_quantity)}] ~ :green[${format_number(balance)}]", key=f"buy_max_btn_{stock_id}", use_container_width=True):
                     with st.spinner("Purchasing..."):
-                        time.sleep(3)
+                        time.sleep(2.5)
                         buy_stock(conn, user_id, stock_id, buy_max_quantity)
-                    time.sleep(2.5)
+                    time.sleep(2)
                     st.rerun()
                             
             with col2:
@@ -3058,16 +3056,16 @@ def stocks_view(conn, user_id):
                 if st.button(f"Sell {symbol}", key=f"sell_btn_{stock_id}", use_container_width=True, 
                             disabled=True if sell_quantity == 0 else False):
                     with st.spinner("Selling..."):
-                        time.sleep(3)
+                        time.sleep(2.5)
                         sell_stock(conn, user_id, stock_id, sell_quantity)
-                    time.sleep(2.5)
+                    time.sleep(2)
                     st.rerun()
 
                 if st.button(f"Sell MAX", key=f"sell_max_btn_{stock_id}", use_container_width=True, disabled=True if not user_quantity else False):
                     with st.spinner("Selling..."):
-                        time.sleep(3)
+                        time.sleep(2.5)
                         sell_stock(conn, user_id, stock_id, user_quantity)
-                    time.sleep(2.5)
+                    time.sleep(2)
                     st.rerun()
 
         stock_metrics = get_stock_metrics(conn, stock_id)
@@ -3192,6 +3190,7 @@ def stocks_view(conn, user_id):
             for _ in range(3):
                 st.text("")
             st.caption("Graph coming soon")
+
 
 def blackmarket_view(conn, user_id):
     c = conn.cursor()
