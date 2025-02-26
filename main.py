@@ -2765,7 +2765,7 @@ def stocks_view(conn, user_id):
     
     preload_stocks_from_json(conn, "./stocks.json")
     update_stock_prices(conn)
-    st_autorefresh(interval=30000, key="stock_autorefresh")
+    st_autorefresh(interval=10000, key="stock_autorefresh")
 
     stocks = c.execute("SELECT stock_id, name, symbol, price, stock_amount, dividend_rate FROM stocks").fetchall()
     balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
@@ -2944,48 +2944,63 @@ def stocks_view(conn, user_id):
             else:
                 st.info("Stock history will be available after 60 seconds of stock creation.")
 
-            q1, q2, q3, q4, q5, q6, q7, q8 = st.columns(8)
+            q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11 = st.columns(11)
 
-            if q1.button("1h", type="tertiary", use_container_width=True):
-                st.session_state.resample = 0.1
+            if q1.button("60s", type="tertiary", use_container_width=True):
+                st.session_state.resample = "1min"
                 st.session_state.hours = 1
                 st.rerun()
-
-            if q2.button("3h", type="tertiary", use_container_width=True):
-                st.session_state.resample = 0.2
-                st.session_state.hours = 3
+            
+            if q2.button("30m", type="tertiary", use_container_width=True):
+                st.session_state.resample = "5min"
+                st.session_state.hours = 1
                 st.rerun()
-
-            if q3.button("5h", type="tertiary", use_container_width=True):
-                st.session_state.resample = 0.4
-                st.session_state.hours = 5
+            
+            if q3.button("1h", type="tertiary", use_container_width=True):
+                st.session_state.resample = "15min"
+                st.session_state.hours = 6
                 st.rerun()
-
-            if q4.button("10h", type="tertiary", use_container_width=True):
-                st.session_state.resample = 0.8
-                st.session_state.hours = 10
+            
+            if q4.button("3h", type="tertiary", use_container_width=True):
+                st.session_state.resample = "30min"
+                st.session_state.hours = 12
                 st.rerun()
-
-            if q5.button("1d", type="tertiary", use_container_width=True):
-                st.session_state.resample = 0.8
+            
+            if q5.button("5h", type="tertiary", use_container_width=True):
+                st.session_state.resample = "1H"
                 st.session_state.hours = 24
                 st.rerun()
-
-            if q6.button("7d", type="tertiary", use_container_width=True):
-                st.session_state.resample = 1
+            
+            if q6.button("10h", type="tertiary", use_container_width=True):
+                st.session_state.resample = "2H"
+                st.session_state.hours = 24
+                st.rerun()
+            
+            if q7.button("1d", type="tertiary", use_container_width=True):
+                st.session_state.resample = "4H"
+                st.session_state.hours = 48
+                st.rerun()
+            
+            if q8.button("7d", type="tertiary", use_container_width=True):
+                st.session_state.resample = "1D"
                 st.session_state.hours = 168
                 st.rerun()
-
-            if q7.button("15d", type="tertiary", use_container_width=True):
-                st.session_state.resample = 1
+            
+            if q9.button("15d", type="tertiary", use_container_width=True):
+                st.session_state.resample = "2D"
                 st.session_state.hours = 360
                 st.rerun()
-
-            if q8.button("1mo", type="tertiary", use_container_width=True):
-                st.session_state.resample = 1
+            
+            if q10.button("1mo", type="tertiary", use_container_width=True):
+                st.session_state.resample = "5D"
                 st.session_state.hours = 720
                 st.rerun()
             
+            if q11.button("MAX", type="tertiary", use_container_width=True):
+                st.session_state.resample = "1W"
+                st.session_state.hours = 1440
+                st.rerun()
+                        
             now = datetime.datetime.now()
             days_ahead = (6 - now.weekday()) % 7
             if days_ahead == 0:
