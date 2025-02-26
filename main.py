@@ -2017,7 +2017,7 @@ def inventory_view(conn, user_id):
                         c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Collect Rent from {type}", rent_income))
                         conn.commit()
                         st.toast(f"🎉 Collected :green[${format_number(rent_income)}]!")
-                        time.sleep(1)
+                        time.sleep(0.5)
                         st.rerun()
 
     with t3:
