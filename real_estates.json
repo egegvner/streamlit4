@@ -926,7 +926,7 @@
     {
         "property_id": 800001002,
         "region": "Pakistan/China",
-        "type": "K2",
+        "type": "Mount K2",
         "price": 600000000,
         "rent_income": 180000000,
         "demand_factor": 0.97,
@@ -937,7 +937,7 @@
     {
         "property_id": 800001003,
         "region": "Nepal/India",
-        "type": "Kangchenjunga",
+        "type": "Mount Kangchenjunga",
         "price": 500000000,
         "rent_income": 150000000,
         "demand_factor": 0.96,
@@ -948,7 +948,7 @@
     {
         "property_id": 800001004,
         "region": "Nepal/Tibet",
-        "type": "Lhotse",
+        "type": "Mount Lhotse",
         "price": 450000000,
         "rent_income": 135000000,
         "demand_factor": 0.95,
@@ -959,7 +959,7 @@
     {
         "property_id": 800001005,
         "region": "Nepal/Tibet",
-        "type": "Makalu",
+        "type": "Mount Makalu",
         "price": 400000000,
         "rent_income": 120000000,
         "demand_factor": 0.94,
@@ -970,7 +970,7 @@
     {
         "property_id": 800001006,
         "region": "Nepal/Tibet",
-        "type": "Cho Oyu",
+        "type": "Mount Cho Oyu",
         "price": 350000000,
         "rent_income": 105000000,
         "demand_factor": 0.93,
@@ -981,7 +981,7 @@
     {
         "property_id": 800001007,
         "region": "Pakistan",
-        "type": "Nanga Parbat",
+        "type": "Mount Nanga Parbat",
         "price": 300000000,
         "rent_income": 90000000,
         "demand_factor": 0.92,
@@ -992,7 +992,7 @@
     {
         "property_id": 800001008,
         "region": "Nepal/Tibet",
-        "type": "Manaslu",
+        "type": "Mount Manaslu",
         "price": 250000000,
         "rent_income": 75000000,
         "demand_factor": 0.91,
@@ -1003,7 +1003,7 @@
     {
         "property_id": 800001009,
         "region": "Nepal/Tibet",
-        "type": "Annapurna",
+        "type": "Mount Annapurna",
         "price": 200000000,
         "rent_income": 60000000,
         "demand_factor": 0.90,
@@ -1014,7 +1014,7 @@
     {
         "property_id": 800001010,
         "region": "Tibet/China",
-        "type": "Shishapangma",
+        "type": "Mount Shishapangma",
         "price": 150000000,
         "rent_income": 45000000,
         "demand_factor": 0.89,
@@ -1036,7 +1036,7 @@
     {
         "property_id": 800001004,
         "region": "Argentina/Chile",
-        "type": "Aconcagua",
+        "type": "Mount Aconcagua",
         "price": 450000000,
         "rent_income": 135000000,
         "demand_factor": 0.95,
@@ -1058,7 +1058,7 @@
     {
         "property_id": 800001006,
         "region": "France/Italy",
-        "type": "Mont Blanc",
+        "type": "Mount Blanc",
         "price": 350000000,
         "rent_income": 105000000,
         "demand_factor": 0.93,
@@ -1069,7 +1069,7 @@
     {
         "property_id": 800001007,
         "region": "Antarctica",
-        "type": "Vinson Massif",
+        "type": "Mount Vinson Massif",
         "price": 300000000,
         "rent_income": 90000000,
         "demand_factor": 0.92,
@@ -1091,7 +1091,7 @@
     {
         "property_id": 800001009,
         "region": "Indonesia",
-        "type": "Puncak Jaya",
+        "type": "Mount Puncak Jaya",
         "price": 200000000,
         "rent_income": 60000000,
         "demand_factor": 0.90,
@@ -1102,7 +1102,7 @@
     {
         "property_id": 800001011,
         "region": "Mexico",
-        "type": "Pico de Orizaba",
+        "type": "Mount Pico de Orizaba",
         "price": 120000000,
         "rent_income": 36000000,
         "demand_factor": 0.88,
@@ -1157,7 +1157,7 @@
     {
         "property_id": 900001004,
         "region": "Greece",
-        "type": "Santorini",
+        "type": "Santorini Island",
         "price": 9500000000,
         "rent_income": 4275000000,
         "demand_factor": 0.99,
@@ -1168,7 +1168,7 @@
     {
         "property_id": 900001005,
         "region": "United Kingdom",
-        "type": "Isle of Skye",
+        "type": "Island of Skye",
         "price": 750000000,
         "rent_income": 337500000,
         "demand_factor": 0.96,
@@ -1212,7 +1212,7 @@
     {
         "property_id": 900001009,
         "region": "French Polynesia",
-        "type": "Bora Bora",
+        "type": "Bora Bora Island",
         "price": 8900000000,
         "rent_income": 4005000000,
         "demand_factor": 0.99,
@@ -1234,7 +1234,7 @@
     {
         "property_id": 900001011,
         "region": "Italy",
-        "type": "Capri",
+        "type": "Capri Island",
         "price": 7700000000,
         "rent_income": 3465000000,
         "demand_factor": 0.97,
@@ -1245,7 +1245,7 @@
     {
         "property_id": 900001012,
         "region": "Thailand",
-        "type": "Phuket",
+        "type": "Phuket Island",
         "price": 8500000000,
         "rent_income": 3825000000,
         "demand_factor": 0.98,
