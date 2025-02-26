@@ -3738,6 +3738,8 @@ def real_estate_marketplace_view(conn, user_id):
             "AIRPORTS": [],
             "PORTS": [],
             "LANDMARKS": [],
+            "MOUNTAINS": [],
+            "ISLANDS": [],
             "BSB": [],
         }
 
@@ -3747,13 +3749,17 @@ def real_estate_marketplace_view(conn, user_id):
                 property_categories["AIRPORTS"].append(row)
             elif "port" in title:
                 property_categories["PORTS"].append(row)
+            elif "island" in title:
+                property_categories["ISLANDS"].append(row)
+            elif "mount" or "mt" in title:
+                property_categories["MOUNTAINS"].append(row)
             elif any(x in title for x in ["ms.", "mr.", "mrs."]):
                 property_categories["BSB"].append(row)
             else:
                 property_categories["LANDMARKS"].append(row)
 
-        tabs = st.tabs(["✈️ AIRPORTS ✈️", "⚓️ PORTS ⚓️", "🪅 LANDMARKS 🪅", "📚 BSB 📚"])
-        tab_names = ["AIRPORTS", "PORTS", "LANDMARKS", "BSB"]
+        tabs = st.tabs(["✈️ AIRPORTS ✈️", "⚓️ PORTS ⚓️", "🪅 LANDMARKS 🪅", "🏔️ MOUNTAINS 🏔️", "🏝️ ISLANDS 🏝️", "📚 BSB 📚"])
+        tab_names = ["AIRPORTS", "PORTS", "LANDMARKS", "MOUNTAINS", "ISLANDS", "BSB"]
         
         property_categories = {category: [] for category in tab_names}
         
@@ -3763,6 +3769,10 @@ def real_estate_marketplace_view(conn, user_id):
                 property_categories["AIRPORTS"].append(row)
             elif "port" in title:
                 property_categories["PORTS"].append(row)
+            elif "island" in title:
+                property_categories["ISLANDS"].append(row)
+            elif "mount" or "mt" in title:
+                property_categories["MOUNTAINS"].append(row)
             elif any(x in title for x in ["ms.", "mr.", "mrs."]):
                 property_categories["BSB"].append(row)
             else:
