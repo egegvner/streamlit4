@@ -5565,7 +5565,7 @@ def main(conn):
             st.session_state.username = ""
             cookieManager.remove("user_id")
             cookieManager.remove("username")
-            main(conn)
+            st.rerun()
             
 def column_exists(conn, table_name, column_name):
     c = conn.cursor()
