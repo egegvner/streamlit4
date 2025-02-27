@@ -2019,7 +2019,7 @@ def inventory_view(conn, user_id):
                         st.rerun()
 
     with t3:
-        st_autorefresh(interval=15000, key="ss")
+        st_autorefresh(interval=20000, key="ss")
         update_stock_prices(conn)
         st.header("📊 My Portfolio", divider="rainbow")
 
