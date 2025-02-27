@@ -119,6 +119,15 @@ admins = [
     "JohnyJohnyJohn",
 ]
 
+def calculate_dynamic_interest_rate(balance, base_rate):
+    threshold = 1000000
+    
+    if balance <= threshold:
+        return base_rate
+    else:
+        dynamic_rate = base_rate * (threshold / balance)
+        return dynamic_rate
+
 def apply_interest_if_due(conn, user_id, check=True):
     c = conn.cursor()
     current_time = time.time()
@@ -139,7 +148,7 @@ def apply_interest_if_due(conn, user_id, check=True):
             ).fetchone()
             if not savings_data:
                 return
-            balance, last_applied, daily_interest_rate = savings_data
+            balance, last_applied, base_daily_rate = savings_data
 
             now = datetime.datetime.now()
             if last_applied:
@@ -150,7 +159,9 @@ def apply_interest_if_due(conn, user_id, check=True):
             elapsed_seconds = (now - last_applied_time).total_seconds()
             fraction_of_day = elapsed_seconds / 86400.0
 
-            interest = balance * daily_interest_rate * fraction_of_day
+            dynamic_rate = calculate_dynamic_interest_rate(balance, base_daily_rate)
+
+            interest = balance * dynamic_rate * fraction_of_day
             new_balance = balance + interest
 
             c.execute("""
@@ -168,7 +179,7 @@ def apply_interest_if_due(conn, user_id, check=True):
             st.rerun()
         else:
             st.toast(f"Wait {int(60 - (current_time - st.session_state.last_refresh))} seconds before refreshing again.")
-    
+
 def change_password(conn, username, current_password, new_password):
     c = conn.cursor()
     c.execute("SELECT password FROM users WHERE username = ?", (username,))
