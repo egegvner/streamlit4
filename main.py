@@ -674,7 +674,7 @@ def get_balance_trend(conn, user_id):
             current_balance -= amount
         
         cumulative_balance.append({
-            "time": timestamp.split(" ")[0],  # Extract only the date part
+            "time": timestamp.split(" ")[0],
             "value": round(current_balance, 2)
         })
 
@@ -687,6 +687,34 @@ def prepare_chart_data(balance_trend):
         "options": {}
     }]
     return seriesAreaChart
+
+def apply_daily_maintenance_cost(conn, user_id):
+    c = conn.cursor()
+    now = datetime.datetime.now()
+    
+    result = c.execute("SELECT last_maintenance_cost FROM users WHERE user_id = ?", (user_id,)).fetchone()
+    if result and result[0]:
+        last_maintenance = datetime.datetime.strptime(result[0], "%Y-%m-%d %H:%M:%S")
+    else:
+        last_maintenance = now - datetime.timedelta(days=1)
+    
+    days_passed = (now - last_maintenance).days
+    if days_passed < 1:
+        return
+    
+    total_worth = calculate_total_worth(c, user_id)
+    fee = total_worth * 0.01 * days_passed
+    
+    c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (fee, user_id))
+    c.execute("UPDATE users SET balance = balance + ? WHERE username = 'Government'", (fee,))
+    
+    new_maintenance_time = last_maintenance + datetime.timedelta(days=days_passed)
+    c.execute("UPDATE users SET last_maintenance_cost = ? WHERE user_id = ?",
+              (new_maintenance_time.strftime("%Y-%m-%d %H:%M:%S"), user_id))
+    
+    st.toast(f"Daily Maintenance Fee of :red[{format_number(fee)}] Applied.")
+    
+    conn.commit()
 
 def register_user(conn, username, password):
     c = conn.cursor()
@@ -2323,6 +2351,7 @@ def savings_view(conn, user_id):
 def dashboard(conn, user_id):
     c = conn.cursor()
     check_and_update_investments(conn, user_id)
+    apply_daily_maintenance_cost(conn, user_id)
     streak = c.execute("SELECT login_streak FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     credit_score = c.execute("SELECT credit_score FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
@@ -5654,5 +5683,5 @@ if __name__ == "__main__":
 """, unsafe_allow_html=True)
     
     init_db(conn)
-    # conn.cursor().execute("ALTER TABLE users ADD COLUMN card_url TEXT DEFAULT NULL;")
+    conn.cursor().execute("ALTER TABLE users ADD COLUMN last_maintenance_cost TEXT;")
     main(conn)
