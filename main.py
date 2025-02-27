@@ -5345,9 +5345,7 @@ def main(conn):
                             st.session_state.user_id = user[0]
                             st.session_state.username = username
                             st.session_state.current_menu = "Dashboard"
-                            cookieManager.set("user_id", user[0])
-                            cookieManager.set("username", username)
-                            time.sleep(3)
+                            time.sleep(2.5)
                             
                     st.rerun()
                 else:
@@ -5358,7 +5356,6 @@ def main(conn):
 
             if st.button("[Terms]", type = "tertiary", use_container_width=True):
                 privacy_policy_dialog()
-
             
             st.write('<div style="position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); color: slategray; text-align: center;"><marquee>Simple and educational bank / finance simulator by Ege. Specifically built for IB Computer Science IA. All rights of this "game" is reserved.</marquee></div>', unsafe_allow_html=True)
 
@@ -5378,9 +5375,7 @@ def main(conn):
                         if new_password != "":
                             if len(new_password) >= 8:
                                 if new_password == confirm_password:
-                                    if new_username not in existing_users and new_username != "egegvner" and new_username != "Egegvner" and new_username != "Genova":
-                                        cookieManager.set("user_id", user[0])
-                                        cookieManager.set("username", username)
+                                    if new_username not in existing_users:
                                         register_user(conn, new_username, new_password)
                                     else:
                                         st.error("Username already taken.")
