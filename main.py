@@ -739,10 +739,10 @@ def apply_monthly_living_tax(conn, user_id):
     c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, "Monthly Living Tax", fee))
     
     new_tax_time = last_tax + datetime.timedelta(days=days_passed)
-    c.execute("UPDATE users SET last_maintenance_cost = ? WHERE user_id = ?",
+    c.execute("UPDATE users SET last_living_tax = ? WHERE user_id = ?",
               (new_tax_time.strftime("%Y-%m-%d %H:%M:%S"), user_id))
     
-    st.toast(f"Monthly Living Taxt of :red[${format_number(fee)}] Applied.")
+    st.toast(f"Monthly Living Tax of :red[${format_number(fee)}] Applied.")
     
     conn.commit()
 
@@ -5714,5 +5714,5 @@ if __name__ == "__main__":
 """, unsafe_allow_html=True)
     
     init_db(conn)
-    conn.cursor().execute("ALTER TABLE users ADD COLUMN last_living_tax TEXT;")
+    # conn.cursor().execute("ALTER TABLE users ADD COLUMN last_living_tax TEXT;")
     main(conn)
