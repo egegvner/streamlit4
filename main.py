@@ -5172,7 +5172,6 @@ def admin_panel(conn):
                 label=f"Click to download {file}",
                 data=file_content,
                 file_name=file,
-                mime="application/octet-stream"
             )
     
 def settings(conn, username):
