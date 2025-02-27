@@ -125,7 +125,7 @@ def apply_interest_if_due(conn, user_id, check = True):
     c = conn.cursor()
     current_time = time.time()
     if check:
-        if current_time - st.session_state.last_refresh >= 30:
+        if current_time - st.session_state.last_refresh >= 60:
             st.session_state.last_refresh = current_time
 
             has_savings_account = c.execute("SELECT has_savings_account FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
