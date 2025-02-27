@@ -3611,7 +3611,7 @@ def bank_view(conn, user_id):
                 st.text("")
                 st.write(f"📈 **[Default Interest]** :red[{format_number(round(interest_rate * 100, 2))}% / day]")
                 st.text("")
-                st.write(f"📉 **[CreditScore - Based Interest]** :red[{format_number(get_adjusted_interest_rate(credit_score, interest_rate)[0] * 100)}% / day] | :blue[{get_adjusted_interest_rate(credit_score, interest_rate)[1]}] of default")
+                st.write(f"📉 **[CreditScore - Based Interest]** :red[{format_number(get_adjusted_interest_rate(credit_score, interest_rate, inflation_rate * 100)[0] * 100)}% / day] | :blue[{get_adjusted_interest_rate(credit_score, interest_rate, inflation_rate * 100)[1]}] of default")
                 st.text("")
                 st.write(f"💳 **[Loan Debt]** :red[${format_number(loan)}]")
 
@@ -3629,7 +3629,7 @@ def bank_view(conn, user_id):
                 col1, col2, col3 = st.columns([1.5, 1, 1])
                 col1.write(f"# <span style='font-family: Inter; color: rgb(234, 89, 82);'><s>%{format_number(round(interest_rate * 100, 2))}</s></span>", unsafe_allow_html=True)
                 col2.write("# ->")
-                col3.write(f"# <span style='font-family: Inter; color: lime;'>%{format_number(get_adjusted_interest_rate(credit_score, interest_rate)[0] * 100)}</span>", unsafe_allow_html=True)
+                col3.write(f"# <span style='font-family: Inter; color: lime;'>%{format_number(get_adjusted_interest_rate(credit_score, interest_rate, inflation_rate * 100)[0] * 100)}</span>", unsafe_allow_html=True)
                 col3.caption(":gray[/ day]")
 
         with co2:
