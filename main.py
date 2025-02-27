@@ -119,33 +119,44 @@ admins = [
     "JohnyJohnyJohn",
 ]
 
-def apply_interest_if_due(conn, user_id, check = True):
+def apply_interest_if_due(conn, user_id, check=True):
     c = conn.cursor()
     current_time = time.time()
+    
     if check:
         if current_time - st.session_state.last_refresh >= 60:
             st.session_state.last_refresh = current_time
 
-            has_savings_account = c.execute("SELECT has_savings_account FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+            has_savings_account = c.execute(
+                "SELECT has_savings_account FROM users WHERE user_id = ?", (user_id,)
+            ).fetchone()[0]
             if not has_savings_account:
                 return
 
-            savings_data = c.execute("SELECT balance, last_interest_applied FROM savings WHERE user_id = ?", (user_id,)).fetchone()
-            balance, last_applied = savings_data if savings_data else (0, None)
+            savings_data = c.execute(
+                "SELECT balance, last_interest_applied, interest_rate FROM savings WHERE user_id = ?",
+                (user_id,)
+            ).fetchone()
+            if not savings_data:
+                return
+            balance, last_applied, daily_interest_rate = savings_data
 
-            last_applied_time = datetime.datetime.strptime(last_applied, "%Y-%m-%d %H:%M:%S") if last_applied else now
             now = datetime.datetime.now()
-            hours_passed = (now - last_applied_time).total_seconds() / 86400
+            if last_applied:
+                last_applied_time = datetime.datetime.strptime(last_applied, "%Y-%m-%d %H:%M:%S")
+            else:
+                last_applied_time = now
 
-            hourly_interest_rate = c.execute("SELECT interest_rate FROM savings WHERE user_id = ?", (user_id,)).fetchone()[0]
+            elapsed_seconds = (now - last_applied_time).total_seconds()
+            fraction_of_day = elapsed_seconds / 86400.0
 
-            total_interest = balance * hourly_interest_rate * hours_passed
-            new_balance = balance + total_interest
+            interest = balance * daily_interest_rate * fraction_of_day
+            new_balance = balance + interest
 
             c.execute("""
                 INSERT INTO interest_history (user_id, interest_amount, new_balance)
                 VALUES (?, ?, ?)
-            """, (user_id, total_interest, new_balance))
+            """, (user_id, interest, new_balance))
 
             c.execute("""
                 UPDATE savings
@@ -1180,7 +1191,7 @@ def transfer_to_vault_dialog(conn, user_id):
     st.write(f"Net Transfer -> :green[${format_number(net, 2)}] $|$ :red[${format_number(tax, 2)} Tax]")
     st.write(f"Remaining Savings -> :green[${format_number((current_savings - amount), 2)}]")
 
-    if st.button("Transfer to Vault", type = "primary", use_container_width = True, disabled = True if amount <= 0.00 else False):
+    if st.button("Transfer", type = "primary", use_container_width = True, disabled = True if amount <= 0.00 else False):
         if check_cooldown(conn, user_id):
             c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (net, user_id))
             c.execute("UPDATE savings SET balance = balance - ? WHERE user_id = ?", (amount, user_id))
