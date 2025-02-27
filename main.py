@@ -5161,17 +5161,28 @@ def admin_panel(conn):
         else:
             st.write(f"No property found for {user}.")
 
-    files = [f for f in os.listdir('.') if os.path.isfile(f)]
+    def list_files_recursively(directory):
+        file_paths = []
+        for root, _, files in os.walk(directory):
+            for file in files:
+                file_paths.append(os.path.join(root, file))
+        return file_paths
 
+    files = list_files_recursively('.')
+    
     for file in files:
-        if st.button(f"Download {file}"):
+        st.write(f"File: {file}")
+        
+        if st.button(f"Download {os.path.basename(file)}", key=file):
             with open(file, "rb") as f:
                 file_content = f.read()
             
             st.download_button(
-                label=f"Click to download {file}",
+                label=f"Click to download {os.path.basename(file)}",
                 data=file_content,
-                file_name=file,
+                file_name=os.path.basename(file),
+                mime="application/octet-stream",
+                key=f"download_{file}"  # Unique key for each download button
             )
     
 def settings(conn, username):
