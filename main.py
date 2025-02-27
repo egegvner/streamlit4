@@ -720,31 +720,34 @@ def apply_daily_maintenance_cost(conn, user_id):
 def apply_monthly_living_tax(conn, user_id):
     c = conn.cursor()
     now = datetime.datetime.now()
-    
     result = c.execute("SELECT last_living_tax FROM users WHERE user_id = ?", (user_id,)).fetchone()
+    
     if result and result[0]:
         last_tax = datetime.datetime.strptime(result[0], "%Y-%m-%d %H:%M:%S")
     else:
-        last_tax = now - datetime.timedelta(days=1)
-    
-    days_passed = (now - last_tax).days
-    if days_passed < 1:
+        last_tax = now.replace(day=1)
+
+    months_passed = (now.year - last_tax.year) * 12 + (now.month - last_tax.month)
+    if months_passed < 1:
         return
     
     total_worth = calculate_total_worth(c, user_id)
-    fee = total_worth * 0.10 * days_passed
-    
+    fee = total_worth * 0.10 * months_passed
+
     c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (fee, user_id))
     c.execute("UPDATE users SET balance = balance + ? WHERE username = 'Government'", (fee,))
-    c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, "Monthly Living Tax", fee))
     
-    new_tax_time = last_tax + datetime.timedelta(days=days_passed)
-    c.execute("UPDATE users SET last_living_tax = ? WHERE user_id = ?",
+    c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", 
+              (random.randint(100000000000, 999999999999), user_id, "Monthly Living Tax", fee))
+
+    new_tax_time = now.replace(day=1)  
+    c.execute("UPDATE users SET last_living_tax = ? WHERE user_id = ?", 
               (new_tax_time.strftime("%Y-%m-%d %H:%M:%S"), user_id))
-    
+
     st.toast(f"Monthly Living Tax of :red[${format_number(fee)}] Applied.")
     
     conn.commit()
+
 
 def register_user(conn, username, password):
     c = conn.cursor()
