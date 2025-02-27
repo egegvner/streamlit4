@@ -707,12 +707,13 @@ def apply_daily_maintenance_cost(conn, user_id):
     
     c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (fee, user_id))
     c.execute("UPDATE users SET balance = balance + ? WHERE username = 'Government'", (fee,))
+    c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, "Daily Fee", fee))
     
     new_maintenance_time = last_maintenance + datetime.timedelta(days=days_passed)
     c.execute("UPDATE users SET last_maintenance_cost = ? WHERE user_id = ?",
               (new_maintenance_time.strftime("%Y-%m-%d %H:%M:%S"), user_id))
     
-    st.toast(f"Daily Maintenance Fee of :red[{format_number(fee)}] Applied.")
+    st.toast(f"Daily Maintenance Fee of :red[${format_number(fee)}] Applied.")
     
     conn.commit()
 
@@ -2500,7 +2501,7 @@ def dashboard(conn, user_id):
                     def create_transaction_row(transaction_type, timestamp, amount):
                         formatted_date = format_timestamp(timestamp)
                         
-                        if any(keyword in transaction_type for keyword in ["Buy", "Upgrade", "Repay", "Transfer to", "Gift", "Declined", "Purchase", "Fail"]):
+                        if any(keyword in transaction_type for keyword in ["Buy", "Upgrade", "Repay", "Transfer to", "Gift", "Declined", "Purchase", "Fail", "Fee"]):
                             amount_color = "red"
                         elif any(keyword in transaction_type for keyword in ["Sell", "Dividend", "Collect", "Accepted", "Borrow", "Return"]):
                             amount_color = "lime"
