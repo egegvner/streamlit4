@@ -84,8 +84,8 @@ def write_stream(s, delay = 0, random_delay = False):
             yield i
             time.sleep(delay)
 
-DB_PATH = "./genova_copy442501.db"
-WRITABLE_PATH = "/tmp/genova_copy442501.db"
+DB_PATH = "./bank.db"
+WRITABLE_PATH = "/tmp/bank.db"
 
 if not os.path.exists(WRITABLE_PATH):
     shutil.copy(DB_PATH, WRITABLE_PATH)
