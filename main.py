@@ -1,6 +1,7 @@
 # Copyright Ege Güvener, 20/12/2024
 # License: MIT
 
+
 import streamlit as st
 import sqlite3
 import random
@@ -19,10 +20,7 @@ import shutil
 import geopandas as gpd
 import numpy as np
 import streamlit_lightweight_charts
-from streamlit_cookies_controller import CookieController
 from streamlit_lightweight_charts import renderLightweightCharts
-
-cookieManager = CookieController()
 
 ph = argon2.PasswordHasher(
     memory_cost=65536,  # 64MB RAM usage (default: 10240)
@@ -5574,8 +5572,6 @@ def main(conn):
             st.session_state.logged_in = False
             st.session_state.user_id = ""
             st.session_state.username = ""
-            cookieManager.remove("user_id")
-            cookieManager.remove("username")
             st.rerun()
             
 def column_exists(conn, table_name, column_name):
