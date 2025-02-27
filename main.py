@@ -158,7 +158,7 @@ def apply_interest_if_due(conn, user_id, check = True):
             conn.commit()
             st.rerun()
         else:
-            st.toast(f"Wait {int(30 - (current_time - st.session_state.last_refresh))} seconds before refreshing again.")
+            st.toast(f"Wait {int(60 - (current_time - st.session_state.last_refresh))} seconds before refreshing again.")
     
 def change_password(conn, username, current_password, new_password):
     c = conn.cursor()
