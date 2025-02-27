@@ -3448,7 +3448,7 @@ def repay_loan(conn, user_id, amount):
         st.toast(f"⚠ Early repayment fee of :red[${format_number_with_dots(fee)}] applied!")
         time.sleep(2)
     else:
-        score = 20
+        score = 10
 
     new_loan = max(0, loan - amount)
 
@@ -3458,7 +3458,7 @@ def repay_loan(conn, user_id, amount):
               (random.randint(100000000, 999999999), user_id, "Repay Loan", amount))
 
     if new_loan == 0:
-        c.execute("UPDATE users SET credit_score = credit_score + ? WHERE user_id = ?", (user_id, score))
+        c.execute("UPDATE users SET credit_score = credit_score + ? WHERE user_id = ?", (score, user_id))
         st.toast(f"✅ Loan fully repaid! Credit score improved.")
 
     conn.commit()
