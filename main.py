@@ -2386,6 +2386,8 @@ def dashboard(conn, user_id):
     check_and_update_investments(conn, user_id)
     apply_monthly_living_tax(conn, user_id)
     apply_daily_maintenance_cost(conn, user_id)
+    apply_loan_penalty(conn, user_id)
+    distribute_dividends(conn)
     streak = c.execute("SELECT login_streak FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     credit_score = c.execute("SELECT credit_score FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
     balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
@@ -2445,10 +2447,7 @@ def dashboard(conn, user_id):
     if not days and not hours and not minutes:
         pass
 
-    distribute_dividends(conn)
-
     has_unread_news = check_unread_news(conn, user_id)
-
     st.header(f"Welcome, {st.session_state.username}!", divider="rainbow")
     st.text("")
     c1, c2, c3 = st.columns(3)
@@ -3343,19 +3342,21 @@ def calculate_total_worth(c, user_id):
     
     return worth if worth > 0 else 0
 
-def get_adjusted_interest_rate(credit_score, base_interest_rate):
+def get_adjusted_interest_rate(credit_score, base_interest_rate, inflation_rate):
+    inflation_factor = 1 + (inflation_rate / 10)
+
     if credit_score > 1000:
-        return [base_interest_rate * 0.05, "5%"]
+        return [base_interest_rate * 0.05 * inflation_factor, "5%"]
     elif credit_score > 800:
-        return [base_interest_rate * 0.30, "30%"]
+        return [base_interest_rate * 0.30 * inflation_factor, "30%"]
     elif credit_score > 600:
-        return [base_interest_rate * 0.60, "60%"]
+        return [base_interest_rate * 0.60 * inflation_factor, "60%"]
     elif credit_score > 400:
-        return [base_interest_rate * 0.90, "90%"]
+        return [base_interest_rate * 0.90 * inflation_factor, "90%"]
     elif credit_score > 200:
-        return [base_interest_rate * 1.50, "150%"]
+        return [base_interest_rate * 1.50 * inflation_factor, "150%"]
     else:
-        return [base_interest_rate * 3.00, "300%"]
+        return [base_interest_rate * 3.00 * inflation_factor, "300%"]
 
 def get_max_borrow(credit_score, total_worth):
     if credit_score > 1000:
@@ -3370,11 +3371,11 @@ def get_max_borrow(credit_score, total_worth):
         return total_worth * 0.5
 
 def get_duration_adjusted_interest(base_interest_rate, duration, min_days=7, max_days=60):
-    scaling_factor = 2.5  # Controls how much shorter loans increase daily interest
+    scaling_factor = 2.5
     loan_duration_factor = 1 + ((max_days - duration) / (max_days - min_days)) * scaling_factor
     
     daily_interest_rate = base_interest_rate / loan_duration_factor
-    total_interest = daily_interest_rate * duration  # Ensures total interest matches the default rate
+    total_interest = daily_interest_rate * duration
     
     return daily_interest_rate, total_interest
 
@@ -3465,26 +3466,58 @@ def repay_loan(conn, user_id, amount):
     time.sleep(2.5)
     st.rerun()
 
-def apply_loan_penalty(conn):
+def apply_loan_penalty(conn, user_id):
     c = conn.cursor()
     today = datetime.date.today()
 
-    users_with_loans = c.execute("SELECT user_id, loan, loan_due_date, credit_score FROM users WHERE loan > 0").fetchall()
+    result = c.execute("SELECT loan, loan_due_date, credit_score FROM users WHERE user_id = ? AND loan > 0", 
+                       (user_id,)).fetchone()
 
-    for user_id, loan, due_date, credit_score in users_with_loans:
-        if not due_date:
-            continue
+    if not result:
+        return
 
-        due_date_obj = datetime.datetime.strptime(due_date, "%Y-%m-%d").date()
-        days_late = (today - due_date_obj).days
+    loan, due_date, credit_score = result
 
-        if days_late > 0:
-            penalty_interest = round(loan * 0.01 * days_late, 2)  # 1% per overdue day
-            new_loan = loan + penalty_interest
-            new_credit_score = max(0, credit_score - (50 * days_late))  # -50 per day late
+    if not due_date:
+        return
 
-            c.execute("UPDATE users SET loan = ?, credit_score = ? WHERE user_id = ?", (new_loan, new_credit_score, user_id))
+    due_date_obj = datetime.datetime.strptime(due_date, "%Y-%m-%d").date()
+    days_late = (today - due_date_obj).days
+
+    if days_late > 0:
+        penalty_interest = round(loan * 0.01 * days_late, 2)
+        new_loan = loan + penalty_interest
+        new_credit_score = max(0, credit_score - (15 * days_late))
+
+        c.execute("UPDATE users SET loan = ?, credit_score = ? WHERE user_id = ?", 
+                  (new_loan, new_credit_score, user_id))
+
     conn.commit()
+
+def get_inflation_trend(c):
+    inflation_query = """
+        SELECT date, inflation_rate 
+        FROM inflation_history 
+        ORDER BY date ASC
+    """
+    inflation_data = c.execute(inflation_query).fetchall()
+
+    if not inflation_data:
+        return []
+
+    inflation_trend = [
+        {"time": date, "value": round(rate * 100, 2)}  # Convert to percentage
+        for date, rate in inflation_data
+    ]
+    
+    return inflation_trend
+
+def prepare_chart_data(trend_data):
+    return [{
+        "type": 'Area',
+        "data": trend_data,
+        "options": {}
+    }]
 
 def bank_view(conn, user_id):
     update_inflation(conn)
@@ -3492,12 +3525,6 @@ def bank_view(conn, user_id):
 
     c = conn.cursor()
 
-    if "repay" not in st.session_state:
-        st.session_state.repay = 0.0
-
-    if "amt" not in st.session_state:
-        st.session_state.amt = 0.0
-    
     df = get_inflation_history(c)
     gov_funds = c.execute("SELECT balance FROM users WHERE username = 'Government'").fetchone()[0]
     inflation_rate = c.execute("SELECT inflation_rate FROM inflation_history ORDER BY date DESC LIMIT 1").fetchone()
@@ -3505,30 +3532,56 @@ def bank_view(conn, user_id):
 
     t1, t2 = st.tabs(["Economy", "Loans & Repayments"])
     st.markdown('''
-                    <style>
-                button[data-baseweb="tab"] {
-                font-size: 24px;
-                margin: 0;
-                width: 100%;
-                }
-                </style>
-                ''', unsafe_allow_html=True)
+        <style>
+        button[data-baseweb="tab"] {
+            font-size: 24px;
+            margin: 0;
+            width: 100%;
+        }
+        </style>
+    ''', unsafe_allow_html=True)
+
     with t1:
         st.header("Total Government Funds", divider="rainbow")
-        st.text("")
-        st.text("")
-        st.text("")
-
         c1, c2, c3 = st.columns([2, 1, 2])
         c2.subheader(f":green[${format_number(gov_funds)}]")
-        st.caption(f":green[${format_number(gov_funds)}]")
         st.divider()
         st.subheader(f"Inflation: :red[{format_number(inflation_rate * 100)}%]")
 
-        if not df.empty:
-            df["Date"] = pd.to_datetime(df["Date"])
-            df.set_index("Date", inplace=True)
-            st.line_chart(df["Inflation Rate"], color=(255, 0, 0))
+        inflation_trend = get_inflation_trend(c)
+        if inflation_trend:
+            seriesAreaChart = prepare_chart_data(inflation_trend)
+
+            chartOptions = {
+                "layout": {
+                    "textColor": 'rgba(180, 180, 180, 1)',
+                    "background": {
+                        "type": 'solid',
+                        "color": 'rgb(15, 17, 22)'
+                    }
+                },
+                "grid": {
+                    "vertLines": {"color": "rgba(30, 30, 30, 0.7)"},
+                    "horzLines": {"color": "rgba(30, 30, 30, 0.7)"}
+                },
+                "crosshair": {"mode": 0},
+                "watermark": {
+                    "visible": True,
+                    "fontSize": 70,
+                    "horzAlign": 'center',
+                    "vertAlign": 'center',
+                    "color": 'rgba(50, 50, 50, 0.2)',
+                    "text": 'Genova',
+                }
+            }
+
+            st.subheader("Inflation Trend Over Time")
+            renderLightweightCharts([
+                {
+                    "chart": chartOptions,
+                    "series": seriesAreaChart,
+                }
+            ], 'area')
         else:
             st.info("No inflation data available yet.")
 
