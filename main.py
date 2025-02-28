@@ -422,7 +422,6 @@ def distribute_dividends(conn):
         "SELECT COUNT(*) FROM transactions WHERE type = 'Dividend Payout' AND DATE(timestamp)=?",
         (today_str,)
     ).fetchone()[0] > 0:
-        st.toast("Dividend payout already processed for today! 😎")
         return
 
     user_stocks = c.execute("""
