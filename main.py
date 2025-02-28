@@ -422,6 +422,7 @@ def distribute_dividends(conn):
         "SELECT COUNT(*) FROM transactions WHERE type = 'Dividend Payout' AND DATE(timestamp)=?",
         (today_str,)
     ).fetchone()[0] > 0:
+        st.toast("Dividend payout already processed for today! 😎")
         return
 
     user_stocks = c.execute("""
@@ -5491,21 +5492,24 @@ def main(conn):
             st.text("")
 
             if st.button("**Log In**", use_container_width = True, type="primary"):
-                user = c.execute("SELECT user_id, password FROM users WHERE username = ?", (username,)).fetchone()
-                if user and verifyPass(user[1], password):
-                    if c.execute("SELECT suspension FROM users WHERE username = ?", (username,)).fetchone()[0] == 1:
-                        st.error("Your account has been suspended. Please contact admin (Ege).")
+                if not "=" in username or not "'" in username:
+                    user = c.execute("SELECT user_id, password FROM users WHERE username = ?", (username,)).fetchone()
+                    if user and verifyPass(user[1], password):
+                        if c.execute("SELECT suspension FROM users WHERE username = ?", (username,)).fetchone()[0] == 1:
+                            st.error("Your account has been suspended. Please contact admin (Ege).")
+                        else:
+                            with st.spinner("Logging you in..."):
+                                st.session_state.logged_in = True
+                                st.session_state.user_id = user[0]
+                                st.session_state.username = username
+                                st.session_state.current_menu = "Dashboard"
+                                time.sleep(2.5)
+                                
+                        st.rerun()
                     else:
-                        with st.spinner("Logging you in..."):
-                            st.session_state.logged_in = True
-                            st.session_state.user_id = user[0]
-                            st.session_state.username = username
-                            st.session_state.current_menu = "Dashboard"
-                            time.sleep(2.5)
-                            
-                    st.rerun()
+                        st.error("Invalid username or password")
                 else:
-                    st.error("Invalid username or password")
+                    st.rerun()
             st.button("Password Reset", type = "tertiary", use_container_width = True, help = "Not yet available")
             st.text("")
             st.text("")
