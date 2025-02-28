@@ -3525,6 +3525,9 @@ def bank_view(conn, user_id):
 
     c = conn.cursor()
 
+    if "repay" not in st.session_state:
+        st.session_state.repay = 0.0
+
     df = get_inflation_history(c)
     gov_funds = c.execute("SELECT balance FROM users WHERE username = 'Government'").fetchone()[0]
     inflation_rate = c.execute("SELECT inflation_rate FROM inflation_history ORDER BY date DESC LIMIT 1").fetchone()
