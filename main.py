@@ -416,23 +416,26 @@ def get_stock_metrics(conn, stock_id):
 def distribute_dividends(conn):
     c = conn.cursor()
     now = datetime.datetime.now()
-    one_week_ago = now - datetime.timedelta(days=7)
+    today_str = now.strftime("%Y-%m-%d")
+    
+    if c.execute(
+        "SELECT COUNT(*) FROM transactions WHERE type = 'Dividend Payout' AND DATE(timestamp)=?",
+        (today_str,)
+    ).fetchone()[0] > 0:
+        st.toast("Dividend payout already processed for today! 😎")
+        return
 
     user_stocks = c.execute("""
         SELECT us.user_id, us.stock_id, us.quantity, s.price, s.dividend_rate, us.purchase_date
         FROM user_stocks us
         JOIN stocks s ON us.stock_id = s.stock_id
         WHERE s.dividend_rate > 0 AND us.purchase_date <= ?
-    """, (one_week_ago.strftime("%Y-%m-%d %H:%M:%S"),)).fetchall()
+    """, ((now - datetime.timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S"),)).fetchall()
 
     dividends_paid = {}
-
     for user_id, stock_id, quantity, price, dividend_rate, purchase_date in user_stocks:
         dividend = round(quantity * price * dividend_rate, 2)
-
-        if user_id not in dividends_paid:
-            dividends_paid[user_id] = 0
-        dividends_paid[user_id] += dividend
+        dividends_paid[user_id] = dividends_paid.get(user_id, 0) + dividend
 
         c.execute("""
             INSERT INTO transactions (user_id, type, amount, stock_id, status, timestamp)
@@ -443,12 +446,10 @@ def distribute_dividends(conn):
 
     for user_id, total_dividend in dividends_paid.items():
         c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (total_dividend, user_id))
-
         if user_id == logged_in_user:
             st.toast(f"💰 Dividend Payout: Received :green[${total_dividend}]")
 
     conn.commit()
-
 
 def update_inflation(conn):
     c = conn.cursor()
