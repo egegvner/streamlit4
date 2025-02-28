@@ -3506,7 +3506,7 @@ def get_inflation_trend(c):
         return []
 
     inflation_trend = [
-        {"time": date, "value": round(rate * 100, 2)}  # Convert to percentage
+        {"time": date, "value": round(rate * 100, 2)}
         for date, rate in inflation_data
     ]
     
@@ -3549,7 +3549,7 @@ def bank_view(conn, user_id):
         c1, c2, c3 = st.columns([2, 1, 2])
         c2.subheader(f":green[${format_number(gov_funds)}]")
         st.divider()
-        st.subheader(f"Inflation: :red[{format_number(inflation_rate * 100)}%]")
+        st.subheader(f"Inflation: :red[{format_number_with_dots(inflation_rate * 100)}%]")
 
         inflation_trend = get_inflation_trend(c)
         if inflation_trend:
@@ -3560,7 +3560,7 @@ def bank_view(conn, user_id):
                     "textColor": 'rgba(180, 180, 180, 1)',
                     "background": {
                         "type": 'solid',
-                        "color": 'rgb(15, 17, 22)'
+                        "color": 'rgb(217, 35, 35)'
                     }
                 },
                 "grid": {
