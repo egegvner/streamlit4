@@ -2095,7 +2095,7 @@ def inventory_view(conn, user_id):
                     if c4.button("**COLLECT RENT**", type="primary", key=f"rent_{prop_id}", use_container_width=True, disabled=not can_collect, help="Rent for this property has already been collected today." if not can_collect else None):
                         c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (rent_income, user_id))
                         c.execute("UPDATE user_properties SET last_collected = ? WHERE property_id = ?", (now.strftime("%Y-%m-%d %H:%M:%S"), prop_id))
-                        c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Collect Rent from {type}", rent_income))
+                        c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Collect Rent from {prop_type}", rent_income))
                         conn.commit()
                         st.toast(f"🎉 Collected :green[${format_number(rent_income)}]!")
                         time.sleep(0.5)
