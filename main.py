@@ -324,13 +324,13 @@ def update_stock_prices(conn):
             if last_updated:
                 last_updated = datetime.datetime.strptime(last_updated, "%Y-%m-%d %H:%M:%S")
             else:
-                last_updated = now - datetime.timedelta(seconds=15)
+                last_updated = now - datetime.timedelta(seconds=10)
 
             if open_price is None:
                 open_price = current_price
 
             elapsed_time = (now - last_updated).total_seconds()
-            num_updates = int(elapsed_time // 15)
+            num_updates = int(elapsed_time // 10)
 
             one_month_ago = now - datetime.timedelta(days=60)
             c.execute(
@@ -343,7 +343,7 @@ def update_stock_prices(conn):
                     change_percent = round(random.uniform(-change_rate, change_rate), 2)
                     new_price = max(1, round(current_price * (1 + change_percent / 100), 2))
 
-                    missed_update_time = last_updated + datetime.timedelta(seconds=(i + 1) * 15)
+                    missed_update_time = last_updated + datetime.timedelta(seconds=(i + 1) * 10)
                     if missed_update_time <= now:
                         c.execute(
                             "INSERT INTO stock_history (stock_id, price, timestamp) VALUES (?, ?, ?)",
@@ -2847,7 +2847,7 @@ def stocks_view(conn, user_id):
     
     # preload_stocks_from_json(conn, "./stocks.json")
     update_stock_prices(conn)
-    st_autorefresh(interval=15000, key="stock_autorefresh")
+    st_autorefresh(interval=10000, key="stock_autorefresh")
 
     stocks = c.execute("SELECT stock_id, name, symbol, price, stock_amount, dividend_rate FROM stocks").fetchall()
     balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
@@ -3120,14 +3120,14 @@ def stocks_view(conn, user_id):
                     with st.spinner("Purchasing..."):
                         time.sleep(2.5)
                         buy_stock(conn, user_id, stock_id, buy_quantity)
-                    time.sleep(2)
+                    time.sleep(1.5)
                     st.rerun()
                 
                 if st.button(f"Buy MAX: :orange[{format_number(buy_max_quantity)}] ~ :green[${format_number(balance)}]", key=f"buy_max_btn_{stock_id}", use_container_width=True):
                     with st.spinner("Purchasing..."):
                         time.sleep(2.5)
                         buy_stock(conn, user_id, stock_id, buy_max_quantity)
-                    time.sleep(2)
+                    time.sleep(1.5)
                     st.rerun()
                             
             with col2:
@@ -3141,14 +3141,14 @@ def stocks_view(conn, user_id):
                     with st.spinner("Selling..."):
                         time.sleep(2.5)
                         sell_stock(conn, user_id, stock_id, sell_quantity)
-                    time.sleep(2)
+                    time.sleep(1.5)
                     st.rerun()
 
                 if st.button(f"Sell MAX: :orange[{format_number(user_quantity)}] ~ :green[${format_number(user_quantity * price)}]", key=f"sell_max_btn_{stock_id}", use_container_width=True, disabled=True if not user_quantity else False):
                     with st.spinner("Selling..."):
                         time.sleep(2.5)
                         sell_stock(conn, user_id, stock_id, user_quantity)
-                    time.sleep(2)
+                    time.sleep(1.5)
                     st.rerun()
 
         stock_metrics = get_stock_metrics(conn, stock_id)
