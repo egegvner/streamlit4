@@ -5492,7 +5492,7 @@ def main(conn):
             st.text("")
 
             if st.button("**Log In**", use_container_width = True, type="primary"):
-                if not "=" in username or not "'" in username:
+                if re.match(r'^[A-Za-z0-9]+$', username):
                     user = c.execute("SELECT user_id, password FROM users WHERE username = ?", (username,)).fetchone()
                     if user and verifyPass(user[1], password):
                         if c.execute("SELECT suspension FROM users WHERE username = ?", (username,)).fetchone()[0] == 1:
@@ -5530,25 +5530,28 @@ def main(conn):
 
             existing_users = c.execute("SELECT username FROM users").fetchall()
             if st.button("Register", use_container_width = True, type = "primary"):
-                if new_username != "":
-                    if len(new_username) >= 5:
-                        if new_password != "":
-                            if len(new_password) >= 8:
-                                if new_password == confirm_password:
-                                    if new_username not in existing_users:
-                                        register_user(conn, new_username, new_password)
+                if re.match(r'^[A-Za-z0-9]+$', username):
+                    if new_username != "":
+                        if len(new_username) >= 5:
+                            if new_password != "":
+                                if len(new_password) >= 8:
+                                    if new_password == confirm_password:
+                                        if new_username not in existing_users:
+                                            register_user(conn, new_username, new_password)
+                                        else:
+                                            st.error("Username already taken.")
                                     else:
-                                        st.error("Username already taken.")
+                                        st.error("Passwords do not match.")
                                 else:
-                                    st.error("Passwords do not match.")
+                                    st.error("Password must contain **at least** 8 chars.")
                             else:
-                                st.error("Password must contain **at least** 8 chars.")
+                                st.error("Empty password is illegal.")
                         else:
-                            st.error("Empty password is illegal.")
+                            st.error("Username must be **at least 5 chars** long.")
                     else:
-                        st.error("Username must be **at least 5 chars** long.")
+                        st.error("Empty username is illegal.")
                 else:
-                    st.error("Empty username is illegal.")
+                    st.rerun()
             
             st.text("")
             c1, c2, c3 = st.columns([1, 1, 1])
