@@ -3506,7 +3506,7 @@ def get_inflation_trend(c):
         return []
 
     inflation_trend = [
-        {"time": date, "value": round(rate * 100, 2)}
+        {"time": date, "value": round(rate * 100, 2)}  # Convert to percentage
         for date, rate in inflation_data
     ]
     
@@ -3560,7 +3560,7 @@ def bank_view(conn, user_id):
                     "textColor": 'rgba(180, 180, 180, 1)',
                     "background": {
                         "type": 'solid',
-                        "color": 'rgb(217, 35, 35)'
+                        "color": 'rgb(15, 17, 22)'
                     }
                 },
                 "grid": {
