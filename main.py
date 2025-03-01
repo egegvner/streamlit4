@@ -3338,7 +3338,7 @@ def calculate_total_worth(c, user_id):
     total_stock_worth = sum(quantity * price for quantity, price in user_stocks)
     loan = c.execute("SELECT loan FROM users WHERE user_id = ?", (user_id,)).fetchone()[0] or 0.0
 
-    user_investments = c.execute("SELECT amount FROM user_investments WHERE user_id = ?", (user_id,)).fetchall()
+    user_investments = c.execute("SELECT amount FROM investments WHERE user_id = ?", (user_id,)).fetchall()
     worth = balance + savings + real_estates_worth + total_country_worth + total_stock_worth + sum(user_investments) - loan
     
     return worth if worth > 0 else 0
