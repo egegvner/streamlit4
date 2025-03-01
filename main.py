@@ -422,7 +422,6 @@ def distribute_dividends(conn):
         "SELECT COUNT(*) FROM transactions WHERE type = 'Dividend Payout' AND DATE(timestamp)=?",
         (today_str,)
     ).fetchone()[0] > 0:
-        st.toast("Dividend payout already processed for today! 😎")
         return
 
     user_stocks = c.execute("""
@@ -704,7 +703,7 @@ def apply_daily_maintenance_cost(conn, user_id):
         return
     
     total_worth = calculate_total_worth(c, user_id)
-    fee = total_worth * 0.01 * days_passed
+    fee = total_worth * 0.005 * days_passed
     
     c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (fee, user_id))
     c.execute("UPDATE users SET balance = balance + ? WHERE username = 'Government'", (fee,))
@@ -733,7 +732,7 @@ def apply_monthly_living_tax(conn, user_id):
         return
     
     total_worth = calculate_total_worth(c, user_id)
-    fee = total_worth * 0.10 * months_passed
+    fee = total_worth * 0.05 * months_passed
 
     c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (fee, user_id))
     c.execute("UPDATE users SET balance = balance + ? WHERE username = 'Government'", (fee,))
@@ -748,7 +747,6 @@ def apply_monthly_living_tax(conn, user_id):
     st.toast(f"Monthly Living Tax of :red[${format_number(fee)}] Applied.")
     
     conn.commit()
-
 
 def register_user(conn, username, password):
     c = conn.cursor()
@@ -2431,7 +2429,7 @@ def dashboard(conn, user_id):
         FROM transactions 
         WHERE user_id = ? 
         ORDER BY timestamp DESC 
-        LIMIT 5
+        LIMIT 10
     """, (user_id,)).fetchall()
     now = datetime.datetime.now()
     days_ahead = (6 - now.weekday()) % 7
@@ -2501,7 +2499,7 @@ def dashboard(conn, user_id):
         align-items: center;
         justify-content: space-between;
         border-radius: 8px;
-        transition: background-color 0.2s ease-in-out;
+        transition: background-color 0.1s ease-in-out;
     }
     .transaction-row:hover {
         background-color: rgb(25, 27, 32);
@@ -2534,7 +2532,7 @@ def dashboard(conn, user_id):
                     def create_transaction_row(transaction_type, timestamp, amount):
                         formatted_date = format_timestamp(timestamp)
                         
-                        if any(keyword in transaction_type for keyword in ["Buy", "Upgrade", "Repay", "Transfer to", "Gift", "Declined", "Purchase", "Fail", "Fee"]):
+                        if any(keyword in transaction_type for keyword in ["Buy", "Upgrade", "Repay", "Transfer to", "Gift", "Declined", "Purchase", "Fail", "Fee", "Tax"]):
                             amount_color = "red"
                         elif any(keyword in transaction_type for keyword in ["Sell", "Dividend", "Collect", "Accepted", "Borrow", "Return"]):
                             amount_color = "lime"
