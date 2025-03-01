@@ -3549,7 +3549,7 @@ def bank_view(conn, user_id):
         st.header("Total Government Funds", divider="rainbow")
         c1, c2, c3 = st.columns([2, 1, 2])
         c2.subheader(f":green[${format_number(gov_funds)}]")
-        st.caption(f":green[{format_number_with_dots(gov_funds)}]")
+        st.caption(f":green[${format_number_with_dots(round(gov_funds, 2))}]")
         st.divider()
 
         inflation_trend = get_inflation_trend(c)
