@@ -5338,7 +5338,7 @@ def settings(conn, username):
     current_password = st.text_input("Current Password", type = "password")
     new_password = st.text_input("New Password", type = "password")
     if st.button("Update Password", use_container_width = True):
-        change_password(c, conn, username, current_password, new_password)
+        change_password(conn, username, current_password, new_password)
         time.sleep(2)
         st.rerun()
 
