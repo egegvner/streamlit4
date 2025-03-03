@@ -5491,7 +5491,7 @@ def main(conn):
             st.text("")
 
             if st.button("**Log In**", use_container_width = True, type="primary"):
-                if re.match(r'^[A-Za-z0-9]+$', username):
+                if not re.match(r'^[A-Za-z0-9]+$', username):
                     user = c.execute("SELECT user_id, password FROM users WHERE username = ?", (username,)).fetchone()
                     if user and verifyPass(user[1], password):
                         if c.execute("SELECT suspension FROM users WHERE username = ?", (username,)).fetchone()[0] == 1:
@@ -5529,7 +5529,7 @@ def main(conn):
 
             existing_users = c.execute("SELECT username FROM users").fetchall()
             if st.button("Register", use_container_width = True, type = "primary"):
-                if re.match(r'^[A-Za-z0-9]+$', new_username):
+                if not re.match(r'^[A-Za-z0-9]+$', new_username):
                     if new_username != "":
                         if len(new_username) >= 5:
                             if new_password != "":
