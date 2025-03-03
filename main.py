@@ -5491,7 +5491,7 @@ def main(conn):
             st.text("")
 
             if st.button("**Log In**", use_container_width = True, type="primary"):
-                if "'" not in new_username and "=" not in new_username and '"' not in new_username:
+                if "'" not in username and "=" not in username and '"' not in username:
                     user = c.execute("SELECT user_id, password FROM users WHERE username = ?", (username,)).fetchone()
                     if user and verifyPass(user[1], password):
                         if c.execute("SELECT suspension FROM users WHERE username = ?", (username,)).fetchone()[0] == 1:
