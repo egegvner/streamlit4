@@ -5529,7 +5529,7 @@ def main(conn):
 
             existing_users = c.execute("SELECT username FROM users").fetchall()
             if st.button("Register", use_container_width = True, type = "primary"):
-                if re.match(r'^[A-Za-z0-9]+$', username):
+                if re.match(r'^[A-Za-z0-9]+$', new_username):
                     if new_username != "":
                         if len(new_username) >= 5:
                             if new_password != "":
