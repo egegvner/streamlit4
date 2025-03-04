@@ -2816,7 +2816,6 @@ def sell_stock(conn, user_id, stock_id, quantity):
     c = conn.cursor()
 
     price, symbol = c.execute("SELECT price, symbol FROM stocks WHERE stock_id = ?", (stock_id,)).fetchone()
-
     user_stock = c.execute("SELECT quantity, avg_buy_price FROM user_stocks WHERE user_id = ? AND stock_id = ?", 
                            (user_id, stock_id)).fetchone()
 
@@ -2847,7 +2846,7 @@ def stocks_view(conn, user_id):
     
     # preload_stocks_from_json(conn, "./stocks.json")
     update_stock_prices(conn)
-    st_autorefresh(interval=10000, key="stock_autorefresh")
+    st_autorefresh(interval=15000, key="stock_autorefresh")
 
     stocks = c.execute("SELECT stock_id, name, symbol, price, stock_amount, dividend_rate FROM stocks").fetchall()
     balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
@@ -3118,16 +3117,16 @@ def stocks_view(conn, user_id):
                 if st.button(f"Buy {symbol}", key=f"buy_btn_{stock_id}", type="primary", use_container_width=True, 
                             disabled=True if buy_quantity == 0 or stock_amount < buy_quantity else False, help="Not enough stock available in the market" if stock_amount < buy_quantity else None):
                     with st.spinner("Purchasing..."):
-                        time.sleep(2.5)
+                        time.sleep(1.5)
                         buy_stock(conn, user_id, stock_id, buy_quantity)
-                    time.sleep(1.5)
+                    time.sleep(1)
                     st.rerun()
                 
                 if st.button(f"Buy MAX: :orange[{format_number(buy_max_quantity)}] ~ :green[${format_number(balance)}]", key=f"buy_max_btn_{stock_id}", use_container_width=True):
                     with st.spinner("Purchasing..."):
-                        time.sleep(2.5)
+                        time.sleep(1.5)
                         buy_stock(conn, user_id, stock_id, buy_max_quantity)
-                    time.sleep(1.5)
+                    time.sleep(1)
                     st.rerun()
                             
             with col2:
@@ -3139,16 +3138,16 @@ def stocks_view(conn, user_id):
                 if st.button(f"Sell {symbol}", key=f"sell_btn_{stock_id}", use_container_width=True, 
                             disabled=True if sell_quantity == 0 else False):
                     with st.spinner("Selling..."):
-                        time.sleep(2.5)
+                        time.sleep(1.5)
                         sell_stock(conn, user_id, stock_id, sell_quantity)
-                    time.sleep(1.5)
+                    time.sleep(1)
                     st.rerun()
 
                 if st.button(f"Sell MAX: :orange[{format_number(user_quantity)}] ~ :green[${format_number(user_quantity * price)}]", key=f"sell_max_btn_{stock_id}", use_container_width=True, disabled=True if not user_quantity else False):
                     with st.spinner("Selling..."):
-                        time.sleep(2.5)
+                        time.sleep(1.5)
                         sell_stock(conn, user_id, stock_id, user_quantity)
-                    time.sleep(1.5)
+                    time.sleep(1)
                     st.rerun()
 
         stock_metrics = get_stock_metrics(conn, stock_id)
