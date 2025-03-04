@@ -3413,7 +3413,7 @@ def borrow_money(conn, user_id, amount, base_interest_rate, duration):
     c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", 
               (random.randint(100000000, 999999999), user_id, "Borrow Loan", amount))
 
-    c.execute("UPDATE users SET credit_score = credit_score - 15 WHERE user_id = ?", (user_id,))
+    c.execute("UPDATE users SET credit_score = credit_score - 7 WHERE user_id = ?", (user_id,))
 
     conn.commit()
     st.toast(f"✅ Borrowed :green[${format_number_with_dots(amount)}] with daily interest of :red[{round(daily_interest_rate * 100, 2)}%]. Due Date: {due_date}.")
