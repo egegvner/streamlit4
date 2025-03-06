@@ -2102,7 +2102,7 @@ def inventory_view(conn, user_id):
                         st.rerun()
 
     with t3:
-        st_autorefresh(interval=20000, key="ss")
+        st_autorefresh(interval=30000, key="ss")
         update_stock_prices(conn)
         st.header("📊 My Portfolio", divider="rainbow")
 
@@ -2846,7 +2846,7 @@ def stocks_view(conn, user_id):
     
     # preload_stocks_from_json(conn, "./stocks.json")
     update_stock_prices(conn)
-    st_autorefresh(interval=15000, key="stock_autorefresh")
+    st_autorefresh(interval=30000, key="stock_autorefresh")
 
     stocks = c.execute("SELECT stock_id, name, symbol, price, stock_amount, dividend_rate FROM stocks").fetchall()
     balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
