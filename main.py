@@ -2766,7 +2766,7 @@ def adjust_stock_prices(conn, stock_id, quantity, action):
     if action == "buy":
         price_change = (quantity / stock_amount) * elasticity_factor * price
     elif action == "sell":
-        price_change = (quantity / stock_amount) * elasticity_factor * price
+        price_change = -(quantity / stock_amount) * elasticity_factor * price
     
     new_price = price + price_change
     c.execute("UPDATE stocks SET price = ? WHERE stock_id = ?", (new_price, stock_id))
