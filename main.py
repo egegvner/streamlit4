@@ -2836,7 +2836,7 @@ def sell_stock(conn, user_id, stock_id, quantity):
     c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount, stock_id, quantity) VALUES (?, ?, ?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Sell Stock ({symbol})", net_profit, stock_id, quantity))
     c.execute("UPDATE users SET balance = balance - ? WHERE username = 'Government'", (profit,))
     c.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (net_profit, user_id))
-    adjust_stock_prices(conn, stock_id, quantity, "buy")
+    adjust_stock_prices(conn, stock_id, quantity, "sell")
 
     conn.commit()
     st.toast(f"Sold :blue[{format_number(quantity)}] shares for :green[${format_number(net_profit, 2)}]") 
