@@ -5199,19 +5199,19 @@ def admin_panel(conn):
     user = st.selectbox("Select User", [u[0] for u in c.execute("SELECT username FROM users").fetchall()], key="inv5")
     if user:
         user_id = c.execute("SELECT user_id FROM users WHERE username = ?", (user,)).fetchone()[0]
-        user_stocks = c.execute("SELECT id, stock_id, name, quantity, avg_buy_price, purchase_date FROM user_stocks WHERE user_id = ? ORDER BY purchase_date DESC", (user_id,)).fetchall()
+        user_stocks = c.execute("SELECT id, stock_id, quantity, avg_buy_price, purchase_date FROM user_stocks WHERE user_id = ? ORDER BY purchase_date DESC", (user_id,)).fetchall()
 
         if user_stocks:
-            df = pd.DataFrame(user_stocks, columns=["ID", "Stock ID", "Stock Name", "Quantity", "Avg Buy Price", "Purchase Date"])
+            df = pd.DataFrame(user_stocks, columns=["ID", "Stock ID", "Quantity", "Avg Buy Price", "Purchase Date"])
             edited_df = st.data_editor(df, key="user_stocks_table", num_rows="fixed", use_container_width=True, hide_index=False)
             
             if st.button("Update User Stock Holdings", use_container_width=True):
                 for _, row in edited_df.iterrows():
                     c.execute("""
                         UPDATE OR IGNORE user_stocks 
-                        SET stock_id = ?, name = ?, quantity = ?, avg_buy_price = ?, purchase_date = ?
+                        SET stock_id = ?, quantity = ?, avg_buy_price = ?, purchase_date = ?
                         WHERE id = ?
-                    """, (row["Stock ID"], row["Stock Name"], row["Quantity"], row["Avg Buy Price"], row["Purchase Date"], row["ID"]))
+                    """, (row["Stock ID"], row["Quantity"], row["Avg Buy Price"], row["Purchase Date"], row["ID"]))
                 conn.commit()
                 st.success("User stock holdings updated successfully.")
                 st.rerun()
