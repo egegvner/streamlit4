@@ -5193,6 +5193,40 @@ def admin_panel(conn):
             st.write(f"No transactions found for {user}.")
 
     st.divider()
+    st.header("Manage User Stock Holdings", divider="rainbow")
+    st.text("")
+
+    user = st.selectbox("Select User", [u[0] for u in c.execute("SELECT username FROM users").fetchall()], key="inv5")
+    if user:
+        user_id = c.execute("SELECT user_id FROM users WHERE username = ?", (user,)).fetchone()[0]
+        user_stocks = c.execute("SELECT id, stock_id, quantity, avg_buy_price, purchase_date FROM user_stocks WHERE user_id = ? ORDER BY purchase_date DESC", (user_id,)).fetchall()
+
+        if user_stocks:
+            df = pd.DataFrame(user_stocks, columns=["ID", "Stock ID", "Quantity", "Avg Buy Price", "Purchase Date"])
+            edited_df = st.data_editor(df, key="user_stocks_table", num_rows="fixed", use_container_width=True, hide_index=False)
+            
+            if st.button("Update User Stock Holdings", use_container_width=True):
+                for _, row in edited_df.iterrows():
+                    c.execute("""
+                        UPDATE OR IGNORE user_stocks 
+                        SET stock_id = ?, quantity = ?, avg_buy_price = ?, purchase_date = ?
+                        WHERE id = ?
+                    """, (row["Stock ID"], row["Quantity"], row["Avg Buy Price"], row["Purchase Date"], row["ID"]))
+                conn.commit()
+                st.success("User stock holdings updated successfully.")
+                st.rerun()
+            
+            st.text("")
+            stock_id_to_delete = st.number_input("Enter Stock Holding ID to Delete", min_value=0, step=1)
+            if st.button("Delete Stock Holding", use_container_width=True):
+                with st.spinner("Processing..."):
+                    c.execute("DELETE FROM user_stocks WHERE id = ?", (stock_id_to_delete,))
+                conn.commit()
+                st.rerun()
+        else:
+            st.write(f"No stock holdings found for {user}.")
+
+    st.divider()
     st.header("Users", divider = "rainbow")
     st.text("")
     st.write(":red[Editing data from the dataframes below without proper permission will trigger a legal punishment by law.]")
