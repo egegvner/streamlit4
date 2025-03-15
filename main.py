@@ -3668,7 +3668,7 @@ def investments_view(conn, user_id):
 
     check_and_update_investments(conn, user_id)
     balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
-   
+
     if "s_c" not in st.session_state:
         st.session_state.s_c = None
 
@@ -3677,6 +3677,25 @@ def investments_view(conn, user_id):
 
     if "invest_value" not in st.session_state:
         st.session_state.invest_value = 0
+
+    st.markdown("""
+        <style>
+            .investment-container {
+                display: flex;
+                justify-content: space-between;
+                gap: 20px;
+            }
+            .investment-section {
+                flex: 1;
+                padding: 20px;
+                border-radius: 10px;
+                background-color: #1e1e1e;
+            }
+            .investment-section h2 {
+                color: #ffffff;
+            }
+        </style>
+    """, unsafe_allow_html=True)
 
     st.subheader(f"💰 Balance: **:green[${format_number(balance)}]**")
 
@@ -3703,15 +3722,15 @@ def investments_view(conn, user_id):
     st.subheader(f"**Risk:** :red[{format_number(selected_company['risk_level'] * 100)}%]")
 
     c1, c2, c3, c4 = st.columns(4)
-    if c1.button("%25", use_container_width = True):
+    if c1.button("%25", use_container_width=True):
         st.session_state.invest_value = (balance / 100) * 25
-    if c2.button("%50", use_container_width = True):
+    if c2.button("%50", use_container_width=True):
         st.session_state.invest_value = (balance / 100) * 50
-    if c3.button("%75", use_container_width = True):
+    if c3.button("%75", use_container_width=True):
         st.session_state.invest_value = (balance / 100) * 75
-    if c4.button("%100", use_container_width = True):
-        st.session_state.invest_value = balance 
-    
+    if c4.button("%100", use_container_width=True):
+        st.session_state.invest_value = balance
+
     investment_amount = st.number_input(
         "Investment Amount",
         min_value=0.0,
@@ -3733,7 +3752,7 @@ def investments_view(conn, user_id):
         else:
             with st.spinner("Processing Investment"):
                 return_rate = calculate_investment_return(st.session_state.s_c['risk_level'], investment_amount)
-            
+
                 duration_hours = random.randint(1, 24)
                 start_date = datetime.datetime.now()
                 end_date = start_date + datetime.timedelta(hours=duration_hours)
@@ -3788,7 +3807,6 @@ def investments_view(conn, user_id):
             else:
                 st.write(f"**{company}** - {outcome}: :red[${format_number(rate)}] ({status.upper()})")
     else:
-
         st.info("No completed investments yet.")
 
 def real_estate_marketplace_view(conn, user_id):
