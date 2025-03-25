@@ -33,7 +33,7 @@ if "current_menu" not in st.session_state:
     st.session_state.current_menu = "Login"
 
 previous_layout = st.session_state.get("previous_layout", "centered")
-current_layout = "wide" if st.session_state.current_menu == "Blackmarket" or st.session_state.current_menu == "Main Account" or st.session_state.current_menu == "Bank" or st.session_state.current_menu == "Jobs Marketplace" or st.session_state.current_menu == "Jobs" or st.session_state.current_menu == "Investments" or st.session_state.current_menu == "Dashboard" or st.session_state.current_menu == "Membership" or st.session_state.current_menu == "Stocks" or st.session_state.current_menu == "Transaction History" or st.session_state.current_menu == "Inventory" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "Real Estate" or st.session_state.current_menu == "Chat" or st.session_state.current_menu == "View Savings" else "centered"
+current_layout = "wide" if st.session_state.current_menu == "Blackmarket" or st.session_state.current_menu == "Main Account" or st.session_state.current_menu == "Leaderboard" or st.session_state.current_menu == "Bank" or st.session_state.current_menu == "Jobs Marketplace" or st.session_state.current_menu == "Jobs" or st.session_state.current_menu == "Investments" or st.session_state.current_menu == "Dashboard" or st.session_state.current_menu == "Membership" or st.session_state.current_menu == "Stocks" or st.session_state.current_menu == "Transaction History" or st.session_state.current_menu == "Inventory" or st.session_state.current_menu == "Marketplace" or st.session_state.current_menu == "Real Estate" or st.session_state.current_menu == "Chat" or st.session_state.current_menu == "View Savings" else "centered"
 
 if previous_layout != current_layout:
     st.session_state.previous_layout = current_layout
@@ -1941,7 +1941,8 @@ def marketplace_view(conn, user_id):
     c = conn.cursor()
 
     items = c.execute("SELECT item_id, name, description, rarity, price, stock, image_url FROM marketplace_items").fetchall()
-    st.header("GNFTs", divider="rainbow")
+    st.markdown("<h1 style='font-family: Inter;'>GNFTs</h1>", unsafe_allow_html=True)
+    st.divider()
 
     if not items:
         st.info("No items available in the marketplace.")
@@ -2157,7 +2158,8 @@ def inventory_view(conn, user_id):
 
 def manage_pending_transfers(conn, receiver_id):
     c = conn.cursor()
-    st.header("📥 Pending Transfers", divider = "rainbow")
+    st.markdown("<h1 style='font-family: Inter;'>📥 Pending Transfers</h1>", unsafe_allow_html=True)
+    st.divider()
     pending_transfers = c.execute("""
         SELECT transaction_id, user_id, amount, timestamp
         FROM transactions
@@ -2216,7 +2218,7 @@ def main_account_view(conn, user_id):
 
     current_balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
-    st.header("Main Account (Vault)", divider = "gray")
+    st.markdown("<h1 style='font-family: Inter;'>Main Account (Vault)</h1>", unsafe_allow_html=True)
     co1, co2 = st.columns(2)
     with co1:
         with st.container(border=True):
@@ -2275,7 +2277,7 @@ def savings_view(conn, user_id):
         st.session_state.last_refresh = 0
     apply_interest_if_due(conn, user_id, check=False)
     
-    st.header("Savings Account", divider="gray")
+    st.markdown("<h1 style='font-family: Inter;'>Savings Account</h1>", unsafe_allow_html=True)
 
     has_savings_account = c.execute("SELECT has_savings_account FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
 
@@ -2338,7 +2340,7 @@ def savings_view(conn, user_id):
                 </style>
                 """, unsafe_allow_html=True)
     with col2:
-        st.header("📜 Interest History")
+        st.markdown("<h1 style='font-family: Inter;'>📜 Interest History</h1>", unsafe_allow_html=True)
         if has_savings_account:
             interest_history = c.execute("""
                 SELECT timestamp, interest_amount, new_balance 
@@ -2448,7 +2450,8 @@ def dashboard(conn, user_id):
         pass
 
     has_unread_news = check_unread_news(conn, user_id)
-    st.header(f"Welcome, {st.session_state.username}!", divider="rainbow")
+    st.markdown("<h1 style='font-family: Inter;'>f"Welcome, {st.session_state.username}!", unsafe_allow_html=True)
+    st.divider()
     st.text("")
     c1, c2, c3 = st.columns(3)
     if c1.button("Weekly Quiz", use_container_width=True):
@@ -2710,7 +2713,7 @@ def get_latest_message_time(conn):
 def transaction_history_view(conn, user_id):
     c = conn.cursor()
 
-    st.header("📜 Transaction History", divider="rainbow")
+    st.markdown("<h1 style='font-family: Inter;'>📜 Transaction History</h1>", unsafe_allow_html=True)
     get_transaction_history(conn, user_id)
     st.subheader("Investments", divider="rainbow")
     investments = c.execute("""
@@ -3276,7 +3279,8 @@ def stocks_view(conn, user_id):
 
 def blackmarket_view(conn, user_id):
     c = conn.cursor()
-    st.header("🖤 Black Market", divider="rainbow")
+    st.markdown("<h1 style='font-family: Inter;'>🖤 Black Market</h1>", unsafe_allow_html=True)
+
     
     blackmarket_items = c.execute("""
         SELECT item_id, item_number, name, description, rarity, price, image_url, seller_id 
@@ -3663,7 +3667,7 @@ def bank_view(conn, user_id):
                     repay_loan(conn, user_id, st.session_state.repay)
                 
 def investments_view(conn, user_id):
-    st.header("📈 Investments", divider="rainbow")
+    st.markdown("<h1 style='font-family: Inter;'>📈 Investments</h1>", unsafe_allow_html=True)
     c = conn.cursor()
 
     check_and_update_investments(conn, user_id)
@@ -4547,7 +4551,8 @@ def available_jobs_view(conn, user_id):
     c = conn.cursor()
     has_job = c.execute("SELECT employee_id FROM employees WHERE user_id = ?", (user_id,)).fetchone()
     c1, c2 = st.columns([3, 1])
-    c1.header("Jobs Marketplace", divider="gray")
+    st.markdown("<h1 style='font-family: Inter;'>Jobs Marketplace</h1>", unsafe_allow_html=True)
+    st.divider()
     if c2.button("Set Up Your Business", use_container_width=True, disabled=True if has_job else False, help="You already have a job." if has_job else None):
         new_business_dialog(conn, user_id)
 
@@ -4626,7 +4631,8 @@ def jobs_view(conn, user_id):
     c = conn.cursor()
     has_job = c.execute("SELECT employee_id FROM employees WHERE user_id = ?", (user_id,)).fetchone()
     if not has_job:
-        st.header("My Job", divider="gray")
+        st.markdown("<h1 style='font-family: Inter;'>My Job</h1>", unsafe_allow_html=True)
+        st.divider()
         c1, c2, c3 = st.columns([2.4, 2, 1])
         c2.text("")
         c2.text("")
@@ -5380,7 +5386,8 @@ def admin_panel(conn):
     
 def settings(conn, username):
     c = conn.cursor()
-    st.header("⚙️ Settings", divider = "rainbow")
+    st.markdown("<h1 style='font-family: Inter;'>Settings</h1>", unsafe_allow_html=True)
+    st.divider()
 
     user_id = c.execute("SELECT user_id FROM users WHERE username = ?", (username,)).fetchone()[0]
     balance = c.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
