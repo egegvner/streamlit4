@@ -2450,7 +2450,7 @@ def dashboard(conn, user_id):
         pass
 
     has_unread_news = check_unread_news(conn, user_id)
-    st.markdown("<h1 style='font-family: Inter;'>f"Welcome, {st.session_state.username}!", unsafe_allow_html=True)
+    st.markdown(f"<h1 style='font-family: Inter;'>'Welcome, {st.session_state.username}!'", unsafe_allow_html=True)
     st.divider()
     st.text("")
     c1, c2, c3 = st.columns(3)
