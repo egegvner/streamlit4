@@ -5839,5 +5839,5 @@ if __name__ == "__main__":
 """, unsafe_allow_html=True)
     
     init_db(conn)
-    conn.cursor().execute("ALTER TABLE users ADD COLUMN last_living_tax DATETIME;")
+    conn.cursor().execute("ALTER TABLE users ADD COLUMN last_maintenance_cost DATETIME;")
     main(conn)
