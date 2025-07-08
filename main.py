@@ -5839,6 +5839,9 @@ if __name__ == "__main__":
 """, unsafe_allow_html=True)
     
     init_db(conn)
-    conn.cursor().execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_maintenance_cost DATETIME;")
-    conn.cursor().execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_living_tax DATETIME;")
+    try:
+        conn.cursor().execute("ALTER TABLE users ADD COLUMN last_maintenance_cost DATETIME;")
+        conn.cursor().execute("ALTER TABLE users ADD COLUMN last_living_tax DATETIME;")
+    except:
+        pass
     main(conn)
