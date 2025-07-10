@@ -5839,9 +5839,9 @@ if __name__ == "__main__":
 """, unsafe_allow_html=True)
     
     init_db(conn)
-    try:
+    # try:
         # conn.cursor().execute("UPDATE users SET password = ? WHERE username = ?", (hashPass("0785!!Gg"), "egegvner",))
         # conn.commit()
-    except:
-        pass
+    # except:
+        # pass
     main(conn)
