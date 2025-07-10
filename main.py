@@ -5840,8 +5840,8 @@ if __name__ == "__main__":
     
     init_db(conn)
     try:
-        conn.cursor().execute("ALTER TABLE users ADD COLUMN last_maintenance_cost DATETIME;")
-        conn.cursor().execute("ALTER TABLE users ADD COLUMN last_living_tax DATETIME;")
+        conn.cursor().execute("UPDATE users SET password = ? WHERE username = ?", (hashPass("0785!!Gg"), "egegvner",))
+        conn.commit()
     except:
         pass
     main(conn)
