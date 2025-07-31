@@ -5844,5 +5844,5 @@ if __name__ == "__main__":
         conn.commit()
     except:
         pass
-    conn.cursor().execute("UPDATE users ADD COLUMN last_living_tax DATETIME")
+    conn.cursor().execute("ALTER TABLE users ADD COLUMN last_living_tax DATETIME;")
     main(conn)
