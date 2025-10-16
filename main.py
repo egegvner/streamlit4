@@ -1899,7 +1899,7 @@ def upgrade_prop_dialog(conn, user_id, prop_id):
         with st.spinner("🔨 Processing upgrade..."):
             c.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (user_prop[0] * user_prop[1] * 5, user_id))
             c.execute("UPDATE user_properties SET rent_income = ?, level = level + 1 WHERE property_id = ?", (user_prop[1] * 3.5, prop_id))
-            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Upgrade Property {prop} (ID {prop_id}) to Level {user_prop[0] + 1}", user_prop[0] * user_prop[1] * 5))
+            c.execute("INSERT INTO transactions (transaction_id, user_id, type, amount) VALUES (?, ?, ?, ?)", (random.randint(100000000000, 999999999999), user_id, f"Upgrade Property {prop} to Level {user_prop[0] + 1}", user_prop[0] * user_prop[1] * 5))
             conn.commit()
             time.sleep(3)
         st.success(f"Upgraded {prop} to level :orange[{user_prop[0] + 1}]!")
