@@ -2065,6 +2065,10 @@ def inventory_view(conn, user_id):
                         cqw2.write(f":gray[Level] :orange[{level}]")
                         cqw2.write(f":gray[Ready In] :green[{int(hours)}] :gray[Hours,] :green[{int(minutes)}] :gray[Minutes]")
 
+                        st.text("")
+                        st.text("")
+                        st.text("")
+                        st.text("")
                         if time_left.total_seconds() < 0:
                             st.success(f"[Accumulated Rent] :green[${format_number(rent_income)}]")
                         else:
