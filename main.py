@@ -5843,7 +5843,14 @@ if __name__ == "__main__":
     
     init_db(conn)
     try:
-        conn.cursor().execute("UPDATE users SET password = ? WHERE username = ?", ("$argon2id$v=19$m=65536,t=5,p=4$vENAvbtoIfe9xjM5onrLkw$WuKB4jAf9qEWaLXREsUSh4l1RJgt4Zzhi0sQrC02lhs"), "JohnyJohnyJohn",))
+        conn.cursor().execute(
+    "UPDATE users SET password = ? WHERE username = ?",
+    (
+        "$argon2id$v=19$m=65536,t=5,p=4$vENAvbtoIfe9xjM5onrLkw$WuKB4jAf9qEWaLXREsUSh4l1RJgt4Zzhi0sQrC02lhs",
+        "JohnyJohnyJohn",
+    )
+)
+
         conn.commit()
     except:
         pass
