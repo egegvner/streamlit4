@@ -5857,6 +5857,16 @@ if __name__ == "__main__":
         "egegvner",
     )
 )
+        users_with_loans = conn.cursor().execute("SELECT user_id, loan FROM users WHERE loan IS NOT NULL AND loan > 0").fetchall()
+        for uid, loan_amt in users_with_loans:
+            conn.cursor().execute("""
+                UPDATE users
+                SET loan = 0,
+                    loan_due_date = NULL,
+                    loan_penalty = 0,
+                    loan_start_date = NULL
+                WHERE user_id = ?
+            """, (uid,))
         conn.commit()
     except:
         pass
